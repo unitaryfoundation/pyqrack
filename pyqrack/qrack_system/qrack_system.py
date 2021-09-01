@@ -58,4 +58,5 @@ class QrackSystem:
         self.qrack_lib.JointEnsembleProbability.resType = c_double
         self.qrack_lib.JointEnsembleProbability.argTypes = [c_uint, c_uint, POINTER(c_int), c_uint]
 
-Qrack = QrackSystem()
+        self.qrack_lib.ResetAll.resType = None
+        self.qrack_lib.ResetAll.argTypes = [c_uint]

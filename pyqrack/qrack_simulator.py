@@ -32,3 +32,6 @@ class QrackSimulator:
 
     def joint_ensemble_probability(self, n, b, q):
         Qrack.qrack_lib.JointEnsembleProbability(self.sid, n, b, q)
+
+    def reset_all(self):
+        Qrack.qrack_lib.ResetAll(self.sid)
