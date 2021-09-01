@@ -58,30 +58,4 @@ class QrackSystem:
         self.qrack_lib.JointEnsembleProbability.resType = c_double
         self.qrack_lib.JointEnsembleProbability.argTypes = [c_uint, c_uint, POINTER(c_int), c_uint]
 
-    def init_simulator(self, *args):
-        if len(args) == 0:
-            return self.qrack_lib.init()
-        return self.qrack_lib.init_count(args[0])
-
-    def init_clone(self, sid):
-        return self.qrack_lib.init_clone(sid)
-
-    def destroy_simulator(self, sid):
-        self.qrack_lib.destroy(sid)
-
-    def seed_simulator(self, sid, s):
-        self.qrack_lib.seed(sid, s)
-
-    def set_concurrency(self, sid, p):
-        self.qrack_lib.set_concurrency(sid, p)
-
-    def prob(self, sid, q):
-        return self.qrack_lib.Prob(sid, q)
-
-    def permutation_expectation(self, sid, n, c):
-        return self.qrack_lib.PermutationExpectation(sid, n, c)
-
-    def joint_ensemble_probability(self, sid, n, b, q):
-        self.qrack_lib.JointEnsembleProbability(sid, n, b, q)
-
 Qrack = QrackSystem()
