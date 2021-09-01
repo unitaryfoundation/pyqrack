@@ -35,3 +35,9 @@ class QrackSimulator:
 
     def reset_all(self):
         Qrack.qrack_lib.ResetAll(self.sid)
+
+    def allocate_qubit(self, qid):
+        Qrack.qrack_lib.allocateQubit(self.sid, qid)
+
+    def release(self, q):
+        return Qrack.qrack_lib.release(self.sid, q)

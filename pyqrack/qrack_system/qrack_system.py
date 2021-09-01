@@ -60,3 +60,9 @@ class QrackSystem:
 
         self.qrack_lib.ResetAll.resType = None
         self.qrack_lib.ResetAll.argTypes = [c_uint]
+
+        self.qrack_lib.allocateQubit.resType = None
+        self.qrack_lib.allocateQubit.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.release.resType = c_bool
+        self.qrack_lib.release.argTypes = [c_uint, c_uint]
