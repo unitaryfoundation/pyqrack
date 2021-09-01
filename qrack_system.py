@@ -19,10 +19,69 @@ from ctypes import *
 from sys import platform
 
 
-shared_lib_path = "/usr/local/lib/libqrack_pinvoke.so"
-if platform.startswith('win32'):
-    shared_lib_path = "C:\\Program Files\\Qrack\\bin\\qrack_pinvoke.dll"
-try:
-    add_lib = CDLL(shared_lib_path)
-except Exception as e:
-    print(e)
+class QrackSystem:
+
+    def __init__(self):
+        shared_lib_path = "/usr/local/lib/libqrack_pinvoke.so"
+        if platform.startswith('win32'):
+            shared_lib_path = "C:\\Program Files\\Qrack\\bin\\qrack_pinvoke.dll"
+        try:
+            self.qrack_lib = CDLL(shared_lib_path)
+        except Exception as e:
+            print(e)
+
+        #Define function signatures, up front
+        self.qrack_lib.init.restype = c_uint
+        self.qrack_lib.init.argTypes = []
+
+        self.qrack_lib.init_count.restype = c_uint
+        self.qrack_lib.init_count.argTypes = [c_uint]
+
+        self.qrack_lib.init_clone.restype = c_uint
+        self.qrack_lib.init_clone.argTypes = [c_uint]
+
+        self.qrack_lib.destroy.restype = None
+        self.qrack_lib.destroy.argTypes = [c_uint]
+
+        self.qrack_lib.seed.restype = None
+        self.qrack_lib.seed.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.set_concurrency.restype = None
+        self.qrack_lib.set_concurrency.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.Prob.restype = c_double
+        self.qrack_lib.Prob.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.PermutationExpectation.restype = c_double
+        self.qrack_lib.PermutationExpectation.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
+        self.qrack_lib.JointEnsembleProbability.resType = c_double
+        self.qrack_lib.JointEnsembleProbability.argTypes = [c_uint, c_uint, POINTER(c_int), c_uint]
+
+    def init_simulator(self, *args):
+        if len(args) == 0:
+            return self.qrack_lib.init()
+        return self.qrack_lib.init_count(args[0])
+
+    def init_clone(self, sid):
+        return self.qrack_lib.init_clone(sid)
+
+    def destroy_simulator(self, sid):
+        self.qrack_lib.destroy(sid)
+
+    def seed_simulator(self, sid, s):
+        self.qrack_lib.seed(sid, s)
+
+    def set_concurrency(self, sid, p):
+        self.qrack_lib.set_concurrency(sid, p)
+
+    def prob(self, sid, q):
+        return self.qrack_lib.Prob(sid, q)
+
+    def permutation_expectation(self, sid, n, c):
+        return self.qrack_lib.PermutationExpectation(sid, n, c)
+
+    def joint_ensemble_probability(self, sid, n, b, q):
+        self.qrack_lib.JointEnsembleProbability(sid, n, b, q)
+
+Qrack = QrackSystem()
