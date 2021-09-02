@@ -188,3 +188,11 @@ class QrackSystem:
 
         self.qrack_lib.MCExp.resType = None
         self.qrack_lib.MCExp.argTypes = [c_uint, c_uint, POINTER(c_int), c_double, c_uint, POINTER(c_uint), POINTER(c_uint)]
+
+        # measurements
+
+        self.qrack_lib.M.resType = c_uint
+        self.qrack_lib.M.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.Measure.resType = c_uint
+        self.qrack_lib.Measure.argTypes = [c_uint, c_uint, POINTER(c_int), POINTER(c_uint)]

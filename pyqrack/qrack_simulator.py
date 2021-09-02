@@ -163,3 +163,11 @@ class QrackSimulator:
 
     def mcexp(self, b, ph, cs, q):
         Qrack.qrack_lib.MCExp(self.sid, len(b), b, ph, len(cs), cs, q)
+
+    # measurements
+
+    def m(self, q):
+        return Qrack.qrack_lib.M(self.sid, q)
+
+    def measure_pauli(self, b, q):
+        return Qrack.qrack_lib.Measure(self.sid, len(b), b, q)
