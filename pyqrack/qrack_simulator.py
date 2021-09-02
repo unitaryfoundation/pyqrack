@@ -3,6 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
+from ctypes import *
 from .qrack_system import Qrack
 
 
@@ -23,6 +24,12 @@ class QrackSimulator:
     def __del__(self):
         Qrack.qrack_lib.destroy(self.sid)
 
+    def _uint_byref(self, a):
+        return (c_uint * len(a))(*a)
+
+    def _double_byref(self, a):
+        return (c_double * len(a))(*a)
+
     def seed(self, s):
         Qrack.qrack_lib.seed(self.sid, s)
 
@@ -35,10 +42,10 @@ class QrackSimulator:
         return Qrack.qrack_lib.Prob(self.sid, q)
 
     def permutation_expectation(self, c):
-        return Qrack.qrack_lib.PermutationExpectation(self.sid, len(c), c)
+        return Qrack.qrack_lib.PermutationExpectation(self.sid, len(c), self._uint_byref(c))
 
     def joint_ensemble_probability(self, b, q):
-        return Qrack.qrack_lib.JointEnsembleProbability(self.sid, len(b), b, q)
+        return Qrack.qrack_lib.JointEnsembleProbability(self.sid, len(b), self._uint_byref(b), q)
 
     def reset_all(self):
         Qrack.qrack_lib.ResetAll(self.sid)
@@ -84,71 +91,71 @@ class QrackSimulator:
         Qrack.qrack_lib.U(self.sid, q, th, ph, la)
 
     def mtrx(self, m, q):
-        Qrack.qrack_lib.Mtrx(self.sid, m, q)
+        Qrack.qrack_lib.Mtrx(self.sid, self._double_byref(m), q)
 
     # multi-controlled single-qubit gates
 
     def mcx(self, c, q):
-        Qrack.qrack_lib.MCX(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MCX(self.sid, len(c), self._uint_byref(c), q)
 
     def mcy(self, c, q):
-        Qrack.qrack_lib.MCY(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MCY(self.sid, len(c), self._uint_byref(c), q)
 
     def mcz(self, c, q):
-        Qrack.qrack_lib.MCZ(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MCZ(self.sid, len(c), self._uint_byref(c), q)
 
     def mch(self, c, q):
-        Qrack.qrack_lib.MCH(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MCH(self.sid, len(c), self._uint_byref(c), q)
 
     def mcs(self, c, q):
-        Qrack.qrack_lib.MCS(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MCS(self.sid, len(c), self._uint_byref(c), q)
 
     def mct(self, c, q):
-        Qrack.qrack_lib.MCT(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MCT(self.sid, len(c), self._uint_byref(c), q)
 
     def mcadjs(self, c, q):
-        Qrack.qrack_lib.MCAdjS(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MCAdjS(self.sid, len(c), self._uint_byref(c), q)
 
     def mcadjt(self, c, q):
-        Qrack.qrack_lib.MCAdjT(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MCAdjT(self.sid, len(c), self._uint_byref(c), q)
 
     def mcu(self, c, q, th, ph, la):
-        Qrack.qrack_lib.MCU(self.sid, len(c), c, q, th, ph, la)
+        Qrack.qrack_lib.MCU(self.sid, len(c), self._uint_byref(c), q, th, ph, la)
 
     def mcmtrx(self, c, m, q):
-        Qrack.qrack_lib.MCMtrx(self.sid, len(c), c, m, q)
+        Qrack.qrack_lib.MCMtrx(self.sid, len(c), self._uint_byref(c), self._double_byref(m), q)
 
     # multi-anti-controlled single-qubit gates
 
     def macx(self, c, q):
-        Qrack.qrack_lib.MACX(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MACX(self.sid, len(c), self._uint_byref(c), q)
 
     def macy(self, c, q):
-        Qrack.qrack_lib.MACY(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MACY(self.sid, len(c), self._uint_byref(c), q)
 
     def macz(self, c, q):
-        Qrack.qrack_lib.MACZ(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MACZ(self.sid, len(c), self._uint_byref(c), q)
 
     def mach(self, c, q):
-        Qrack.qrack_lib.MACH(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MACH(self.sid, len(c), self._uint_byref(c), q)
 
     def macs(self, c, q):
-        Qrack.qrack_lib.MACS(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MACS(self.sid, len(c), self._uint_byref(c), q)
 
     def mact(self, c, q):
-        Qrack.qrack_lib.MACT(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MACT(self.sid, len(c), self._uint_byref(c), q)
 
     def macadjs(self, c, q):
-        Qrack.qrack_lib.MACAdjS(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MACAdjS(self.sid, len(c), self._uint_byref(c), q)
 
     def macadjt(self, c, q):
-        Qrack.qrack_lib.MACAdjT(self.sid, len(c), c, q)
+        Qrack.qrack_lib.MACAdjT(self.sid, len(c), self._uint_byref(c), q)
 
     def macu(self, c, q, th, ph, la):
-        Qrack.qrack_lib.MACU(self.sid, len(c), c, q, th, ph, la)
+        Qrack.qrack_lib.MACU(self.sid, len(c), self._uint_byref(c), q, th, ph, la)
 
     def macmtrx(self, c, m, q):
-        Qrack.qrack_lib.MACMtrx(self.sid, len(c), c, m, q)
+        Qrack.qrack_lib.MACMtrx(self.sid, len(c), self._uint_byref(c), self._double_byref(m), q)
 
     # rotations
 
@@ -156,15 +163,15 @@ class QrackSimulator:
         Qrack.qrack_lib.R(self.sid, b, ph, q)
 
     def mcr(self, b, ph, c, q):
-        Qrack.qrack_lib.MCR(self.sid, b, ph, len(c), c, q)
+        Qrack.qrack_lib.MCR(self.sid, b, ph, len(c), self._uint_byref(c), q)
 
     # exponential of Pauli operators
 
     def exp(self, b, ph, q):
-        Qrack.qrack_lib.Exp(self.sid, len(b), b, ph, q)
+        Qrack.qrack_lib.Exp(self.sid, len(b), self._uint_byref(b), ph, self._uint_byref(q))
 
     def mcexp(self, b, ph, cs, q):
-        Qrack.qrack_lib.MCExp(self.sid, len(b), b, ph, len(cs), cs, q)
+        Qrack.qrack_lib.MCExp(self.sid, len(b), self._uint_byref(b), ph, len(cs), self._uint_byref(cs), self._uint_byref(q))
 
     # measurements
 
@@ -172,7 +179,12 @@ class QrackSimulator:
         return Qrack.qrack_lib.M(self.sid, q)
 
     def measure_pauli(self, b, q):
-        return Qrack.qrack_lib.Measure(self.sid, len(b), b, q)
+        return Qrack.qrack_lib.Measure(self.sid, len(b), self._uint_byref(b), self._uint_byref(q))
+
+    def measure_shots(self, q, s):
+        m = self._uint_byref([0] * s)
+        Qrack.qrack_lib.MeasureShots(self.sid, len(q), self._uint_byref(q), s, m)
+        return [m[i] for i in range(s)]
 
     #swap
 
@@ -180,7 +192,7 @@ class QrackSimulator:
         Qrack.qrack_lib.SWAP(self.sid, qi1, qi2)
 
     def cswap(self, c, qi1, qi2):
-        Qrack.qrack_lib.CSWAP(self.sid, len(c), c, qi1, qi2)
+        Qrack.qrack_lib.CSWAP(self.sid, len(c), self._uint_byref(c), qi1, qi2)
 
     # (quasi-)Boolean gates
 
@@ -225,10 +237,10 @@ class QrackSimulator:
     # Fourier transform
 
     def qft(self, qs):
-        Qrack.qrack_lib.QFT(self.sid, len(qs), qs)
+        Qrack.qrack_lib.QFT(self.sid, len(qs), self._uint_byref(qs))
 
     def iqft(self, qs):
-        Qrack.qrack_lib.IQFT(self.sid, len(qs), qs)
+        Qrack.qrack_lib.IQFT(self.sid, len(qs), self._uint_byref(qs))
 
     # miscellaneous
 
@@ -239,7 +251,7 @@ class QrackSimulator:
         return Qrack.qrack_lib.TrySeparate2Qb(self.sid, qi1, qi2)
 
     def try_separate_tolerance(self, qs, t):
-        return Qrack.qrack_lib.TrySeparateTol(self.sid, len(qs), qs, tol)
+        return Qrack.qrack_lib.TrySeparateTol(self.sid, len(qs), self._uint_byref(qs), tol)
 
     def set_reactive_separate(self, irs):
         Qrack.qrack_lib.SetReactiveSeparate(self.sid, irs)
