@@ -171,3 +171,11 @@ class QrackSimulator:
 
     def measure_pauli(self, b, q):
         return Qrack.qrack_lib.Measure(self.sid, len(b), b, q)
+
+    #swap
+
+    def swap(self, qi1, qi2):
+        Qrack.qrack_lib.SWAP(self.sid, qi1, qi2)
+
+    def cswap(self, c, qi1, qi2):
+        Qrack.qrack_lib.CSWAP(self.sid, len(c), c, qi1, qi2)
