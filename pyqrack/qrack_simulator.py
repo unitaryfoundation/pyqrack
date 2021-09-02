@@ -34,11 +34,11 @@ class QrackSimulator:
     def prob(self, q):
         return Qrack.qrack_lib.Prob(self.sid, q)
 
-    def permutation_expectation(self, n, c):
-        return Qrack.qrack_lib.PermutationExpectation(self.sid, n, c)
+    def permutation_expectation(self, c):
+        return Qrack.qrack_lib.PermutationExpectation(self.sid, len(c), c)
 
-    def joint_ensemble_probability(self, n, b, q):
-        Qrack.qrack_lib.JointEnsembleProbability(self.sid, n, b, q)
+    def joint_ensemble_probability(self, b, q):
+        Qrack.qrack_lib.JointEnsembleProbability(self.sid, len(b), b, q)
 
     def reset_all(self):
         Qrack.qrack_lib.ResetAll(self.sid)
