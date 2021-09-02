@@ -5,9 +5,11 @@
 
 from .qrack_system import Qrack
 
+
 class QrackSimulator:
 
     # non-quantum
+
     def __init__(self, isClone = False, *args):
         if len(args) == 0:
             self.sid = Qrack.qrack_lib.init()
@@ -26,6 +28,7 @@ class QrackSimulator:
         Qrack.qrack_lib.set_concurrency(self.sid, p)
 
     # pseudo-quantum
+
     def prob(self, q):
         return Qrack.qrack_lib.Prob(self.sid, q)
 
@@ -39,6 +42,7 @@ class QrackSimulator:
         Qrack.qrack_lib.ResetAll(self.sid)
 
     # allocate and release
+
     def allocate_qubit(self, qid):
         Qrack.qrack_lib.allocateQubit(self.sid, qid)
 
@@ -49,6 +53,7 @@ class QrackSimulator:
         return Qrack.qrack_lib.num_qubits(self.sid)
 
     # single-qubit gates
+
     def x(self, q):
         Qrack.qrack_lib.X(self.sid, q)
 
@@ -67,10 +72,10 @@ class QrackSimulator:
     def t(self, q):
         Qrack.qrack_lib.T(self.sid, q)
 
-    def adj_s(self, q):
+    def adjs(self, q):
         Qrack.qrack_lib.AdjS(self.sid, q)
 
-    def adj_t(self, q):
+    def adjt(self, q):
         Qrack.qrack_lib.AdjT(self.sid, q)
 
     def u(self, q, th, ph, la):
@@ -78,3 +83,33 @@ class QrackSimulator:
 
     def mtrx(self, m, q):
         Qrack.qrack_lib.Mtrx(self.sid, m, q)
+
+    def mcx(self, n, c, q):
+        Qrack.qrack_lib.MCX(self.sid, n, c, q)
+
+    def mcy(self, n, c, q):
+        Qrack.qrack_lib.MCY(self.sid, n, c, q)
+
+    def mcz(self, n, c, q):
+        Qrack.qrack_lib.MCZ(self.sid, n, c, q)
+
+    def mch(self, n, c, q):
+        Qrack.qrack_lib.MCH(self.sid, n, c, q)
+
+    def mcs(self, n, c, q):
+        Qrack.qrack_lib.MCS(self.sid, n, c, q)
+
+    def mct(self, n, c, q):
+        Qrack.qrack_lib.MCT(self.sid, n, c, q)
+
+    def mcadjs(self, n, c, q):
+        Qrack.qrack_lib.MCAdjS(self.sid, n, c, q)
+
+    def mcadjt(self, n, c, q):
+        Qrack.qrack_lib.MCAdjT(self.sid, n, c, q)
+
+    def mcu(self, n, c, q, th, ph, la):
+        Qrack.qrack_lib.MCU(self.sid, n, c, q, th, ph, la)
+
+    def mcmtrx(self, n, c, m, q):
+        Qrack.qrack_lib.MCMtrx(self.sid, n, c, m, q)

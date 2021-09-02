@@ -33,6 +33,7 @@ class QrackSystem:
         # Define function signatures, up front
 
         # non-quantum
+
         self.qrack_lib.init.restype = c_uint
         self.qrack_lib.init.argTypes = []
 
@@ -52,6 +53,7 @@ class QrackSystem:
         self.qrack_lib.set_concurrency.argTypes = [c_uint, c_uint]
 
         # pseudo-quantum
+
         self.qrack_lib.Prob.restype = c_double
         self.qrack_lib.Prob.argTypes = [c_uint, c_uint]
 
@@ -65,6 +67,7 @@ class QrackSystem:
         self.qrack_lib.ResetAll.argTypes = [c_uint]
 
         # allocate and release
+
         self.qrack_lib.allocateQubit.resType = None
         self.qrack_lib.allocateQubit.argTypes = [c_uint, c_uint]
 
@@ -75,6 +78,7 @@ class QrackSystem:
         self.qrack_lib.num_qubits.argTypes = [c_uint]
 
         # single-qubit gates
+
         self.qrack_lib.X.resType = None
         self.qrack_lib.X.argTypes = [c_uint, c_uint]
 
@@ -104,3 +108,35 @@ class QrackSystem:
 
         self.qrack_lib.Mtrx.resType = None
         self.qrack_lib.Mtrx.argTypes = [c_uint, POINTER(c_double), c_uint]
+
+        # multi-controlled single-qubit gates
+
+        self.qrack_lib.MCX.resType = None
+        self.qrack_lib.MCX.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MCY.resType = None
+        self.qrack_lib.MCY.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MCZ.resType = None
+        self.qrack_lib.MCZ.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MCH.resType = None
+        self.qrack_lib.MCH.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MCS.resType = None
+        self.qrack_lib.MCS.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MCT.resType = None
+        self.qrack_lib.MCT.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MCAdjS.resType = None
+        self.qrack_lib.MCAdjS.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MCAdjT.resType = None
+        self.qrack_lib.MCAdjT.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MCU.resType = None
+        self.qrack_lib.MCU.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, c_double, c_double, c_double]
+
+        self.qrack_lib.MCMtrx.resType = None
+        self.qrack_lib.MCMtrx.argTypes = [c_uint, c_uint, POINTER(c_uint), POINTER(c_double), c_uint]
