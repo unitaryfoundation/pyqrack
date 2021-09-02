@@ -10,13 +10,15 @@ class QrackSimulator:
 
     # non-quantum
 
-    def __init__(self, isClone = False, *args):
-        if len(args) == 0:
-            self.sid = Qrack.qrack_lib.init()
-        elif isClone:
+    def __init__(self, qubitCount=0, cloneSid=0):
+        if qubitCount > 0 and cloneSid > 0:
+            raise RuntimeError('Cannot clone a QrackSimulator and specify its qubit length at the same time, in QrackSimulator constructor!')
+        if cloneSid > 0:
             self.sid = Qrack.qrack_lib.init_clone(sid)
+        elif qubitCount == 0:
+            self.sid = Qrack.qrack_lib.init()
         else:
-            self.sid = Qrack.qrack_lib.init_count(args[0])
+            self.sid = Qrack.qrack_lib.init_count(qubitCount)
 
     def __del__(self):
         Qrack.qrack_lib.destroy(self.sid)
