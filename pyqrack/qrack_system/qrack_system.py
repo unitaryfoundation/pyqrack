@@ -244,3 +244,11 @@ class QrackSystem:
 
         self.qrack_lib.CLXNOR.resType = None
         self.qrack_lib.CLXNOR.argTypes = [c_uint, c_bool, c_uint, c_uint]
+
+        # Fourier transform
+
+        self.qrack_lib.QFT.resType = None
+        self.qrack_lib.QFT.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
+        self.qrack_lib.IQFT.resType = None
+        self.qrack_lib.IQFT.argTypes = [c_uint, c_uint, POINTER(c_uint)]

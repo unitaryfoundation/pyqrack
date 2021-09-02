@@ -219,3 +219,11 @@ class QrackSimulator:
 
     def clxnor(self, ci, qi, qo):
         Qrack.qrack_lib.CLXNOR(self.sid, ci, qi, qo)
+
+    # Fourier transform
+
+    def qft(self, qs):
+        Qrack.qrack_lib.QFT(self.sid, len(qs), qs)
+
+    def adjqft(self, qs):
+        Qrack.qrack_lib.IQFT(self.sid, len(qs), qs)
