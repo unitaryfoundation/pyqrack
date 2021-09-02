@@ -84,6 +84,8 @@ class QrackSimulator:
     def mtrx(self, m, q):
         Qrack.qrack_lib.Mtrx(self.sid, m, q)
 
+    # multi-controlled single-qubit gates
+
     def mcx(self, n, c, q):
         Qrack.qrack_lib.MCX(self.sid, n, c, q)
 
@@ -113,3 +115,35 @@ class QrackSimulator:
 
     def mcmtrx(self, n, c, m, q):
         Qrack.qrack_lib.MCMtrx(self.sid, n, c, m, q)
+
+    # multi-anti-controlled single-qubit gates
+
+    def macx(self, n, c, q):
+        Qrack.qrack_lib.MACX(self.sid, n, c, q)
+
+    def macy(self, n, c, q):
+        Qrack.qrack_lib.MACY(self.sid, n, c, q)
+
+    def macz(self, n, c, q):
+        Qrack.qrack_lib.MACZ(self.sid, n, c, q)
+
+    def mach(self, n, c, q):
+        Qrack.qrack_lib.MACH(self.sid, n, c, q)
+
+    def macs(self, n, c, q):
+        Qrack.qrack_lib.MACS(self.sid, n, c, q)
+
+    def mact(self, n, c, q):
+        Qrack.qrack_lib.MACT(self.sid, n, c, q)
+
+    def macadjs(self, n, c, q):
+        Qrack.qrack_lib.MACAdjS(self.sid, n, c, q)
+
+    def macadjt(self, n, c, q):
+        Qrack.qrack_lib.MACAdjT(self.sid, n, c, q)
+
+    def macu(self, n, c, q, th, ph, la):
+        Qrack.qrack_lib.MACU(self.sid, n, c, q, th, ph, la)
+
+    def macmtrx(self, n, c, m, q):
+        Qrack.qrack_lib.MACMtrx(self.sid, n, c, m, q)

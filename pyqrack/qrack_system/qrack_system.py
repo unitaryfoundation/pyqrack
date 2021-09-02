@@ -140,3 +140,35 @@ class QrackSystem:
 
         self.qrack_lib.MCMtrx.resType = None
         self.qrack_lib.MCMtrx.argTypes = [c_uint, c_uint, POINTER(c_uint), POINTER(c_double), c_uint]
+
+        # multi-anti-controlled single-qubit gates
+
+        self.qrack_lib.MACX.resType = None
+        self.qrack_lib.MACX.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MACY.resType = None
+        self.qrack_lib.MACY.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MACZ.resType = None
+        self.qrack_lib.MACZ.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MACH.resType = None
+        self.qrack_lib.MACH.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MACS.resType = None
+        self.qrack_lib.MACS.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MACT.resType = None
+        self.qrack_lib.MACT.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MACAdjS.resType = None
+        self.qrack_lib.MACAdjS.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MACAdjT.resType = None
+        self.qrack_lib.MACAdjT.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint]
+
+        self.qrack_lib.MACU.resType = None
+        self.qrack_lib.MACU.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, c_double, c_double, c_double]
+
+        self.qrack_lib.MACMtrx.resType = None
+        self.qrack_lib.MACMtrx.argTypes = [c_uint, c_uint, POINTER(c_uint), POINTER(c_double), c_uint]
