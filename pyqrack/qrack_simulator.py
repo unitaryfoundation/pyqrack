@@ -147,3 +147,11 @@ class QrackSimulator:
 
     def macmtrx(self, n, c, m, q):
         Qrack.qrack_lib.MACMtrx(self.sid, n, c, m, q)
+
+    # rotations
+
+    def r(self, b, ph, q):
+        Qrack.qrack_lib.R(self.sid, b, ph, q)
+
+    def mcr(self, b, ph, n, c, q):
+        Qrack.qrack_lib.MCR(self.sid, b, ph, n, c, q);

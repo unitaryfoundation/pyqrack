@@ -172,3 +172,11 @@ class QrackSystem:
 
         self.qrack_lib.MACMtrx.resType = None
         self.qrack_lib.MACMtrx.argTypes = [c_uint, c_uint, POINTER(c_uint), POINTER(c_double), c_uint]
+
+        # rotations
+
+        self.qrack_lib.R.resType = None
+        self.qrack_lib.R.argTypes = [c_uint, c_uint, c_double, c_uint]
+
+        self.qrack_lib.MCR.resType = None
+        self.qrack_lib.MCR.argTypes = [c_uint, c_uint, c_double, c_uint, POINTER(c_uint), c_uint]
