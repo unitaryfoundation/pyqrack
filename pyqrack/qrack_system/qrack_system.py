@@ -180,3 +180,11 @@ class QrackSystem:
 
         self.qrack_lib.MCR.resType = None
         self.qrack_lib.MCR.argTypes = [c_uint, c_uint, c_double, c_uint, POINTER(c_uint), c_uint]
+
+        # exponential of Pauli operators
+
+        self.qrack_lib.Exp.resType = None
+        self.qrack_lib.Exp.argTypes = [c_uint, c_uint, POINTER(c_int), c_double, POINTER(c_uint)]
+
+        self.qrack_lib.MCExp.resType = None
+        self.qrack_lib.MCExp.argTypes = [c_uint, c_uint, POINTER(c_int), c_double, c_uint, POINTER(c_uint), POINTER(c_uint)]
