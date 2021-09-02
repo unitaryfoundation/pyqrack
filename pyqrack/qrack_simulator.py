@@ -179,3 +179,43 @@ class QrackSimulator:
 
     def cswap(self, c, qi1, qi2):
         Qrack.qrack_lib.CSWAP(self.sid, len(c), c, qi1, qi2)
+
+    # (quasi-)Boolean gates
+
+    def qand(self, qi1, qi2, qo):
+        Qrack.qrack_lib.AND(self.sid, qi1, qi2, qo)
+
+    def qor(self, qi1, qi2, qo):
+        Qrack.qrack_lib.OR(self.sid, qi1, qi2, qo)
+
+    def qxor(self, qi1, qi2, qo):
+        Qrack.qrack_lib.XOR(self.sid, qi1, qi2, qo)
+
+    def qnand(self, qi1, qi2, qo):
+        Qrack.qrack_lib.NAND(self.sid, qi1, qi2, qo)
+
+    def qnor(self, qi1, qi2, qo):
+        Qrack.qrack_lib.NOR(self.sid, qi1, qi2, qo)
+
+    def qxnor(self, qi1, qi2, qo):
+        Qrack.qrack_lib.XNOR(self.sid, qi1, qi2, qo)
+
+    # half classical (quasi-)Boolean gates
+
+    def cland(self, ci, qi, qo):
+        Qrack.qrack_lib.CLAND(self.sid, ci, qi, qo)
+
+    def clor(self, ci, qi, qo):
+        Qrack.qrack_lib.CLOR(self.sid, ci, qi, qo)
+
+    def clxor(self, ci, qi, qo):
+        Qrack.qrack_lib.CLXOR(self.sid, ci, qi, qo)
+
+    def clnand(self, ci, qi, qo):
+        Qrack.qrack_lib.CLNAND(self.sid, ci, qi, qo)
+
+    def clnor(self, ci, qi, qo):
+        Qrack.qrack_lib.CLNOR(self.sid, ci, qi, qo)
+
+    def clxnor(self, ci, qi, qo):
+        Qrack.qrack_lib.CLXNOR(self.sid, ci, qi, qo)

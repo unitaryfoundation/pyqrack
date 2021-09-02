@@ -204,3 +204,43 @@ class QrackSystem:
 
         self.qrack_lib.CSWAP.resType = None
         self.qrack_lib.CSWAP.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, c_uint]
+
+        # (quasi-)Boolean gates
+
+        self.qrack_lib.AND.resType = None
+        self.qrack_lib.AND.argTypes = [c_uint, c_uint, c_uint, c_uint]
+
+        self.qrack_lib.OR.resType = None
+        self.qrack_lib.OR.argTypes = [c_uint, c_uint, c_uint, c_uint]
+
+        self.qrack_lib.XOR.resType = None
+        self.qrack_lib.XOR.argTypes = [c_uint, c_uint, c_uint, c_uint]
+
+        self.qrack_lib.NAND.resType = None
+        self.qrack_lib.NAND.argTypes = [c_uint, c_uint, c_uint, c_uint]
+
+        self.qrack_lib.NOR.resType = None
+        self.qrack_lib.NOR.argTypes = [c_uint, c_uint, c_uint, c_uint]
+
+        self.qrack_lib.XNOR.resType = None
+        self.qrack_lib.XNOR.argTypes = [c_uint, c_uint, c_uint, c_uint]
+
+        # half classical (quasi-)Boolean gates
+
+        self.qrack_lib.CLAND.resType = None
+        self.qrack_lib.CLAND.argTypes = [c_uint, c_bool, c_uint, c_uint]
+
+        self.qrack_lib.CLOR.resType = None
+        self.qrack_lib.CLOR.argTypes = [c_uint, c_bool, c_uint, c_uint]
+
+        self.qrack_lib.CLXOR.resType = None
+        self.qrack_lib.CLXOR.argTypes = [c_uint, c_bool, c_uint, c_uint]
+
+        self.qrack_lib.CLNAND.resType = None
+        self.qrack_lib.CLNAND.argTypes = [c_uint, c_bool, c_uint, c_uint]
+
+        self.qrack_lib.CLNOR.resType = None
+        self.qrack_lib.CLNOR.argTypes = [c_uint, c_bool, c_uint, c_uint]
+
+        self.qrack_lib.CLXNOR.resType = None
+        self.qrack_lib.CLXNOR.argTypes = [c_uint, c_bool, c_uint, c_uint]
