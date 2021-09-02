@@ -13,7 +13,7 @@ class QrackSimulator:
     def __init__(self, qubitCount=-1, cloneSid=-1):
         if qubitCount > -1 and cloneSid > -1:
             raise RuntimeError('Cannot clone a QrackSimulator and specify its qubit length at the same time, in QrackSimulator constructor!')
-        if cloneSid > 0:
+        if cloneSid > -1:
             self.sid = Qrack.qrack_lib.init_clone(sid)
         elif qubitCount > 0:
             self.sid = Qrack.qrack_lib.init_count(qubitCount)
