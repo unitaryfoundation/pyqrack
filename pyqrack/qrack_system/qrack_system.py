@@ -198,7 +198,7 @@ class QrackSystem:
         self.qrack_lib.Measure.argTypes = [c_uint, c_uint, POINTER(c_int), POINTER(c_uint)]
 
         self.qrack_lib.MeasureShots.resType = None
-        self.qrack_lib.Measure.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, POINTER(c_uint)]
+        self.qrack_lib.MeasureShots.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, POINTER(c_uint)]
 
         # swap
 
