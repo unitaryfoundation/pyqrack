@@ -38,7 +38,7 @@ class QrackSimulator:
         return Qrack.qrack_lib.PermutationExpectation(self.sid, len(c), c)
 
     def joint_ensemble_probability(self, b, q):
-        Qrack.qrack_lib.JointEnsembleProbability(self.sid, len(b), b, q)
+        return Qrack.qrack_lib.JointEnsembleProbability(self.sid, len(b), b, q)
 
     def reset_all(self):
         Qrack.qrack_lib.ResetAll(self.sid)
