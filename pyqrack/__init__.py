@@ -5,3 +5,4 @@
 
 from .qrack_system import QrackSystem, Qrack
 from .qrack_simulator import QrackSimulator
+from .pauli import Pauli
