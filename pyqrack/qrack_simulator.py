@@ -86,72 +86,72 @@ class QrackSimulator:
 
     # multi-controlled single-qubit gates
 
-    def mcx(self, n, c, q):
-        Qrack.qrack_lib.MCX(self.sid, n, c, q)
+    def mcx(self, c, q):
+        Qrack.qrack_lib.MCX(self.sid, len(c), c, q)
 
-    def mcy(self, n, c, q):
-        Qrack.qrack_lib.MCY(self.sid, n, c, q)
+    def mcy(self, c, q):
+        Qrack.qrack_lib.MCY(self.sid, len(c), c, q)
 
-    def mcz(self, n, c, q):
-        Qrack.qrack_lib.MCZ(self.sid, n, c, q)
+    def mcz(self, c, q):
+        Qrack.qrack_lib.MCZ(self.sid, len(c), c, q)
 
-    def mch(self, n, c, q):
-        Qrack.qrack_lib.MCH(self.sid, n, c, q)
+    def mch(self, c, q):
+        Qrack.qrack_lib.MCH(self.sid, len(c), c, q)
 
-    def mcs(self, n, c, q):
-        Qrack.qrack_lib.MCS(self.sid, n, c, q)
+    def mcs(self, c, q):
+        Qrack.qrack_lib.MCS(self.sid, len(c), c, q)
 
-    def mct(self, n, c, q):
-        Qrack.qrack_lib.MCT(self.sid, n, c, q)
+    def mct(self, c, q):
+        Qrack.qrack_lib.MCT(self.sid, len(c), c, q)
 
-    def mcadjs(self, n, c, q):
-        Qrack.qrack_lib.MCAdjS(self.sid, n, c, q)
+    def mcadjs(self, c, q):
+        Qrack.qrack_lib.MCAdjS(self.sid, len(c), c, q)
 
-    def mcadjt(self, n, c, q):
-        Qrack.qrack_lib.MCAdjT(self.sid, n, c, q)
+    def mcadjt(self, c, q):
+        Qrack.qrack_lib.MCAdjT(self.sid, len(c), c, q)
 
     def mcu(self, n, c, q, th, ph, la):
         Qrack.qrack_lib.MCU(self.sid, n, c, q, th, ph, la)
 
-    def mcmtrx(self, n, c, m, q):
-        Qrack.qrack_lib.MCMtrx(self.sid, n, c, m, q)
+    def mcmtrx(self, c, m, q):
+        Qrack.qrack_lib.MCMtrx(self.sid, len(c), c, m, q)
 
     # multi-anti-controlled single-qubit gates
 
-    def macx(self, n, c, q):
-        Qrack.qrack_lib.MACX(self.sid, n, c, q)
+    def macx(self, c, q):
+        Qrack.qrack_lib.MACX(self.sid, len(c), c, q)
 
-    def macy(self, n, c, q):
-        Qrack.qrack_lib.MACY(self.sid, n, c, q)
+    def macy(self, c, q):
+        Qrack.qrack_lib.MACY(self.sid, len(c), c, q)
 
-    def macz(self, n, c, q):
-        Qrack.qrack_lib.MACZ(self.sid, n, c, q)
+    def macz(self, c, q):
+        Qrack.qrack_lib.MACZ(self.sid, len(c), c, q)
 
-    def mach(self, n, c, q):
-        Qrack.qrack_lib.MACH(self.sid, n, c, q)
+    def mach(self, c, q):
+        Qrack.qrack_lib.MACH(self.sid, len(c), c, q)
 
-    def macs(self, n, c, q):
-        Qrack.qrack_lib.MACS(self.sid, n, c, q)
+    def macs(self, c, q):
+        Qrack.qrack_lib.MACS(self.sid, len(c), c, q)
 
-    def mact(self, n, c, q):
-        Qrack.qrack_lib.MACT(self.sid, n, c, q)
+    def mact(self, c, q):
+        Qrack.qrack_lib.MACT(self.sid, len(c), c, q)
 
-    def macadjs(self, n, c, q):
-        Qrack.qrack_lib.MACAdjS(self.sid, n, c, q)
+    def macadjs(self, c, q):
+        Qrack.qrack_lib.MACAdjS(self.sid, len(c), c, q)
 
-    def macadjt(self, n, c, q):
-        Qrack.qrack_lib.MACAdjT(self.sid, n, c, q)
+    def macadjt(self, c, q):
+        Qrack.qrack_lib.MACAdjT(self.sid, len(c), c, q)
 
-    def macu(self, n, c, q, th, ph, la):
-        Qrack.qrack_lib.MACU(self.sid, n, c, q, th, ph, la)
+    def macu(self, c, q, th, ph, la):
+        Qrack.qrack_lib.MACU(self.sid, len(c), c, q, th, ph, la)
 
-    def macmtrx(self, n, c, m, q):
-        Qrack.qrack_lib.MACMtrx(self.sid, n, c, m, q)
+    def macmtrx(self, c, m, q):
+        Qrack.qrack_lib.MACMtrx(self.sid, len(c), c, m, q)
 
     # rotations
 
     def r(self, b, ph, q):
         Qrack.qrack_lib.R(self.sid, b, ph, q)
 
-    def mcr(self, b, ph, n, c, q):
-        Qrack.qrack_lib.MCR(self.sid, b, ph, n, c, q);
+    def mcr(self, b, ph, c, q):
+        Qrack.qrack_lib.MCR(self.sid, b, ph, len(c), c, q);
