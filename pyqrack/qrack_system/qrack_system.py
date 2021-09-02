@@ -30,7 +30,9 @@ class QrackSystem:
         except Exception as e:
             print(e)
 
-        #Define function signatures, up front
+        # Define function signatures, up front
+
+        # non-quantum
         self.qrack_lib.init.restype = c_uint
         self.qrack_lib.init.argTypes = []
 
@@ -49,6 +51,7 @@ class QrackSystem:
         self.qrack_lib.set_concurrency.restype = None
         self.qrack_lib.set_concurrency.argTypes = [c_uint, c_uint]
 
+        # pseudo-quantum
         self.qrack_lib.Prob.restype = c_double
         self.qrack_lib.Prob.argTypes = [c_uint, c_uint]
 
@@ -61,8 +64,43 @@ class QrackSystem:
         self.qrack_lib.ResetAll.resType = None
         self.qrack_lib.ResetAll.argTypes = [c_uint]
 
+        # allocate and release
         self.qrack_lib.allocateQubit.resType = None
         self.qrack_lib.allocateQubit.argTypes = [c_uint, c_uint]
 
         self.qrack_lib.release.resType = c_bool
         self.qrack_lib.release.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.num_qubits.resType = c_uint
+        self.qrack_lib.num_qubits.argTypes = [c_uint]
+
+        # single-qubit gates
+        self.qrack_lib.X.resType = None
+        self.qrack_lib.X.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.Y.resType = None
+        self.qrack_lib.Y.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.Z.resType = None
+        self.qrack_lib.Z.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.H.resType = None
+        self.qrack_lib.H.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.S.resType = None
+        self.qrack_lib.S.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.T.resType = None
+        self.qrack_lib.T.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.AdjS.resType = None
+        self.qrack_lib.AdjS.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.AdjT.resType = None
+        self.qrack_lib.AdjT.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.U.resType = None
+        self.qrack_lib.U.argTypes = [c_uint, c_uint, c_double, c_double, c_double]
+
+        self.qrack_lib.Mtrx.resType = None
+        self.qrack_lib.Mtrx.argTypes = [c_uint, POINTER(c_double), c_uint]
