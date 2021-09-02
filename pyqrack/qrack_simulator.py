@@ -161,7 +161,7 @@ class QrackSimulator:
     # exponential of Pauli operators
 
     def exp(self, b, ph, q):
-        Qrack.qrack_lib.Exp(self.sid, len(b), ph, q)
+        Qrack.qrack_lib.Exp(self.sid, len(b), b, ph, q)
 
     def mcexp(self, b, ph, cs, q):
         Qrack.qrack_lib.MCExp(self.sid, len(b), b, ph, len(cs), cs, q)
