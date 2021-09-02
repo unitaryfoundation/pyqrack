@@ -252,3 +252,17 @@ class QrackSystem:
 
         self.qrack_lib.IQFT.resType = None
         self.qrack_lib.IQFT.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
+        # miscellaneous
+
+        self.qrack_lib.TrySeparate1Qb.resType = c_bool
+        self.qrack_lib.TrySeparate1Qb.argTypes = [c_uint, c_uint]
+
+        self.qrack_lib.TrySeparate2Qb.resType = c_bool
+        self.qrack_lib.TrySeparate2Qb.argTypes = [c_uint, c_uint, c_uint]
+
+        self.qrack_lib.TrySeparateTol.resType = c_bool
+        self.qrack_lib.TrySeparateTol.argTypes = [c_uint, c_uint, POINTER(c_uint), c_double]
+
+        self.qrack_lib.SetReactiveSeparate.resType = c_bool
+        self.qrack_lib.SetReactiveSeparate.argTypes = [c_uint, c_bool]

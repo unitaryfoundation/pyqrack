@@ -225,5 +225,19 @@ class QrackSimulator:
     def qft(self, qs):
         Qrack.qrack_lib.QFT(self.sid, len(qs), qs)
 
-    def adjqft(self, qs):
+    def iqft(self, qs):
         Qrack.qrack_lib.IQFT(self.sid, len(qs), qs)
+
+    # miscellaneous
+
+    def try_separate_1qb(self, qi1):
+        return Qrack.qrack_lib.TrySeparate1Qb(self.sid, qi1)
+
+    def try_separate_2qb(self, qi1, qi2):
+        return Qrack.qrack_lib.TrySeparate2Qb(self.sid, qi1, qi2)
+
+    def try_separate_tolerance(self, qs, t):
+        return Qrack.qrack_lib.TrySeparateTol(self.sid, len(qs), qs, tol)
+
+    def set_reactive_separate(self, irs):
+        Qrack.qrack_lib.SetReactiveSeparate(self.sid, irs)
