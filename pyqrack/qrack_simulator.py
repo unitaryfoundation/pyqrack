@@ -88,7 +88,7 @@ class QrackSimulator:
         Qrack.qrack_lib.AdjT(self.sid, q)
 
     def u(self, q, th, ph, la):
-        Qrack.qrack_lib.U(self.sid, q, th, ph, la)
+        Qrack.qrack_lib.U(self.sid, q, c_double(th), c_double(ph), c_double(la))
 
     def mtrx(self, m, q):
         Qrack.qrack_lib.Mtrx(self.sid, self._double_byref(m), q)
@@ -152,7 +152,7 @@ class QrackSimulator:
         Qrack.qrack_lib.MACAdjT(self.sid, len(c), self._uint_byref(c), q)
 
     def macu(self, c, q, th, ph, la):
-        Qrack.qrack_lib.MACU(self.sid, len(c), self._uint_byref(c), q, th, ph, la)
+        Qrack.qrack_lib.MACU(self.sid, len(c), self._uint_byref(c), q, c_double(th), c_double(ph), c_double(la))
 
     def macmtrx(self, c, m, q):
         Qrack.qrack_lib.MACMtrx(self.sid, len(c), self._uint_byref(c), self._double_byref(m), q)
@@ -160,7 +160,7 @@ class QrackSimulator:
     # rotations
 
     def r(self, b, ph, q):
-        Qrack.qrack_lib.R(self.sid, b, ph, q)
+        Qrack.qrack_lib.R(self.sid, b, c_double(ph), q)
 
     def mcr(self, b, ph, c, q):
         Qrack.qrack_lib.MCR(self.sid, b, ph, len(c), self._uint_byref(c), q)
@@ -168,10 +168,10 @@ class QrackSimulator:
     # exponential of Pauli operators
 
     def exp(self, b, ph, q):
-        Qrack.qrack_lib.Exp(self.sid, len(b), self._uint_byref(b), ph, self._uint_byref(q))
+        Qrack.qrack_lib.Exp(self.sid, len(b), self._uint_byref(b), c_double(ph), self._uint_byref(q))
 
     def mcexp(self, b, ph, cs, q):
-        Qrack.qrack_lib.MCExp(self.sid, len(b), self._uint_byref(b), ph, len(cs), self._uint_byref(cs), self._uint_byref(q))
+        Qrack.qrack_lib.MCExp(self.sid, len(b), self._uint_byref(b), c_double(ph), len(cs), self._uint_byref(cs), self._uint_byref(q))
 
     # measurements
 
