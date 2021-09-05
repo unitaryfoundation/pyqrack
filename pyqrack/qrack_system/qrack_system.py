@@ -15,18 +15,26 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
+import os
 from ctypes import *
-from sys import platform
+from sys import platform as _platform
 
 
 class QrackSystem:
 
     def __init__(self):
         shared_lib_path = "/usr/local/lib/libqrack_pinvoke.so"
-        if platform.startswith('win32'):
+        if os.environ.get('PYQRACK_SHARED_LIB_PATH') != None:
+            shared_lib_path = os.environ.get('PYQRACK_SHARED_LIB_PATH')
+        elif _platform == "darwin":
+            shared_lib_path = "/usr/local/lib/libqrack_pinvoke.3.1.dylib"
+        elif _platform == "win32":
             shared_lib_path = "C:\\Program Files\\Qrack\\bin\\qrack_pinvoke.dll"
+
+        if shared_lib_path.startswith("/") or shared_lib_path[1:3] == ":\\":
+            basedir = ""
         try:
-            self.qrack_lib = CDLL(shared_lib_path)
+            self.qrack_lib = CDLL(os.path.join(basedir, shared_lib_path))
         except Exception as e:
             print(e)
 
