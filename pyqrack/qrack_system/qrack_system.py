@@ -216,6 +216,17 @@ class QrackSystem:
         self.qrack_lib.CSWAP.resType = None
         self.qrack_lib.CSWAP.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, c_uint]
 
+        # Schmidt decomposition
+
+        self.qrack_lib.Compose.resType = None
+        self.qrack_lib.Compose.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
+        self.qrack_lib.Decompose.resType = c_uint
+        self.qrack_lib.Decompose.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
+        self.qrack_lib.Dispose.resType = None
+        self.qrack_lib.Dispose.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
         # (quasi-)Boolean gates
 
         self.qrack_lib.AND.resType = None

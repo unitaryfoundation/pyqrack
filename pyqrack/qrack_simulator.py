@@ -194,6 +194,20 @@ class QrackSimulator:
     def cswap(self, c, qi1, qi2):
         Qrack.qrack_lib.CSWAP(self.sid, len(c), self._uint_byref(c), qi1, qi2)
 
+    # Schmidt decomposition
+
+    def compose(self, other, q):
+        Qrack.qrack_lib.Compose(self.sid, other.sid, self._uint_byref(q))
+
+    def decompose(self, q):
+        other = QrackSimulator()
+        Qrack.qrack_lib.destroy(other.sid)
+        other.sid = Qrack.qrack_lib.Decompose(self.sid, len(q), self._uint_byref(q))
+        return other
+
+    def dispose(self, q):
+        Qrack.qrack_lib.Dispose(self.sid, len(q), self._uint_byref(q))
+
     # (quasi-)Boolean gates
 
     def qand(self, qi1, qi2, qo):
