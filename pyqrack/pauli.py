@@ -5,10 +5,10 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
-from enum import Enum
+from enum import IntEnum
 
 
-class Pauli(Enum):
+class Pauli(IntEnum):
     # Pauli Identity operator. Corresponds to Q# constant "PauliI."
     PauliI = 0,
     # Pauli X operator. Corresponds to Q# constant "PauliX."

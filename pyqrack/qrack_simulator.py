@@ -160,10 +160,10 @@ class QrackSimulator:
     # rotations
 
     def r(self, b, ph, q):
-        Qrack.qrack_lib.R(self.sid, b, c_double(ph), q)
+        Qrack.qrack_lib.R(self.sid, c_uint(b), c_double(ph), q)
 
     def mcr(self, b, ph, c, q):
-        Qrack.qrack_lib.MCR(self.sid, b, ph, len(c), self._uint_byref(c), q)
+        Qrack.qrack_lib.MCR(self.sid, c_uint(b), ph, len(c), self._uint_byref(c), q)
 
     # exponential of Pauli operators
 
