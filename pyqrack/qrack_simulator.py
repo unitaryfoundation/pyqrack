@@ -3,6 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
+import math
 from ctypes import *
 from .qrack_system import Qrack
 
@@ -29,6 +30,22 @@ class QrackSimulator:
 
     def _double_byref(self, a):
         return (c_double * len(a))(*a)
+
+    def _ubyte_byref(self, a):
+        return (c_ubyte * len(a))(*a)
+
+    def _to_ubyte(self, nv, v):
+        b = []
+        c = math.floor(nv - 1) / 8) + 1
+        if c > 0:
+            for u in v:
+                for i in range(c):
+                    b.append(u & 0xFF)
+                    u >> 8
+        else:
+            b = v
+
+        return _ubyte_byref(self, b)
 
     def seed(self, s):
         Qrack.qrack_lib.seed(self.sid, s)
@@ -255,6 +272,72 @@ class QrackSimulator:
 
     def iqft(self, qs):
         Qrack.qrack_lib.IQFT(self.sid, len(qs), self._uint_byref(qs))
+
+    # Arithmetic-Logic-Unit (ALU)
+
+    def add(self, a, q):
+        Qrack.qrack_lib.ADD(self.sid, a, len(q), self._uint_byref(q))
+
+    def sub(self, a, q):
+        Qrack.qrack_lib.SUB(self.sid, a, len(q), self._uint_byref(q))
+
+    def adds(self, a, s, q):
+        Qrack.qrack_lib.ADDS(self.sid, a, s, len(q), self._uint_byref(q))
+
+    def subs(self, a, s, q):
+        Qrack.qrack_lib.SUBS(self.sid, a, s, len(q), self._uint_byref(q))
+
+    def mul(self, a, q, o):
+        Qrack.qrack_lib.MUL(self.sid, a, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def div(self, a, q, o):
+        Qrack.qrack_lib.DIV(self.sid, a, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def muln(self, a, m, q, o):
+        Qrack.qrack_lib.MULN(self.sid, a, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def divn(self, a, m, q, o):
+        Qrack.qrack_lib.DIVN(self.sid, a, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def pown(self, a, m, q, o):
+        Qrack.qrack_lib.POWN(self.sid, a, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcadd(self, a, c, q):
+        Qrack.qrack_lib.MCADD(self.sid, a, len(c), c, len(q), self._uint_byref(q))
+
+    def mcsub(self, a, c, q):
+        Qrack.qrack_lib.SUB(self.sid, a, len(c), c, len(q), self._uint_byref(q))
+
+    def mcmul(self, a, c, q, o):
+        Qrack.qrack_lib.MUL(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcdiv(self, a, c, q, o):
+        Qrack.qrack_lib.DIV(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcmuln(self, a, c, m, q, o):
+        Qrack.qrack_lib.MULN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcdivn(self, a, c, m, q, o):
+        Qrack.qrack_lib.DIVN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def pown(self, a, c, m, q, o):
+        Qrack.qrack_lib.POWN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def lda(self, qi, qv, t):
+        Qrack.qrack_lib.LDA(self.sid, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
+
+    def adc(self, s, qi, qv, t):
+        Qrack.qrack_lib.ADC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
+
+    def sbc(self, s, qi, qv, t):
+        Qrack.qrack_lib.ADC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
+
+MICROSOFT_QUANTUM_DECL void LDA(_In_ unsigned sid, _In_ unsigned ni, _In_reads_(ni) unsigned* qi, _In_ unsigned nv,
+    _In_reads_(nv) unsigned* qv, unsigned char* t);
+MICROSOFT_QUANTUM_DECL void ADC(_In_ unsigned sid, unsigned s, _In_ unsigned ni, _In_reads_(ni) unsigned* qi,
+    _In_ unsigned nv, _In_reads_(nv) unsigned* qv, unsigned char* t);
+MICROSOFT_QUANTUM_DECL void SBC(_In_ unsigned sid, unsigned s, _In_ unsigned ni, _In_reads_(ni) unsigned* qi,
+    _In_ unsigned nv, _In_reads_(nv) unsigned* qv, unsigned char* t);
 
     # miscellaneous
 
