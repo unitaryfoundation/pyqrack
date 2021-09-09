@@ -36,8 +36,8 @@ class QrackSimulator:
         return self._double_byref([item for sublist in t for item in sublist])
 
     def _to_ubyte(self, nv, v):
-        b = (c_ubyte * (1 << nv))()
         c = math.floor((nv - 1) / 8) + 1
+        b = (c_ubyte * (c * (1 << nv)))()
         n = 0
         for u in v:
             for i in range(c):
