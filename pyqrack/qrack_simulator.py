@@ -41,7 +41,7 @@ class QrackSimulator:
             for u in v:
                 for i in range(c):
                     b.append(u & 0xFF)
-                    u >> 8
+                    u >>= 8
         else:
             b = v
 
