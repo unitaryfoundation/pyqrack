@@ -45,7 +45,7 @@ class QrackSimulator:
         else:
             b = v
 
-        return _ubyte_byref(self, b)
+        return self._ubyte_byref(b)
 
     def seed(self, s):
         Qrack.qrack_lib.seed(self.sid, s)
@@ -324,13 +324,13 @@ class QrackSimulator:
         Qrack.qrack_lib.MCPOWN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
 
     def lda(self, qi, qv, t):
-        Qrack.qrack_lib.LDA(self.sid, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
+        Qrack.qrack_lib.LDA(self.sid, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(len(qv), t))
 
     def adc(self, s, qi, qv, t):
-        Qrack.qrack_lib.ADC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
+        Qrack.qrack_lib.ADC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(len(qv), t))
 
     def sbc(self, s, qi, qv, t):
-        Qrack.qrack_lib.SBC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
+        Qrack.qrack_lib.SBC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(len(qv), t))
 
     # miscellaneous
 
