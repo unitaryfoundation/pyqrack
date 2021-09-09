@@ -33,7 +33,7 @@ class QrackSimulator:
 
     def _complex_byref(self, a):
         t = [(c.real, c.imag) for c in a]
-        return self._double_byref([item for sublist in t for item in sublist])
+        return self._double_byref([float(item) for sublist in t for item in sublist])
 
     def _to_ubyte(self, nv, v):
         c = math.floor((nv - 1) / 8) + 1
