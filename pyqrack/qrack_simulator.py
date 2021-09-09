@@ -31,21 +31,15 @@ class QrackSimulator:
     def _double_byref(self, a):
         return (c_double * len(a))(*a)
 
-    def _ubyte_byref(self, a):
-        return (c_ubyte * len(a))(*a)
-
     def _to_ubyte(self, nv, v):
-        b = []
+        b = (c_ubyte * (1 << nv))()
         c = math.floor((nv - 1) / 8) + 1
-        if c > 0:
-            for u in v:
-                for i in range(c):
-                    b.append(u & 0xFF)
-                    u >>= 8
-        else:
-            b = v
+        for u in v:
+            for i in range(c):
+                b[i] = u & 0xFF
+                u >>= 8
 
-        return self._ubyte_byref(b)
+        return byref(b)
 
     def seed(self, s):
         Qrack.qrack_lib.seed(self.sid, s)
