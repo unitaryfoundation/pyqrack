@@ -27,7 +27,7 @@ class QrackSystem:
         if os.environ.get('PYQRACK_SHARED_LIB_PATH') != None:
             shared_lib_path = os.environ.get('PYQRACK_SHARED_LIB_PATH')
         elif _platform == "darwin":
-            shared_lib_path = "/usr/local/lib/libqrack_pinvoke.3.1.dylib"
+            shared_lib_path = "/usr/local/lib/libqrack_pinvoke.dylib"
         elif _platform == "win32":
             shared_lib_path = "C:\\Program Files\\Qrack\\bin\\qrack_pinvoke.dll"
 
