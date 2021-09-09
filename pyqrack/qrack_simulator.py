@@ -306,22 +306,22 @@ class QrackSimulator:
         Qrack.qrack_lib.MCADD(self.sid, a, len(c), c, len(q), self._uint_byref(q))
 
     def mcsub(self, a, c, q):
-        Qrack.qrack_lib.SUB(self.sid, a, len(c), c, len(q), self._uint_byref(q))
+        Qrack.qrack_lib.MCSUB(self.sid, a, len(c), c, len(q), self._uint_byref(q))
 
     def mcmul(self, a, c, q, o):
-        Qrack.qrack_lib.MUL(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCMUL(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
 
     def mcdiv(self, a, c, q, o):
-        Qrack.qrack_lib.DIV(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCDIV(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
 
     def mcmuln(self, a, c, m, q, o):
-        Qrack.qrack_lib.MULN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCMULN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
 
     def mcdivn(self, a, c, m, q, o):
-        Qrack.qrack_lib.DIVN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCDIVN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
 
-    def pown(self, a, c, m, q, o):
-        Qrack.qrack_lib.POWN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+    def mcpown(self, a, c, m, q, o):
+        Qrack.qrack_lib.MCPOWN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
 
     def lda(self, qi, qv, t):
         Qrack.qrack_lib.LDA(self.sid, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
@@ -330,7 +330,7 @@ class QrackSimulator:
         Qrack.qrack_lib.ADC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
 
     def sbc(self, s, qi, qv, t):
-        Qrack.qrack_lib.ADC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
+        Qrack.qrack_lib.SBC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
 
     # miscellaneous
 
