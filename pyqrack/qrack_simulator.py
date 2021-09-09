@@ -30,6 +30,22 @@ class QrackSimulator:
     def _double_byref(self, a):
         return (c_double * len(a))(*a)
 
+    def _complex_byref(self, a):
+        t = [(c.real, c.imag) for c in a]
+        return self._double_byref([float(item) for sublist in t for item in sublist])
+
+    def _to_ubyte(self, nv, v):
+        c = math.floor((nv - 1) / 8) + 1
+        b = (c_ubyte * (c * (1 << nv)))()
+        n = 0
+        for u in v:
+            for i in range(c):
+                b[n] = u & 0xFF
+                u >>= 8
+                n += 1
+
+        return byref(b)
+
     def seed(self, s):
         Qrack.qrack_lib.seed(self.sid, s)
 
