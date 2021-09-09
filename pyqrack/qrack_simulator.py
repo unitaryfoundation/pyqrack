@@ -36,7 +36,7 @@ class QrackSimulator:
 
     def _to_ubyte(self, nv, v):
         b = []
-        c = math.floor(nv - 1) / 8) + 1
+        c = math.floor((nv - 1) / 8) + 1
         if c > 0:
             for u in v:
                 for i in range(c):
@@ -331,13 +331,6 @@ class QrackSimulator:
 
     def sbc(self, s, qi, qv, t):
         Qrack.qrack_lib.ADC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(t))
-
-MICROSOFT_QUANTUM_DECL void LDA(_In_ unsigned sid, _In_ unsigned ni, _In_reads_(ni) unsigned* qi, _In_ unsigned nv,
-    _In_reads_(nv) unsigned* qv, unsigned char* t);
-MICROSOFT_QUANTUM_DECL void ADC(_In_ unsigned sid, unsigned s, _In_ unsigned ni, _In_reads_(ni) unsigned* qi,
-    _In_ unsigned nv, _In_reads_(nv) unsigned* qv, unsigned char* t);
-MICROSOFT_QUANTUM_DECL void SBC(_In_ unsigned sid, unsigned s, _In_ unsigned ni, _In_reads_(ni) unsigned* qi,
-    _In_ unsigned nv, _In_reads_(nv) unsigned* qv, unsigned char* t);
 
     # miscellaneous
 

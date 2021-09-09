@@ -310,12 +310,6 @@ class QrackSystem:
         self.qrack_lib.MCSUB.resType = None
         self.qrack_lib.MCSUB.argTypes = [c_uint, c_uint, c_uint, POINTER(c_uint), c_uint, POINTER(c_uint)]
 
-        self.qrack_lib.MCADDS.resType = None
-        self.qrack_lib.MCADDS.argTypes = [c_uint, c_uint, c_uint, POINTER(c_uint), c_uint, c_uint, POINTER(c_uint)]
-
-        self.qrack_lib.MCSUBS.resType = None
-        self.qrack_lib.MCSUBS.argTypes = [c_uint, c_uint, c_uint, POINTER(c_uint), c_uint, c_uint, POINTER(c_uint)]
-
         self.qrack_lib.MCMUL.resType = None
         self.qrack_lib.MCMUL.argTypes = [c_uint, c_uint, c_uint, POINTER(c_uint), c_uint, POINTER(c_uint), POINTER(c_uint)]
 
