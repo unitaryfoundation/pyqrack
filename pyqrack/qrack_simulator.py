@@ -3,6 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
+import math, cmath
 from ctypes import *
 from .qrack_system import Qrack
 
@@ -107,7 +108,7 @@ class QrackSimulator:
         Qrack.qrack_lib.U(self.sid, q, c_double(th), c_double(ph), c_double(la))
 
     def mtrx(self, m, q):
-        Qrack.qrack_lib.Mtrx(self.sid, self._double_byref(m), q)
+        Qrack.qrack_lib.Mtrx(self.sid, self._complex_byref(m), q)
 
     # multi-controlled single-qubit gates
 
@@ -139,7 +140,7 @@ class QrackSimulator:
         Qrack.qrack_lib.MCU(self.sid, len(c), self._uint_byref(c), q, th, ph, la)
 
     def mcmtrx(self, c, m, q):
-        Qrack.qrack_lib.MCMtrx(self.sid, len(c), self._uint_byref(c), self._double_byref(m), q)
+        Qrack.qrack_lib.MCMtrx(self.sid, len(c), self._uint_byref(c), self._complex_byref(m), q)
 
     # multi-anti-controlled single-qubit gates
 
@@ -171,7 +172,7 @@ class QrackSimulator:
         Qrack.qrack_lib.MACU(self.sid, len(c), self._uint_byref(c), q, c_double(th), c_double(ph), c_double(la))
 
     def macmtrx(self, c, m, q):
-        Qrack.qrack_lib.MACMtrx(self.sid, len(c), self._uint_byref(c), self._double_byref(m), q)
+        Qrack.qrack_lib.MACMtrx(self.sid, len(c), self._uint_byref(c), self._complex_byref(m), q)
 
     # rotations
 
@@ -271,6 +272,65 @@ class QrackSimulator:
 
     def iqft(self, qs):
         Qrack.qrack_lib.IQFT(self.sid, len(qs), self._uint_byref(qs))
+
+    # Arithmetic-Logic-Unit (ALU)
+
+    def add(self, a, q):
+        Qrack.qrack_lib.ADD(self.sid, a, len(q), self._uint_byref(q))
+
+    def sub(self, a, q):
+        Qrack.qrack_lib.SUB(self.sid, a, len(q), self._uint_byref(q))
+
+    def adds(self, a, s, q):
+        Qrack.qrack_lib.ADDS(self.sid, a, s, len(q), self._uint_byref(q))
+
+    def subs(self, a, s, q):
+        Qrack.qrack_lib.SUBS(self.sid, a, s, len(q), self._uint_byref(q))
+
+    def mul(self, a, q, o):
+        Qrack.qrack_lib.MUL(self.sid, a, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def div(self, a, q, o):
+        Qrack.qrack_lib.DIV(self.sid, a, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def muln(self, a, m, q, o):
+        Qrack.qrack_lib.MULN(self.sid, a, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def divn(self, a, m, q, o):
+        Qrack.qrack_lib.DIVN(self.sid, a, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def pown(self, a, m, q, o):
+        Qrack.qrack_lib.POWN(self.sid, a, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcadd(self, a, c, q):
+        Qrack.qrack_lib.MCADD(self.sid, a, len(c), c, len(q), self._uint_byref(q))
+
+    def mcsub(self, a, c, q):
+        Qrack.qrack_lib.MCSUB(self.sid, a, len(c), c, len(q), self._uint_byref(q))
+
+    def mcmul(self, a, c, q, o):
+        Qrack.qrack_lib.MCMUL(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcdiv(self, a, c, q, o):
+        Qrack.qrack_lib.MCDIV(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcmuln(self, a, c, m, q, o):
+        Qrack.qrack_lib.MCMULN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcdivn(self, a, c, m, q, o):
+        Qrack.qrack_lib.MCDIVN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def mcpown(self, a, c, m, q, o):
+        Qrack.qrack_lib.MCPOWN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+
+    def lda(self, qi, qv, t):
+        Qrack.qrack_lib.LDA(self.sid, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(len(qv), t))
+
+    def adc(self, s, qi, qv, t):
+        Qrack.qrack_lib.ADC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(len(qv), t))
+
+    def sbc(self, s, qi, qv, t):
+        Qrack.qrack_lib.SBC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(len(qv), t))
 
     # miscellaneous
 
