@@ -3,7 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
-import math
+import math, cmath
 from ctypes import *
 from .qrack_system import Qrack
 
@@ -30,6 +30,10 @@ class QrackSimulator:
 
     def _double_byref(self, a):
         return (c_double * len(a))(*a)
+
+    def _complex_byref(self, a):
+        t = [(c.real, c.imag) for c in a]
+        return self._double_byref([item for sublist in t for item in sublist])
 
     def _to_ubyte(self, nv, v):
         b = (c_ubyte * (1 << nv))()
@@ -104,7 +108,7 @@ class QrackSimulator:
         Qrack.qrack_lib.U(self.sid, q, c_double(th), c_double(ph), c_double(la))
 
     def mtrx(self, m, q):
-        Qrack.qrack_lib.Mtrx(self.sid, self._double_byref(m), q)
+        Qrack.qrack_lib.Mtrx(self.sid, self._complex_byref(m), q)
 
     # multi-controlled single-qubit gates
 
@@ -136,7 +140,7 @@ class QrackSimulator:
         Qrack.qrack_lib.MCU(self.sid, len(c), self._uint_byref(c), q, th, ph, la)
 
     def mcmtrx(self, c, m, q):
-        Qrack.qrack_lib.MCMtrx(self.sid, len(c), self._uint_byref(c), self._double_byref(m), q)
+        Qrack.qrack_lib.MCMtrx(self.sid, len(c), self._uint_byref(c), self._complex_byref(m), q)
 
     # multi-anti-controlled single-qubit gates
 
@@ -168,7 +172,7 @@ class QrackSimulator:
         Qrack.qrack_lib.MACU(self.sid, len(c), self._uint_byref(c), q, c_double(th), c_double(ph), c_double(la))
 
     def macmtrx(self, c, m, q):
-        Qrack.qrack_lib.MACMtrx(self.sid, len(c), self._uint_byref(c), self._double_byref(m), q)
+        Qrack.qrack_lib.MACMtrx(self.sid, len(c), self._uint_byref(c), self._complex_byref(m), q)
 
     # rotations
 
