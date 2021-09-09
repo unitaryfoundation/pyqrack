@@ -34,10 +34,12 @@ class QrackSimulator:
     def _to_ubyte(self, nv, v):
         b = (c_ubyte * (1 << nv))()
         c = math.floor((nv - 1) / 8) + 1
+        n = 0
         for u in v:
             for i in range(c):
-                b[i] = u & 0xFF
+                b[n] = u & 0xFF
                 u >>= 8
+                n += 1
 
         return byref(b)
 
