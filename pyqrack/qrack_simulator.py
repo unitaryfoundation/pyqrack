@@ -140,7 +140,7 @@ class QrackSimulator:
         Qrack.qrack_lib.MCAdjT(self.sid, len(c), self._uint_byref(c), q)
 
     def mcu(self, c, q, th, ph, la):
-        Qrack.qrack_lib.MCU(self.sid, len(c), self._uint_byref(c), q, th, ph, la)
+        Qrack.qrack_lib.MCU(self.sid, len(c), self._uint_byref(c), q, c_double(th), c_double(ph), c_double(la))
 
     def mcmtrx(self, c, m, q):
         Qrack.qrack_lib.MCMtrx(self.sid, len(c), self._uint_byref(c), self._complex_byref(m), q)
