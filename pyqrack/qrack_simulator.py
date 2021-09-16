@@ -177,6 +177,9 @@ class QrackSimulator:
     def macmtrx(self, c, m, q):
         Qrack.qrack_lib.MACMtrx(self.sid, len(c), self._uint_byref(c), self._complex_byref(m), q)
 
+    def multiplex1_mtrx(self, c, q, m):
+        Qrack.qrack_lib.Multiplex1Mtrx(self.sid, len(c), self._uint_byref(c), q, self._complex_byref(m))
+
     # rotations
 
     def r(self, b, ph, q):
@@ -211,8 +214,17 @@ class QrackSimulator:
     def swap(self, qi1, qi2):
         Qrack.qrack_lib.SWAP(self.sid, qi1, qi2)
 
+    def iswap(self, qi1, qi2):
+        Qrack.qrack_lib.ISWAP(self.sid, qi1, qi2)
+
+    def fsim(self, th, ph, qi1, qi2):
+        Qrack.qrack_lib.FSim(self.sid, c_double(th), c_double(ph), qi1, qi2)
+
     def cswap(self, c, qi1, qi2):
         Qrack.qrack_lib.CSWAP(self.sid, len(c), self._uint_byref(c), qi1, qi2)
+
+    def acswap(self, c, qi1, qi2):
+        Qrack.qrack_lib.ACSWAP(self.sid, len(c), self._uint_byref(c), qi1, qi2)
 
     # Schmidt decomposition
 
@@ -334,6 +346,9 @@ class QrackSimulator:
 
     def sbc(self, s, qi, qv, t):
         Qrack.qrack_lib.SBC(self.sid, s, len(qi), self._uint_byref(qi), len(qv), self._uint_byref(qv), self._to_ubyte(len(qv), t))
+
+    def hash(self, q, t):
+        Qrack.qrack_lib.Hash(self.sid, len(q), self._uint_byref(q), self._to_ubyte(len(q), t))
 
     # miscellaneous
 

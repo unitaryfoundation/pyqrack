@@ -181,6 +181,9 @@ class QrackSystem:
         self.qrack_lib.MACMtrx.resType = None
         self.qrack_lib.MACMtrx.argTypes = [c_uint, c_uint, POINTER(c_uint), POINTER(c_double), c_uint]
 
+        self.qrack_lib.Multiplex1Mtrx.resType = None
+        self.qrack_lib.Multiplex1Mtrx.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, POINTER(c_double)]
+
         # rotations
 
         self.qrack_lib.R.resType = None
@@ -213,8 +216,17 @@ class QrackSystem:
         self.qrack_lib.SWAP.resType = None
         self.qrack_lib.SWAP.argTypes = [c_uint, c_uint, c_uint]
 
+        self.qrack_lib.ISWAP.resType = None
+        self.qrack_lib.ISWAP.argTypes = [c_uint, c_uint, c_uint]
+
+        self.qrack_lib.FSim.resType = None
+        self.qrack_lib.FSim.argTypes = [c_uint, c_double, c_double, c_uint, c_uint]
+
         self.qrack_lib.CSWAP.resType = None
         self.qrack_lib.CSWAP.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, c_uint]
+
+        self.qrack_lib.ACSWAP.resType = None
+        self.qrack_lib.ACSWAP.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, c_uint]
 
         # Schmidt decomposition
 
@@ -333,6 +345,9 @@ class QrackSystem:
 
         self.qrack_lib.SBC.resType = None
         self.qrack_lib.SBC.argType = [c_uint, c_uint, c_uint, POINTER(c_uint), c_uint, POINTER(c_uint), POINTER(c_ubyte)]
+
+        self.qrack_lib.Hash.resType = None
+        self.qrack_lib.Hash.argType = [c_uint, c_uint, POINTER(c_uint), POINTER(c_ubyte)]
 
         # miscellaneous
 
