@@ -30,7 +30,7 @@ class QrackSystem:
             shared_lib_path = "/usr/local/lib/libqrack_pinvoke.dylib"
         elif _platform == "win32":
             shared_lib_path = "C:\\Program Files\\Qrack\\bin\\qrack_pinvoke.dll"
-        else:
+        elif _platform != "linux" and _platform != "linux2":
             print("No Qrack binary for your platform, attempting to use /usr/local/lib/libqrack_pinvoke.so")
             print("You can choose the binary file to load with the environment variable: PYQRACK_SHARED_LIB_PATH")
 
