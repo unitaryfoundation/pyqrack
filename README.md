@@ -13,4 +13,6 @@ Single and array "`b`" parameters represent [**Pauli operator bases**](https://e
 
 `MC[x]` and `MAC[x]` methods are controlled single bit gates, with as many control qubits as you specify via Python list `c` argument. `MCX` is multiply-controlled Pauli X, and `MACX` is "anti-"controlled Pauli X, i.e. "anti-control" activates the gate if all control bits are specifically **off**, as opposed to **on**.
 
+To load the required **vm6502q/qrack** libraries from a different location, set the `PYQRACK_SHARED_LIB_PATH` environment variable.
+
 Please feel welcome to open an issue, if you'd like help. 😃
