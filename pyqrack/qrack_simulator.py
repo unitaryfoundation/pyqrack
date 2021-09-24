@@ -6,14 +6,18 @@
 import math, cmath
 from ctypes import *
 from .qrack_system import Qrack
-
+from .pauli import Pauli
 
 class QrackSimulator:
 
     # non-quantum
 
-    def __init__(self, qubitCount=-1, cloneSid=-1):
+    def __init__(self, qubitCount=-1, cloneSid=-1, pyzxCircuit=None):
         self.sid = None
+
+        if pyzxCircuit is not None:
+            qubitCount = pyzxCircuit.qubits
+
         if qubitCount > -1 and cloneSid > -1:
             raise RuntimeError('Cannot clone a QrackSimulator and specify its qubit length at the same time, in QrackSimulator constructor!')
         if cloneSid > -1:
@@ -22,6 +26,9 @@ class QrackSimulator:
             self.sid = Qrack.qrack_lib.init_count(qubitCount)
         else:
             self.sid = Qrack.qrack_lib.init()
+
+        if pyzxCircuit is not None:
+            self.run_pyzx_gates(pyzxCircuit.gates)
 
     def __del__(self):
         if self.sid is not None:
@@ -363,3 +370,51 @@ class QrackSimulator:
 
     def set_reactive_separate(self, irs):
         Qrack.qrack_lib.SetReactiveSeparate(self.sid, irs)
+
+    def run_pyzx_gates(self, gates):
+        for gate in gates:
+            if gate.Name == 'XPhase':
+                self.r(Pauli.PauliX, math.pi * gate.phase, gate.target)
+            elif gate.Name == 'YPhase':
+                self.r(Pauli.PauliY, math.pi * gate.phase, gate.target)
+            elif gate.Name == 'ZPhase':
+                self.r(Pauli.PauliZ, math.pi * gate.phase, gate.target)
+            elif gate.Name == 'Z':
+                self.z(gate.target)
+            elif gate.Name == 'S':
+                self.s(gate.target)
+            elif gate.Name == 'T':
+                self.z(gate.target)
+            elif gate.Name == 'NOT':
+                self.x(gate.target)
+            elif gate.Name == 'HAD':
+                self.z(gate.target)
+            elif gate.Name == 'CNOT':
+                self.mcx([gate.control], gate.target)
+            elif gate.Name == 'CZ':
+                self.mcz([gate.control], gate.target)
+            elif gate.Name == 'CX':
+                self.h(gate.control)
+                self.mcx([gate.control], gate.target)
+                self.h(gate.control)
+            elif gate.Name == 'SWAP':
+                self.swap(gate.c1, gate.c2)
+            elif gate.Name == 'CRZ':
+                self.mcr(Pauli.PauliZ, math.pi * gate.phase, [gate.control], gate.target)
+            elif gate.Name == 'CHAD':
+                self.mch([gate.control], gate.target)
+            elif gateName == 'ParityPhase':
+                cnot_range = range(len(self.targets)-1)
+                for i in cnot_range:
+                    self.mcx([gate.targets[i]], gate.targets[i+1])
+                self.r(Pauli.PauliZ, math.pi * gate.phase, gate.targets[-1])
+                cnot_range.reverse()
+                for i in range(len(self.targets)-1):
+                    self.mcx([gate.targets[i]], gate.targets[i+1])
+            elif game.Name == 'FSim':
+                self.fsim(gate.theta, gate.phi, gate.control, gate.target)
+            elif gate.Name == 'CCZ':
+                self.mcz([gate.ctrl1, gate.ctrl2], gate.target)
+            elif gate.Name == 'Tof':
+                self.mcx([gate.ctrl1, gate.ctrl2], gate.target)
+            
