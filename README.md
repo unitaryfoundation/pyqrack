@@ -15,4 +15,12 @@ Single and array "`b`" parameters represent [**Pauli operator bases**](https://e
 
 To load the required **vm6502q/qrack** libraries from a different location, set the `PYQRACK_SHARED_LIB_PATH` environment variable.
 
+PyQrack v0.4.6 adds experimental support for [PyZX](https://github.com/Quantomatic/pyzx) `Circuit` definitions as an intermediate representation for `QrackSimulator`. To try this, load a `Circuit` in PyZX, (use that module to optimize your circuit, as you like,) and create a `QrackSimulator()` instance using the `pyzxCircuit` named argument of the constructor, like so:
+
+```
+sim = QrackSimulator(pyzxCircuit=c)
+```
+
+where `c` is a PyZX circuit object. The circuit will automatically be simulated in the constructed `QrackSimulator` instance. This also allows loading from QASM and other intermediate representations supported by PyZX.
+
 Please feel welcome to open an issue, if you'd like help. 😃
