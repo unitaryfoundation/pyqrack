@@ -8,6 +8,7 @@ from ctypes import *
 from .qrack_system import Qrack
 from .pauli import Pauli
 
+
 class QrackSimulator:
 
     # non-quantum
