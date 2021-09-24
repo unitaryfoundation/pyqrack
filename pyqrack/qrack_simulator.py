@@ -375,8 +375,6 @@ class QrackSimulator:
         for gate in gates:
             if gate.name == 'XPhase':
                 self.r(Pauli.PauliX, math.pi * gate.phase, gate.target)
-            elif gate.name == 'YPhase':
-                self.r(Pauli.PauliY, math.pi * gate.phase, gate.target)
             elif gate.name == 'ZPhase':
                 self.r(Pauli.PauliZ, math.pi * gate.phase, gate.target)
             elif gate.name == 'Z':
