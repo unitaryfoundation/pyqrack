@@ -373,37 +373,37 @@ class QrackSimulator:
 
     def run_pyzx_gates(self, gates):
         for gate in gates:
-            if gate.Name == 'XPhase':
+            if gate.name == 'XPhase':
                 self.r(Pauli.PauliX, math.pi * gate.phase, gate.target)
-            elif gate.Name == 'YPhase':
+            elif gate.name == 'YPhase':
                 self.r(Pauli.PauliY, math.pi * gate.phase, gate.target)
-            elif gate.Name == 'ZPhase':
+            elif gate.name == 'ZPhase':
                 self.r(Pauli.PauliZ, math.pi * gate.phase, gate.target)
-            elif gate.Name == 'Z':
+            elif gate.name == 'Z':
                 self.z(gate.target)
-            elif gate.Name == 'S':
+            elif gate.name == 'S':
                 self.s(gate.target)
-            elif gate.Name == 'T':
+            elif gate.name == 'T':
                 self.z(gate.target)
-            elif gate.Name == 'NOT':
+            elif gate.name == 'NOT':
                 self.x(gate.target)
-            elif gate.Name == 'HAD':
+            elif gate.name == 'HAD':
                 self.z(gate.target)
-            elif gate.Name == 'CNOT':
+            elif gate.name == 'CNOT':
                 self.mcx([gate.control], gate.target)
-            elif gate.Name == 'CZ':
+            elif gate.name == 'CZ':
                 self.mcz([gate.control], gate.target)
-            elif gate.Name == 'CX':
+            elif gate.name == 'CX':
                 self.h(gate.control)
                 self.mcx([gate.control], gate.target)
                 self.h(gate.control)
-            elif gate.Name == 'SWAP':
-                self.swap(gate.c1, gate.c2)
-            elif gate.Name == 'CRZ':
+            elif gate.name == 'SWAP':
+                self.swap(gate.control, gate.target)
+            elif gate.name == 'CRZ':
                 self.mcr(Pauli.PauliZ, math.pi * gate.phase, [gate.control], gate.target)
-            elif gate.Name == 'CHAD':
+            elif gate.name == 'CHAD':
                 self.mch([gate.control], gate.target)
-            elif gateName == 'ParityPhase':
+            elif gate.name == 'ParityPhase':
                 cnot_range = range(len(self.targets)-1)
                 for i in cnot_range:
                     self.mcx([gate.targets[i]], gate.targets[i+1])
@@ -411,10 +411,9 @@ class QrackSimulator:
                 cnot_range.reverse()
                 for i in range(len(self.targets)-1):
                     self.mcx([gate.targets[i]], gate.targets[i+1])
-            elif game.Name == 'FSim':
+            elif game.name == 'FSim':
                 self.fsim(gate.theta, gate.phi, gate.control, gate.target)
-            elif gate.Name == 'CCZ':
+            elif gate.name == 'CCZ':
                 self.mcz([gate.ctrl1, gate.ctrl2], gate.target)
-            elif gate.Name == 'Tof':
+            elif gate.name == 'Tof':
                 self.mcx([gate.ctrl1, gate.ctrl2], gate.target)
-            
