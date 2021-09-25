@@ -75,6 +75,9 @@ class QrackSimulator:
     def joint_ensemble_probability(self, b, q):
         return Qrack.qrack_lib.JointEnsembleProbability(self.sid, len(b), self._uint_byref(b), q)
 
+    def phase_parity(self, la, q):
+        Qrack.qrack_lib.PhaseParity(self.sid, c_double(la), len(q), self._uint_byref(q))
+
     def reset_all(self):
         Qrack.qrack_lib.ResetAll(self.sid)
 
@@ -403,13 +406,7 @@ class QrackSimulator:
             elif gate.name == 'CHAD':
                 self.mch([gate.control], gate.target)
             elif gate.name == 'ParityPhase':
-                cnot_range = range(len(self.targets)-1)
-                for i in cnot_range:
-                    self.mcx([gate.targets[i]], gate.targets[i+1])
-                self.r(Pauli.PauliZ, math.pi * gate.phase, gate.targets[-1])
-                cnot_range.reverse()
-                for i in range(len(self.targets)-1):
-                    self.mcx([gate.targets[i]], gate.targets[i+1])
+                self.phase_parity(math.pi * gate.phase, gate.targets)
             elif game.name == 'FSim':
                 self.fsim(gate.theta, gate.phi, gate.control, gate.target)
             elif gate.name == 'CCZ':
