@@ -383,11 +383,11 @@ class QrackSimulator:
             elif gate.name == 'S':
                 self.s(gate.target)
             elif gate.name == 'T':
-                self.z(gate.target)
+                self.t(gate.target)
             elif gate.name == 'NOT':
                 self.x(gate.target)
             elif gate.name == 'HAD':
-                self.z(gate.target)
+                self.h(gate.target)
             elif gate.name == 'CNOT':
                 self.mcx([gate.control], gate.target)
             elif gate.name == 'CZ':
