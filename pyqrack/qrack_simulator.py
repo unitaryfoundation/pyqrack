@@ -13,7 +13,7 @@ class QrackSimulator:
 
     # non-quantum
 
-    def __init__(self, qubitCount=-1, cloneSid=-1, isSchmidtDecompose=True, pyzxCircuit=None):
+    def __init__(self, qubitCount=-1, cloneSid=-1, isSchmidtDecompose=True, is1QbFusion=True, pyzxCircuit=None):
         self.sid = None
 
         if pyzxCircuit is not None:
@@ -26,7 +26,7 @@ class QrackSimulator:
         else:
             if qubitCount < 0:
                 qubitCount = 0
-            self.sid = Qrack.qrack_lib.init_count(qubitCount, isSchmidtDecompose)
+            self.sid = Qrack.qrack_lib.init_count(qubitCount, isSchmidtDecompose, is1QbFusion)
 
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
