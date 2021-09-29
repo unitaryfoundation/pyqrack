@@ -24,6 +24,8 @@ class QrackSimulator:
         if cloneSid > -1:
             self.sid = Qrack.qrack_lib.init_clone(cloneSid)
         else:
+            if qubitCount < 0:
+                qubitCount = 0
             self.sid = Qrack.qrack_lib.init_count(qubitCount, isSchmidtDecompose)
 
         if pyzxCircuit is not None:
