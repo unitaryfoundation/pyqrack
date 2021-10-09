@@ -26,7 +26,7 @@ class QrackSimulator:
         else:
             if qubitCount < 0:
                 qubitCount = 0
-            self.sid = Qrack.qrack_lib.init_count(qubitCount, isMultiDevice, isSchmidtDecompose, isStabilizerHybrid, is1QbFusion, isCpuGpuHybrid)
+            self.sid = Qrack.qrack_lib.init_count_type(qubitCount, isMultiDevice, isSchmidtDecompose, isStabilizerHybrid, is1QbFusion, isCpuGpuHybrid)
 
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
