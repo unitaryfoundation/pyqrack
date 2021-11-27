@@ -6,7 +6,7 @@ from distutils.core import setup
 
 requirements = []
 
-VERSION = "0.7.10"
+VERSION = "0.7.11"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)),
