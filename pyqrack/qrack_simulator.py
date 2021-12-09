@@ -212,6 +212,9 @@ class QrackSimulator:
     def m(self, q):
         return Qrack.qrack_lib.M(self.sid, q)
 
+    def m_all(self):
+        return Qrack.qrack_lib.MAll(self.sid)
+
     def measure_pauli(self, b, q):
         return Qrack.qrack_lib.Measure(self.sid, len(b), self._uint_byref(b), self._uint_byref(q))
 
