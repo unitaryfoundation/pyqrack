@@ -46,6 +46,9 @@ class QrackSystem:
         self.qrack_lib.init.restype = c_uint
         self.qrack_lib.init.argTypes = []
 
+        self.qrack_lib.get_error.restype = c_int
+        self.qrack_lib.get_error.argTypes = [c_uint]
+
         self.qrack_lib.init_count.restype = c_uint
         self.qrack_lib.init_count.argTypes = [c_uint]
 
