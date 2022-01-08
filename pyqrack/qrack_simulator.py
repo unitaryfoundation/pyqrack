@@ -61,7 +61,7 @@ class QrackSimulator:
 
         return byref(b)
 
-    def get_error(self, s):
+    def get_error(self):
         return Qrack.qrack_lib.get_error(self.sid)
 
     def seed(self, s):
