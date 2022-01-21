@@ -52,6 +52,9 @@ class QrackSystem:
         self.qrack_lib.init_count.restype = c_uint
         self.qrack_lib.init_count.argTypes = [c_uint]
 
+        self.qrack_lib.init_count_pager.restype = c_uint
+        self.qrack_lib.init_count_pager.argTypes = [c_uint]
+
         self.qrack_lib.init_count_type.restype = c_uint
         self.qrack_lib.init_count_type.argTypes = [c_uint, c_bool, c_bool, c_bool, c_bool, c_bool, c_bool, c_bool, c_bool]
 
