@@ -32,7 +32,7 @@ class QrackSimulator:
                 else:
                     self.sid = Qrack.qrack_lib.init_count_pager(qubitCount, isHostPointer)
             else:
-                self.sid = Qrack.qrack_lib.init_count_type(qubitCount, isMultiDevice, isSchmidtDecompose, isStabilizerHybrid, isBinaryDecisionTree, isPaged, is1QbFusion, isCpuGpuHybrid, isOpenCL, isHostPointer)
+                self.sid = Qrack.qrack_lib.init_count_type(qubitCount, isSchmidtDecomposeMulti, isSchmidtDecompose, isStabilizerHybrid, isBinaryDecisionTree, isPaged, is1QbFusion, isCpuGpuHybrid, isOpenCL, isHostPointer)
 
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
