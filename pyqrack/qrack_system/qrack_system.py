@@ -62,7 +62,7 @@ class QrackSystem:
         self.qrack_lib.init_count_type.argTypes = [c_uint, c_bool, c_bool, c_bool, c_bool, c_bool, c_bool, c_bool, c_bool, c_bool]
 
         self.qrack_lib.init_qbdt_stabilizer.restype = c_uint
-        self.qrack_lib.init_qbdt_stabilizer.argTypes = [c_uint, c_uint]
+        self.qrack_lib.init_qbdt_stabilizer.argTypes = [c_uint, c_uint, c_bool]
 
         self.qrack_lib.init_clone.restype = c_uint
         self.qrack_lib.init_clone.argTypes = [c_uint]
