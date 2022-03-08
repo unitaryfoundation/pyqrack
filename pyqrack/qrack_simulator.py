@@ -13,7 +13,7 @@ class QrackSimulator:
 
     # non-quantum
 
-    def __init__(self, qubitCount=-1, cloneSid=-1, isSchmidtDecomposeMulti=True, isSchmidtDecompose=True, isStabilizerHybrid=True, isBinaryDecisionTree=False, isPaged=True, is1QbFusion=True, isCpuGpuHybrid=True, isOpenCL=True, isHostPointer=False, pyzxCircuit=None):
+    def __init__(self, qubitCount=-1, stabilizerQubitCount=-1, cloneSid=-1, isSchmidtDecomposeMulti=True, isSchmidtDecompose=True, isStabilizerHybrid=True, isBinaryDecisionTree=False, isPaged=True, is1QbFusion=True, isCpuGpuHybrid=True, isOpenCL=True, isHostPointer=False, pyzxCircuit=None):
         self.sid = None
 
         if pyzxCircuit is not None:
@@ -26,6 +26,11 @@ class QrackSimulator:
         else:
             if qubitCount < 0:
                 qubitCount = 0
+            if stabilizerQubitCount < 0:
+                stabilizerQubitCount = 0
+
+            if isBinaryDecisionTree and stabilizerQubitCount > 0:
+                self.sid = Qrack.qrack_lib.init_qbdt_stabilizer(qubitCount, stabilizerQubitCount)
             if isSchmidtDecompose and isStabilizerHybrid and not isBinaryDecisionTree and isPaged and is1QbFusion and isCpuGpuHybrid and isOpenCL:
                 if isSchmidtDecomposeMulti:
                     self.sid = Qrack.qrack_lib.init_count(qubitCount, isHostPointer)
