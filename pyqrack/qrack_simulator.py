@@ -39,6 +39,9 @@ class QrackSimulator:
             else:
                 self.sid = Qrack.qrack_lib.init_count_type(qubitCount, isSchmidtDecomposeMulti, isSchmidtDecompose, isStabilizerHybrid, isBinaryDecisionTree, isPaged, is1QbFusion, isCpuGpuHybrid, isOpenCL, isHostPointer)
 
+        if self.get_error() != 0:
+            raise Exception("QrackSimulator C++ library raised exception.")
+
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
 
