@@ -26,9 +26,11 @@ class QrackSimulator:
         else:
             if qubitCount < 0:
                 qubitCount = 0
+            if stabilizerQubitCount < 0:
+                stabilizerQubitCount = math.floor(qubitCount - math.sqrt(qubitCount))
 
-            if isBinaryDecisionTree and stabilizerQubitCount > -1:
-                self.sid = Qrack.qrack_lib.init_qbdt_stabilizer(qubitCount, stabilizerQubitCount, isSchmidtDecompose)
+            if isBinaryDecisionTree:
+                self.sid = Qrack.qrack_lib.init_qbdt_stabilizer(qubitCount - stabilizerQubitCount, stabilizerQubitCount, isSchmidtDecompose)
             elif isSchmidtDecompose and isStabilizerHybrid and not isBinaryDecisionTree and isPaged and is1QbFusion and isCpuGpuHybrid and isOpenCL:
                 if isSchmidtDecomposeMulti:
                     self.sid = Qrack.qrack_lib.init_count(qubitCount, isHostPointer)
