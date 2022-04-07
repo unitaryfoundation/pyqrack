@@ -200,6 +200,17 @@ class QrackSystem:
         self.qrack_lib.Multiplex1Mtrx.resType = None
         self.qrack_lib.Multiplex1Mtrx.argTypes = [c_uint, c_uint, POINTER(c_uint), c_uint, POINTER(c_double)]
 
+        # coalesced single qubit gates
+
+        self.qrack_lib.MX.resType = None
+        self.qrack_lib.MX.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
+        self.qrack_lib.MY.resType = None
+        self.qrack_lib.MY.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
+        self.qrack_lib.MZ.resType = None
+        self.qrack_lib.MZ.argTypes = [c_uint, c_uint, POINTER(c_uint)]
+
         # rotations
 
         self.qrack_lib.R.resType = None
