@@ -104,7 +104,7 @@ class QrackSimulator:
         global state_vec_list
         global state_vec_list_index
         global state_vec_probability
-        state_vec_list = [(0, 0)] * (1 << self._qubitCount);
+        state_vec_list = [complex(0, 0)] * (1 << self._qubitCount);
         state_vec_list_index = 0
         state_vec_probability = 0
         Qrack.qrack_lib.Dump(self.sid, self.dump_callback)
@@ -115,7 +115,7 @@ class QrackSimulator:
         global state_vec_list
         global state_vec_list_index
         global state_vec_probability
-        state_vec_list[state_vec_list_index] = (r, i)
+        state_vec_list[state_vec_list_index] = complex(r, i)
         state_vec_list_index = state_vec_list_index + 1
         state_vec_probability = state_vec_probability + (r * r) + (i * i)
         if (1. - state_vec_probability) <= (7./3 - 4./3 - 1):
