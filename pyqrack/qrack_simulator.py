@@ -38,6 +38,8 @@ class QrackSimulator:
         if self.get_error() != 0:
             raise Exception("QrackSimulator C++ library raised exception.")
 
+        self._qubitCount = qubitCount
+
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
 
@@ -82,6 +84,43 @@ class QrackSimulator:
             raise Exception("QrackSimulator C++ library raised exception.")
 
     # pseudo-quantum
+
+    def dump_ids(self):
+        global ids_list
+        global ids_list_index
+        ids_list = [0] * self._qubitCount;
+        ids_list_index = 0
+        Qrack.qrack_lib.DumpIds(self.sid, self.dump_ids_callback)
+        return ids_list
+
+    @CFUNCTYPE(None, c_uint)
+    def dump_ids_callback(i):
+        global ids_list
+        global ids_list_index
+        ids_list[ids_list_index] = i
+        ids_list_index = ids_list_index + 1
+
+    def dump(self):
+        global state_vec_list
+        global state_vec_list_index
+        global state_vec_probability
+        state_vec_list = [(0, 0)] * (1 << self._qubitCount);
+        state_vec_list_index = 0
+        state_vec_probability = 0
+        Qrack.qrack_lib.Dump(self.sid, self.dump_callback)
+        return state_vec_list
+
+    @CFUNCTYPE(c_bool, c_double, c_double)
+    def dump_callback(r, i):
+        global state_vec_list
+        global state_vec_list_index
+        global state_vec_probability
+        state_vec_list[state_vec_list_index] = (r, i)
+        state_vec_list_index = state_vec_list_index + 1
+        state_vec_probability = state_vec_probability + (r * r) + (i * i)
+        if (1. - state_vec_probability) <= (7./3 - 4./3 - 1):
+            return False
+        return True
 
     def prob(self, q):
         result = Qrack.qrack_lib.Prob(self.sid, q)
@@ -388,19 +427,25 @@ class QrackSimulator:
 
     def compose(self, other, q):
         Qrack.qrack_lib.Compose(self.sid, other.sid, self._uint_byref(q))
+        self._qubitCount = self._qubitCount + other.qubitCount
         if self.get_error() != 0:
             raise Exception("QrackSimulator C++ library raised exception.")
 
     def decompose(self, q):
         other = QrackSimulator()
         Qrack.qrack_lib.destroy(other.sid)
-        other.sid = Qrack.qrack_lib.Decompose(self.sid, len(q), self._uint_byref(q))
+        l = len(q)
+        other.sid = Qrack.qrack_lib.Decompose(self.sid, l, self._uint_byref(q))
+        self._qubitCount = self._qubitCount - l
+        other._qubitCount = l
         if self.get_error() != 0:
             raise Exception("QrackSimulator C++ library raised exception.")
         return other
 
     def dispose(self, q):
-        Qrack.qrack_lib.Dispose(self.sid, len(q), self._uint_byref(q))
+        l = len(q)
+        Qrack.qrack_lib.Dispose(self.sid, l, self._uint_byref(q))
+        self._qubitCount = self._qubitCount - l
         if self.get_error() != 0:
             raise Exception("QrackSimulator C++ library raised exception.")
 

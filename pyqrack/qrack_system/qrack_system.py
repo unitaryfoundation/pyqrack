@@ -43,6 +43,12 @@ class QrackSystem:
 
         # non-quantum
 
+        self.qrack_lib.DumpIds.restype = None
+        self.qrack_lib.DumpIds.argTypes = [c_uint, CFUNCTYPE(None, c_uint)]
+
+        self.qrack_lib.Dump.restype = None
+        self.qrack_lib.Dump.argTypes = [c_uint, CFUNCTYPE(c_uint, c_double, c_double)]
+
         self.qrack_lib.init.restype = c_uint
         self.qrack_lib.init.argTypes = []
 
