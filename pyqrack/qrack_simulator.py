@@ -427,7 +427,7 @@ class QrackSimulator:
 
     def compose(self, other, q):
         Qrack.qrack_lib.Compose(self.sid, other.sid, self._uint_byref(q))
-        self._qubitCount = self._qubitCount + other.qubitCount
+        self._qubitCount = self._qubitCount + other._qubitCount
         if self.get_error() != 0:
             raise Exception("QrackSimulator C++ library raised exception.")
 
