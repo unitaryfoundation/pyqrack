@@ -39,6 +39,12 @@ class QrackSystem:
         except Exception as e:
             print(e)
 
+        self.fppow = 5
+        if "QRACK_FPPOW" in os.environ:
+            self.fppow = int(os.environ.get('QRACK_FPPOW'))
+        if self.fppow < 4 or self.fppow > 7:
+            raise ValueError("QRACK_FPPOW environment variable must be an integer >3 and <8. (Qrack builds from 4 for fp16/half, up to 7 for fp128/quad.")
+
         # Define function signatures, up front
 
         # non-quantum
@@ -51,10 +57,14 @@ class QrackSystem:
 
         # These next two methods need to have c_double pointers, if PyQrack is built with fp64.
         self.qrack_lib.InKet.restype = None
-        self.qrack_lib.InKet.argTypes = [c_uint, POINTER(c_float)]
-
         self.qrack_lib.OutKet.restype = None
-        self.qrack_lib.OutKet.argTypes = [c_uint, POINTER(c_float)]
+
+        if self.fppow == 5:
+            self.qrack_lib.InKet.argTypes = [c_uint, POINTER(c_float)]
+            self.qrack_lib.OutKet.argTypes = [c_uint, POINTER(c_float)]
+        if self.fppow == 6:
+            self.qrack_lib.InKet.argTypes = [c_uint, POINTER(c_double)]
+            self.qrack_lib.OutKet.argTypes = [c_uint, POINTER(c_double)]
 
         self.qrack_lib.init.restype = c_uint
         self.qrack_lib.init.argTypes = []
