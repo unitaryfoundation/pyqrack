@@ -80,6 +80,17 @@ class QrackSimulator:
 
         return byref(b)
 
+    # See https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list#answer-30426000
+    def _pairwise(self, it):
+        it = iter(it)
+        while True:
+            try:
+                yield next(it), next(it)
+            except StopIteration:
+                # no more elements in the iterator
+                return
+
+
     def get_error(self):
         return Qrack.qrack_lib.get_error(self.sid)
 
@@ -143,11 +154,11 @@ class QrackSimulator:
     def out_ket(self):
         if Qrack.fppow == 5 or Qrack.fppow == 6:
             amp_count = 1 << self._qubitCount
-            ket = self._qrack_complex_byref([0] * amp_count)
+            ket = self._qrack_complex_byref([0.] * (amp_count << 1))
             Qrack.qrack_lib.OutKet(self.sid, ket)
             if self.get_error() != 0:
                 raise RuntimeError("QrackSimulator C++ library raised exception.")
-            return [ket[i] for i in range(amp_count)]
+            return [complex(r, i) for r, i in self._pairwise(ket)]
         raise NotImplementedError("QrackSimulator.out_ket() not implemented for builds beside float/fp32 and double/fp64, but it can be overloaded.")
 
     def prob(self, q):
