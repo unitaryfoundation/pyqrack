@@ -154,7 +154,7 @@ class QrackSimulator:
     def out_ket(self):
         if Qrack.fppow == 5 or Qrack.fppow == 6:
             amp_count = 1 << self._qubitCount
-            ket = self._qrack_complex_byref([0.] * (amp_count << 1))
+            ket = self._qrack_complex_byref([complex(0, 0)] * amp_count)
             Qrack.qrack_lib.OutKet(self.sid, ket)
             if self.get_error() != 0:
                 raise RuntimeError("QrackSimulator C++ library raised exception.")
