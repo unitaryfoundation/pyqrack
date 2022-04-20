@@ -49,6 +49,13 @@ class QrackSystem:
         self.qrack_lib.Dump.restype = None
         self.qrack_lib.Dump.argTypes = [c_uint, CFUNCTYPE(c_uint, c_double, c_double)]
 
+        # These next two methods need to have c_double pointers, if PyQrack is built with fp64.
+        self.qrack_lib.InKet.restype = None
+        self.qrack_lib.InKet.argTypes = [c_uint, POINTER(c_float)]
+
+        self.qrack_lib.OutKet.restype = None
+        self.qrack_lib.OutKet.argTypes = [c_uint, POINTER(c_float)]
+
         self.qrack_lib.init.restype = c_uint
         self.qrack_lib.init.argTypes = []
 

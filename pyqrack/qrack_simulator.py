@@ -58,6 +58,14 @@ class QrackSimulator:
         t = [(c.real, c.imag) for c in a]
         return self._double_byref([float(item) for sublist in t for item in sublist])
 
+    def _real1_byref(self, a):
+        # This needs to be c_double, if PyQrack is built with fp64.
+        return (c_float * len(a))(*a)
+
+    def _qrack_complex_byref(self, a):
+        t = [(c.real, c.imag) for c in a]
+        return self._real1_byref([float(item) for sublist in t for item in sublist])
+
     def _to_ubyte(self, nv, v):
         c = math.floor((nv - 1) / 8) + 1
         b = (c_ubyte * (c * (1 << nv)))()
@@ -121,6 +129,19 @@ class QrackSimulator:
         if (1. - state_vec_probability) <= (7./3 - 4./3 - 1):
             return False
         return True
+
+    def in_ket(self, ket):
+        Qrack.qrack_lib.InKet(self.sid, self._qrack_complex_byref(ket))
+        if self.get_error() != 0:
+            raise Exception("QrackSimulator C++ library raised exception.")
+
+    def out_ket(self):
+        amp_count = 1 << self._qubitCount
+        ket = self._qrack_complex_byref([0] * amp_count)
+        Qrack.qrack_lib.OutKet(self.sid, ket)
+        if self.get_error() != 0:
+            raise Exception("QrackSimulator C++ library raised exception.")
+        return [ket[i] for i in range(amp_count)]
 
     def prob(self, q):
         result = Qrack.qrack_lib.Prob(self.sid, q)
