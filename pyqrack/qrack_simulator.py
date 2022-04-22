@@ -392,7 +392,7 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcr(self, b, ph, c, q):
-        Qrack.qrack_lib.MCR(self.sid, c_uint(b), ph, len(c), self._uint_byref(c), q)
+        Qrack.qrack_lib.MCR(self.sid, c_uint(b), c_double(ph), len(c), self._uint_byref(c), q)
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
