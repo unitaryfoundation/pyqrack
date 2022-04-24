@@ -447,6 +447,11 @@ class QrackSimulator:
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
+    def adjiswap(self, qi1, qi2):
+        Qrack.qrack_lib.AdjISWAP(self.sid, qi1, qi2)
+        if self.get_error() != 0:
+            raise RuntimeError("QrackSimulator C++ library raised exception.")
+
     def fsim(self, th, ph, qi1, qi2):
         Qrack.qrack_lib.FSim(self.sid, c_double(th), c_double(ph), qi1, qi2)
         if self.get_error() != 0:

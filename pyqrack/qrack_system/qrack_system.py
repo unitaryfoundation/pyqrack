@@ -272,6 +272,9 @@ class QrackSystem:
         self.qrack_lib.ISWAP.resType = None
         self.qrack_lib.ISWAP.argTypes = [c_uint, c_uint, c_uint]
 
+        self.qrack_lib.AdjISWAP.resType = None
+        self.qrack_lib.AdjISWAP.argTypes = [c_uint, c_uint, c_uint]
+
         self.qrack_lib.FSim.resType = None
         self.qrack_lib.FSim.argTypes = [c_uint, c_double, c_double, c_uint, c_uint]
 
