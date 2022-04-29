@@ -617,37 +617,37 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcadd(self, a, c, q):
-        Qrack.qrack_lib.MCADD(self.sid, a, len(c), c, len(q), self._uint_byref(q))
+        Qrack.qrack_lib.MCADD(self.sid, a, len(c), self._uint_byref(c), len(q), self._uint_byref(q))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcsub(self, a, c, q):
-        Qrack.qrack_lib.MCSUB(self.sid, a, len(c), c, len(q), self._uint_byref(q))
+        Qrack.qrack_lib.MCSUB(self.sid, a, len(c), self._uint_byref(c), len(q), self._uint_byref(q))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcmul(self, a, c, q, o):
-        Qrack.qrack_lib.MCMUL(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCMUL(self.sid, a, len(c), self._uint_byref(c), len(q), self._uint_byref(q), self._uint_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcdiv(self, a, c, q, o):
-        Qrack.qrack_lib.MCDIV(self.sid, a, len(c), c, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCDIV(self.sid, a, len(c), self._uint_byref(c), len(q), self._uint_byref(q), self._uint_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcmuln(self, a, c, m, q, o):
-        Qrack.qrack_lib.MCMULN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCMULN(self.sid, a, len(c), self._uint_byref(c), m, len(q), self._uint_byref(q), self._uint_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcdivn(self, a, c, m, q, o):
-        Qrack.qrack_lib.MCDIVN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCDIVN(self.sid, a, len(c), self._uint_byref(c), m, len(q), self._uint_byref(q), self._uint_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcpown(self, a, c, m, q, o):
-        Qrack.qrack_lib.MCPOWN(self.sid, a, len(c), c, m, len(q), self._uint_byref(q), self._uint_byref(o))
+        Qrack.qrack_lib.MCPOWN(self.sid, a, len(c), self._uint_byref(c), m, len(q), self._uint_byref(q), self._uint_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
