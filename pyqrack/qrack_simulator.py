@@ -573,6 +573,8 @@ class QrackSimulator:
 
     def _split_longs(self, a):
         aParts = []
+        if a == 0:
+            aParts.append(0)
         while a > 0:
             aParts.append(a & 0xFFFFFFFFFFFFFFFF)
             a = a >> 64
