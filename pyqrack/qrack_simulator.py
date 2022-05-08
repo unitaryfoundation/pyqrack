@@ -618,21 +618,30 @@ class QrackSimulator:
     def muln(self, a, m, q, o):
         aParts = self._split_longs(a)
         mParts = self._split_longs(m)
-        Qrack.qrack_lib.MULN(self.sid, len(aParts), self._ulonglong_byref(aParts), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
+        wordLen = len(aParts)
+        if len(mParts) > wordLen:
+            wordLen = len(mParts)
+        Qrack.qrack_lib.MULN(self.sid, wordLen, self._ulonglong_byref(aParts), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def divn(self, a, m, q, o):
         aParts = self._split_longs(a)
         mParts = self._split_longs(m)
-        Qrack.qrack_lib.DIVN(self.sid, len(aParts), self._ulonglong_byref(aParts), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
+        wordLen = len(aParts)
+        if len(mParts) > wordLen:
+            wordLen = len(mParts)
+        Qrack.qrack_lib.DIVN(self.sid, wordLen, self._ulonglong_byref(aParts), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def pown(self, a, m, q, o):
         aParts = self._split_longs(a)
         mParts = self._split_longs(m)
-        Qrack.qrack_lib.POWN(self.sid, len(aParts), self._ulonglong_byref(aParts), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
+        wordLen = len(aParts)
+        if len(mParts) > wordLen:
+            wordLen = len(mParts)
+        Qrack.qrack_lib.POWN(self.sid, wordLen, self._ulonglong_byref(aParts), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
@@ -663,21 +672,30 @@ class QrackSimulator:
     def mcmuln(self, a, c, m, q, o):
         aParts = self._split_longs(a)
         mParts = self._split_longs(m)
-        Qrack.qrack_lib.MCMULN(self.sid, len(aParts), self._ulonglong_byref(aParts), len(c), self._ulonglong_byref(c), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
+        wordLen = len(aParts)
+        if len(mParts) > wordLen:
+            wordLen = len(mParts)
+        Qrack.qrack_lib.MCMULN(self.sid, wordLen, self._ulonglong_byref(aParts), len(c), self._ulonglong_byref(c), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcdivn(self, a, c, m, q, o):
         aParts = self._split_longs(a)
         mParts = self._split_longs(m)
-        Qrack.qrack_lib.MCDIVN(self.sid, len(aParts), self._ulonglong_byref(aParts), len(c), self._ulonglong_byref(c), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
+        wordLen = len(aParts)
+        if len(mParts) > wordLen:
+            wordLen = len(mParts)
+        Qrack.qrack_lib.MCDIVN(self.sid, wordLen, self._ulonglong_byref(aParts), len(c), self._ulonglong_byref(c), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcpown(self, a, c, m, q, o):
         aParts = self._split_longs(a)
         mParts = self._split_longs(m)
-        Qrack.qrack_lib.MCPOWN(self.sid, len(aParts), self._ulonglong_byref(aParts), len(c), self._ulonglong_byref(c), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
+        wordLen = len(aParts)
+        if len(mParts) > wordLen:
+            wordLen = len(mParts)
+        Qrack.qrack_lib.MCPOWN(self.sid, wordLen, self._ulonglong_byref(aParts), len(c), self._ulonglong_byref(c), self._ulonglong_byref(mParts), len(q), self._ulonglong_byref(q), self._ulonglong_byref(o))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
