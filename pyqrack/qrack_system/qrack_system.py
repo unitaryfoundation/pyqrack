@@ -346,52 +346,52 @@ class QrackSystem:
         # Arithmetic-Logic-Unit (ALU)
 
         self.qrack_lib.ADD.resType = None
-        self.qrack_lib.ADD.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
+        self.qrack_lib.ADD.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.SUB.resType = None
-        self.qrack_lib.SUB.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
+        self.qrack_lib.SUB.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.ADDS.resType = None
-        self.qrack_lib.ADDS.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
+        self.qrack_lib.ADDS.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.SUBS.resType = None
-        self.qrack_lib.SUBS.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
+        self.qrack_lib.SUBS.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.MUL.resType = None
-        self.qrack_lib.MUL.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.MUL.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
 
         self.qrack_lib.DIV.resType = None
-        self.qrack_lib.DIV.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.DIV.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
 
         self.qrack_lib.MULN.resType = None
-        self.qrack_lib.MULN.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.MULN.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
 
         self.qrack_lib.DIVN.resType = None
-        self.qrack_lib.DIVN.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.DIVN.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
 
         self.qrack_lib.POWN.resType = None
-        self.qrack_lib.POWN.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.POWN.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
 
         self.qrack_lib.MCADD.resType = None
-        self.qrack_lib.MCADD.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong)]
+        self.qrack_lib.MCADD.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.MCSUB.resType = None
-        self.qrack_lib.MCSUB.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong)]
+        self.qrack_lib.MCSUB.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.MCMUL.resType = None
-        self.qrack_lib.MCMUL.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.MCMUL.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.MCDIV.resType = None
-        self.qrack_lib.MCDIV.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.MCDIV.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.MCMULN.resType = None
-        self.qrack_lib.MCMULN.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.MCMULN.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
 
         self.qrack_lib.MCDIVN.resType = None
-        self.qrack_lib.MCDIVN.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.MCDIVN.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
 
         self.qrack_lib.MCPOWN.resType = None
-        self.qrack_lib.MCPOWN.argTypes = [c_ulonglong, c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
+        self.qrack_lib.MCPOWN.argTypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ulonglong)]
 
         self.qrack_lib.LDA.resType = None
         self.qrack_lib.LDA.argType = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, POINTER(c_ulonglong), POINTER(c_ubyte)]
