@@ -578,7 +578,6 @@ class QrackSimulator:
         while a > 0:
             aParts.append(a & 0xFFFFFFFFFFFFFFFF)
             a = a >> 64
-        aParts.reverse()
         return aParts
 
     def add(self, a, q):
