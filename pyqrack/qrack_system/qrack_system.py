@@ -255,6 +255,9 @@ class QrackSystem:
         self.qrack_lib.M.resType = c_ulonglong
         self.qrack_lib.M.argTypes = [c_ulonglong, c_ulonglong]
 
+        self.qrack_lib.ForceM.resType = c_ulonglong
+        self.qrack_lib.ForceM.argTypes = [c_ulonglong, c_ulonglong, c_bool]
+
         self.qrack_lib.MAll.resType = c_ulonglong
         self.qrack_lib.MAll.argTypes = [c_ulonglong]
 

@@ -416,6 +416,12 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
+    def force_m(self, q, r):
+        result = Qrack.qrack_lib.ForceM(self.sid, q, r)
+        if self.get_error() != 0:
+            raise RuntimeError("QrackSimulator C++ library raised exception.")
+        return result
+
     def m_all(self):
         result = Qrack.qrack_lib.MAll(self.sid)
         if self.get_error() != 0:
