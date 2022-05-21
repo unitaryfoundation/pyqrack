@@ -115,7 +115,6 @@ class QrackSimulator:
         return ids_list
 
     @ctypes.CFUNCTYPE(None, ctypes.c_ulonglong)
-    @staticmethod
     def dump_ids_callback(i):
         global ids_list
         global ids_list_index
@@ -133,7 +132,6 @@ class QrackSimulator:
         return state_vec_list
 
     @ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_double, ctypes.c_double)
-    @staticmethod
     def dump_callback(r, i):
         global state_vec_list
         global state_vec_list_index
