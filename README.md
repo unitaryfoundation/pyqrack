@@ -26,3 +26,5 @@ sim = QrackSimulator(pyzxCircuit=c)
 where `c` is a PyZX circuit object. The circuit will automatically be simulated in the constructed `QrackSimulator` instance. This also allows loading from QASM and other intermediate representations supported by PyZX.
 
 Please feel welcome to open an issue, if you'd like help. 😃
+
+**Special thanks go to Zeeshan Ahmed, for bug fixes and design suggestions, Ashish Panigrahi, for documentation and design suggestions, WingCode, for documentation, and to the broader community of Qrack contributors, for years of happy Qracking! You rock!**
