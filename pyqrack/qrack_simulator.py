@@ -3,7 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
-import math, cmath
+import math
 from ctypes import *
 from .qrack_system import Qrack
 from .pauli import Pauli
@@ -73,7 +73,7 @@ class QrackSimulator:
         b = (c_ubyte * (c * (1 << nv)))()
         n = 0
         for u in v:
-            for i in range(c):
+            for _ in range(c):
                 b[n] = u & 0xFF
                 u >>= 8
                 n += 1
@@ -115,7 +115,7 @@ class QrackSimulator:
         return ids_list
 
     @CFUNCTYPE(None, c_ulonglong)
-    def dump_ids_callback(i):
+    def dump_ids_callback(self, i):
         global ids_list
         global ids_list_index
         ids_list[ids_list_index] = i
@@ -132,7 +132,7 @@ class QrackSimulator:
         return state_vec_list
 
     @CFUNCTYPE(c_bool, c_double, c_double)
-    def dump_callback(r, i):
+    def dump_callback(self, r, i):
         global state_vec_list
         global state_vec_list_index
         global state_vec_probability
@@ -730,7 +730,7 @@ class QrackSimulator:
         return result
 
     def try_separate_tolerance(self, qs, t):
-        result = Qrack.qrack_lib.TrySeparateTol(self.sid, len(qs), self._ulonglong_byref(qs), tol)
+        result = Qrack.qrack_lib.TrySeparateTol(self.sid, len(qs), self._ulonglong_byref(qs), t)
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
@@ -776,7 +776,7 @@ class QrackSimulator:
                 self.mch([gate.control], gate.target)
             elif gate.name == 'ParityPhase':
                 self.phase_parity(math.pi * gate.phase, gate.targets)
-            elif game.name == 'FSim':
+            elif gate.name == 'FSim':
                 self.fsim(gate.theta, gate.phi, gate.control, gate.target)
             elif gate.name == 'CCZ':
                 self.mcz([gate.ctrl1, gate.ctrl2], gate.target)
