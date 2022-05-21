@@ -3,8 +3,8 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
-import math, cmath
-from ctypes import *
+import math
+import ctypes
 from .qrack_system import Qrack
 from .pauli import Pauli
 
@@ -49,10 +49,10 @@ class QrackSimulator:
             self.sid = None
 
     def _ulonglong_byref(self, a):
-        return (c_ulonglong * len(a))(*a)
+        return (ctypes.c_ulonglong * len(a))(*a)
 
     def _double_byref(self, a):
-        return (c_double * len(a))(*a)
+        return (ctypes.c_double * len(a))(*a)
 
     def _complex_byref(self, a):
         t = [(c.real, c.imag) for c in a]
@@ -61,8 +61,8 @@ class QrackSimulator:
     def _real1_byref(self, a):
         # This needs to be c_double, if PyQrack is built with fp64.
         if Qrack.fppow < 6:
-            return (c_float * len(a))(*a)
-        return (c_double * len(a))(*a)
+            return (ctypes.c_float * len(a))(*a)
+        return (ctypes.c_double * len(a))(*a)
 
     def _qrack_complex_byref(self, a):
         t = [(c.real, c.imag) for c in a]
@@ -70,15 +70,15 @@ class QrackSimulator:
 
     def _to_ubyte(self, nv, v):
         c = math.floor((nv - 1) / 8) + 1
-        b = (c_ubyte * (c * (1 << nv)))()
+        b = (ctypes.c_ubyte * (c * (1 << nv)))()
         n = 0
         for u in v:
-            for i in range(c):
+            for _ in range(c):
                 b[n] = u & 0xFF
                 u >>= 8
                 n += 1
 
-        return byref(b)
+        return ctypes.byref(b)
 
     # See https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list#answer-30426000
     def _pairwise(self, it):
@@ -114,7 +114,8 @@ class QrackSimulator:
         Qrack.qrack_lib.DumpIds(self.sid, self.dump_ids_callback)
         return ids_list
 
-    @CFUNCTYPE(None, c_ulonglong)
+    @ctypes.CFUNCTYPE(None, ctypes.c_ulonglong)
+    @staticmethod
     def dump_ids_callback(i):
         global ids_list
         global ids_list_index
@@ -131,7 +132,8 @@ class QrackSimulator:
         Qrack.qrack_lib.Dump(self.sid, self.dump_callback)
         return state_vec_list
 
-    @CFUNCTYPE(c_bool, c_double, c_double)
+    @ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_double, ctypes.c_double)
+    @staticmethod
     def dump_callback(r, i):
         global state_vec_list
         global state_vec_list_index
@@ -171,14 +173,16 @@ class QrackSimulator:
         result = Qrack.qrack_lib.PermutationExpectation(self.sid, len(c), self._ulonglong_byref(c))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
+        return result
 
     def joint_ensemble_probability(self, b, q):
         result = Qrack.qrack_lib.JointEnsembleProbability(self.sid, len(b), self._ulonglong_byref(b), q)
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
+        return result
 
     def phase_parity(self, la, q):
-        Qrack.qrack_lib.PhaseParity(self.sid, c_double(la), len(q), self._ulonglong_byref(q))
+        Qrack.qrack_lib.PhaseParity(self.sid, ctypes.c_double(la), len(q), self._ulonglong_byref(q))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
@@ -249,7 +253,7 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def u(self, q, th, ph, la):
-        Qrack.qrack_lib.U(self.sid, q, c_double(th), c_double(ph), c_double(la))
+        Qrack.qrack_lib.U(self.sid, q, ctypes.c_double(th), ctypes.c_double(ph), ctypes.c_double(la))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
@@ -301,7 +305,7 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcu(self, c, q, th, ph, la):
-        Qrack.qrack_lib.MCU(self.sid, len(c), self._ulonglong_byref(c), q, c_double(th), c_double(ph), c_double(la))
+        Qrack.qrack_lib.MCU(self.sid, len(c), self._ulonglong_byref(c), q, ctypes.c_double(th), ctypes.c_double(ph), ctypes.c_double(la))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
@@ -353,7 +357,7 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macu(self, c, q, th, ph, la):
-        Qrack.qrack_lib.MACU(self.sid, len(c), self._ulonglong_byref(c), q, c_double(th), c_double(ph), c_double(la))
+        Qrack.qrack_lib.MACU(self.sid, len(c), self._ulonglong_byref(c), q, ctypes.c_double(th), ctypes.c_double(ph), ctypes.c_double(la))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
@@ -387,24 +391,24 @@ class QrackSimulator:
     # rotations
 
     def r(self, b, ph, q):
-        Qrack.qrack_lib.R(self.sid, c_ulonglong(b), c_double(ph), q)
+        Qrack.qrack_lib.R(self.sid, ctypes.c_ulonglong(b), ctypes.c_double(ph), q)
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcr(self, b, ph, c, q):
-        Qrack.qrack_lib.MCR(self.sid, c_ulonglong(b), c_double(ph), len(c), self._ulonglong_byref(c), q)
+        Qrack.qrack_lib.MCR(self.sid, ctypes.c_ulonglong(b), ctypes.c_double(ph), len(c), self._ulonglong_byref(c), q)
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # exponential of Pauli operators
 
     def exp(self, b, ph, q):
-        Qrack.qrack_lib.Exp(self.sid, len(b), self._ulonglong_byref(b), c_double(ph), self._ulonglong_byref(q))
+        Qrack.qrack_lib.Exp(self.sid, len(b), self._ulonglong_byref(b), ctypes.c_double(ph), self._ulonglong_byref(q))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcexp(self, b, ph, cs, q):
-        Qrack.qrack_lib.MCExp(self.sid, len(b), self._ulonglong_byref(b), c_double(ph), len(cs), self._ulonglong_byref(cs), self._ulonglong_byref(q))
+        Qrack.qrack_lib.MCExp(self.sid, len(b), self._ulonglong_byref(b), ctypes.c_double(ph), len(cs), self._ulonglong_byref(cs), self._ulonglong_byref(q))
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
@@ -459,7 +463,7 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def fsim(self, th, ph, qi1, qi2):
-        Qrack.qrack_lib.FSim(self.sid, c_double(th), c_double(ph), qi1, qi2)
+        Qrack.qrack_lib.FSim(self.sid, ctypes.c_double(th), ctypes.c_double(ph), qi1, qi2)
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
@@ -730,7 +734,7 @@ class QrackSimulator:
         return result
 
     def try_separate_tolerance(self, qs, t):
-        result = Qrack.qrack_lib.TrySeparateTol(self.sid, len(qs), self._ulonglong_byref(qs), tol)
+        result = Qrack.qrack_lib.TrySeparateTol(self.sid, len(qs), self._ulonglong_byref(qs), t)
         if self.get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
@@ -776,7 +780,7 @@ class QrackSimulator:
                 self.mch([gate.control], gate.target)
             elif gate.name == 'ParityPhase':
                 self.phase_parity(math.pi * gate.phase, gate.targets)
-            elif game.name == 'FSim':
+            elif gate.name == 'FSim':
                 self.fsim(gate.theta, gate.phi, gate.control, gate.target)
             elif gate.name == 'CCZ':
                 self.mcz([gate.ctrl1, gate.ctrl2], gate.target)
