@@ -69,7 +69,7 @@ class QrackSimulator:
                     isHostPointer,
                 )
 
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
         self._qubitCount = qubitCount
@@ -125,17 +125,17 @@ class QrackSimulator:
                 return
 
     # non-quantum
-    def get_error(self):
+    def _get_error(self):
         return Qrack.qrack_lib.get_error(self.sid)
 
     def seed(self, s):
         Qrack.qrack_lib.seed(self.sid, s)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def set_concurrency(self, p):
         Qrack.qrack_lib.set_concurrency(self.sid, p)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # standard gates
@@ -143,59 +143,59 @@ class QrackSimulator:
     ## single-qubits gates
     def x(self, q):
         Qrack.qrack_lib.X(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def y(self, q):
         Qrack.qrack_lib.Y(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def z(self, q):
         Qrack.qrack_lib.Z(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def h(self, q):
         Qrack.qrack_lib.H(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def s(self, q):
         Qrack.qrack_lib.S(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def t(self, q):
         Qrack.qrack_lib.T(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adjs(self, q):
         Qrack.qrack_lib.AdjS(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adjt(self, q):
         Qrack.qrack_lib.AdjT(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def u(self, q, th, ph, la):
         Qrack.qrack_lib.U(
             self.sid, q, ctypes.c_double(th), ctypes.c_double(ph), ctypes.c_double(la)
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mtrx(self, m, q):
         Qrack.qrack_lib.Mtrx(self.sid, self._complex_byref(m), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def r(self, b, ph, q):
         Qrack.qrack_lib.R(self.sid, ctypes.c_ulonglong(b), ctypes.c_double(ph), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def exp(self, b, ph, q):
@@ -206,48 +206,48 @@ class QrackSimulator:
             ctypes.c_double(ph),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     ## multi-qubit gates
     def mcx(self, c, q):
         Qrack.qrack_lib.MCX(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcy(self, c, q):
         Qrack.qrack_lib.MCY(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcz(self, c, q):
         Qrack.qrack_lib.MCZ(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mch(self, c, q):
         Qrack.qrack_lib.MCH(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcs(self, c, q):
         Qrack.qrack_lib.MCS(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mct(self, c, q):
         Qrack.qrack_lib.MCT(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcadjs(self, c, q):
         Qrack.qrack_lib.MCAdjS(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcadjt(self, c, q):
         Qrack.qrack_lib.MCAdjT(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcu(self, c, q, th, ph, la):
@@ -260,54 +260,54 @@ class QrackSimulator:
             ctypes.c_double(ph),
             ctypes.c_double(la),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcmtrx(self, c, m, q):
         Qrack.qrack_lib.MCMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macx(self, c, q):
         Qrack.qrack_lib.MACX(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macy(self, c, q):
         Qrack.qrack_lib.MACY(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macz(self, c, q):
         Qrack.qrack_lib.MACZ(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mach(self, c, q):
         Qrack.qrack_lib.MACH(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macs(self, c, q):
         Qrack.qrack_lib.MACS(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mact(self, c, q):
         Qrack.qrack_lib.MACT(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macadjs(self, c, q):
         Qrack.qrack_lib.MACAdjS(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macadjt(self, c, q):
         Qrack.qrack_lib.MACAdjT(self.sid, len(c), self._ulonglong_byref(c), q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macu(self, c, q, th, ph, la):
@@ -320,36 +320,36 @@ class QrackSimulator:
             ctypes.c_double(ph),
             ctypes.c_double(la),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macmtrx(self, c, m, q):
         Qrack.qrack_lib.MACMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def multiplex1_mtrx(self, c, q, m):
         Qrack.qrack_lib.Multiplex1Mtrx(
             self.sid, len(c), self._ulonglong_byref(c), q, self._complex_byref(m)
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mx(self, q):
         Qrack.qrack_lib.MX(self.sid, len(q), self._ulonglong_byref(q))
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def my(self, q):
         Qrack.qrack_lib.MY(self.sid, len(q), self._ulonglong_byref(q))
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mz(self, q):
         Qrack.qrack_lib.MZ(self.sid, len(q), self._ulonglong_byref(q))
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcr(self, b, ph, c, q):
@@ -361,7 +361,7 @@ class QrackSimulator:
             self._ulonglong_byref(c),
             q,
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcexp(self, b, ph, cs, q):
@@ -374,57 +374,57 @@ class QrackSimulator:
             self._ulonglong_byref(cs),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def swap(self, qi1, qi2):
         Qrack.qrack_lib.SWAP(self.sid, qi1, qi2)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def iswap(self, qi1, qi2):
         Qrack.qrack_lib.ISWAP(self.sid, qi1, qi2)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adjiswap(self, qi1, qi2):
         Qrack.qrack_lib.AdjISWAP(self.sid, qi1, qi2)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def fsim(self, th, ph, qi1, qi2):
         Qrack.qrack_lib.FSim(
             self.sid, ctypes.c_double(th), ctypes.c_double(ph), qi1, qi2
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def cswap(self, c, qi1, qi2):
         Qrack.qrack_lib.CSWAP(self.sid, len(c), self._ulonglong_byref(c), qi1, qi2)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def acswap(self, c, qi1, qi2):
         Qrack.qrack_lib.ACSWAP(self.sid, len(c), self._ulonglong_byref(c), qi1, qi2)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # standard operations
     def m(self, q):
         result = Qrack.qrack_lib.M(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def force_m(self, q, r):
         result = Qrack.qrack_lib.ForceM(self.sid, q, r)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def m_all(self):
         result = Qrack.qrack_lib.MAll(self.sid)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
@@ -432,20 +432,20 @@ class QrackSimulator:
         result = Qrack.qrack_lib.Measure(
             self.sid, len(b), self._ulonglong_byref(b), self._ulonglong_byref(q)
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def measure_shots(self, q, s):
         m = self._ulonglong_byref([0] * s)
         Qrack.qrack_lib.MeasureShots(self.sid, len(q), self._ulonglong_byref(q), s, m)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return [m[i] for i in range(s)]
 
     def reset_all(self):
         Qrack.qrack_lib.ResetAll(self.sid)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # arithmetic-logic-unit (ALU)
@@ -480,7 +480,7 @@ class QrackSimulator:
             len(q),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def sub(self, a, q):
@@ -492,7 +492,7 @@ class QrackSimulator:
             len(q),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adds(self, a, s, q):
@@ -505,7 +505,7 @@ class QrackSimulator:
             len(q),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def subs(self, a, s, q):
@@ -518,7 +518,7 @@ class QrackSimulator:
             len(q),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mul(self, a, q, o):
@@ -531,7 +531,7 @@ class QrackSimulator:
             self._ulonglong_byref(q),
             self._ulonglong_byref(o),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def div(self, a, q, o):
@@ -544,7 +544,7 @@ class QrackSimulator:
             self._ulonglong_byref(q),
             self._ulonglong_byref(o),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def muln(self, a, m, q, o):
@@ -558,7 +558,7 @@ class QrackSimulator:
             self._ulonglong_byref(q),
             self._ulonglong_byref(o),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def divn(self, a, m, q, o):
@@ -572,7 +572,7 @@ class QrackSimulator:
             self._ulonglong_byref(q),
             self._ulonglong_byref(o),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def pown(self, a, m, q, o):
@@ -586,7 +586,7 @@ class QrackSimulator:
             self._ulonglong_byref(q),
             self._ulonglong_byref(o),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcadd(self, a, c, q):
@@ -600,7 +600,7 @@ class QrackSimulator:
             len(q),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcsub(self, a, c, q):
@@ -614,7 +614,7 @@ class QrackSimulator:
             len(q),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcmul(self, a, c, q, o):
@@ -628,7 +628,7 @@ class QrackSimulator:
             len(q),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcdiv(self, a, c, q, o):
@@ -642,7 +642,7 @@ class QrackSimulator:
             len(q),
             self._ulonglong_byref(q),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcmuln(self, a, c, m, q, o):
@@ -658,7 +658,7 @@ class QrackSimulator:
             self._ulonglong_byref(q),
             self._ulonglong_byref(o),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcdivn(self, a, c, m, q, o):
@@ -674,7 +674,7 @@ class QrackSimulator:
             self._ulonglong_byref(q),
             self._ulonglong_byref(o),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcpown(self, a, c, m, q, o):
@@ -690,7 +690,7 @@ class QrackSimulator:
             self._ulonglong_byref(q),
             self._ulonglong_byref(o),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def lda(self, qi, qv, t):
@@ -702,7 +702,7 @@ class QrackSimulator:
             self._ulonglong_byref(qv),
             self._to_ubyte(len(qv), t),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adc(self, s, qi, qv, t):
@@ -715,7 +715,7 @@ class QrackSimulator:
             self._ulonglong_byref(qv),
             self._to_ubyte(len(qv), t),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def sbc(self, s, qi, qv, t):
@@ -728,75 +728,75 @@ class QrackSimulator:
             self._ulonglong_byref(qv),
             self._to_ubyte(len(qv), t),
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def hash(self, q, t):
         Qrack.qrack_lib.Hash(
             self.sid, len(q), self._ulonglong_byref(q), self._to_ubyte(len(q), t)
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # boolean logic gates
     def qand(self, qi1, qi2, qo):
         Qrack.qrack_lib.AND(self.sid, qi1, qi2, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qor(self, qi1, qi2, qo):
         Qrack.qrack_lib.OR(self.sid, qi1, qi2, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qxor(self, qi1, qi2, qo):
         Qrack.qrack_lib.XOR(self.sid, qi1, qi2, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qnand(self, qi1, qi2, qo):
         Qrack.qrack_lib.NAND(self.sid, qi1, qi2, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qnor(self, qi1, qi2, qo):
         Qrack.qrack_lib.NOR(self.sid, qi1, qi2, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qxnor(self, qi1, qi2, qo):
         Qrack.qrack_lib.XNOR(self.sid, qi1, qi2, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def cland(self, ci, qi, qo):
         Qrack.qrack_lib.CLAND(self.sid, ci, qi, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clor(self, ci, qi, qo):
         Qrack.qrack_lib.CLOR(self.sid, ci, qi, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clxor(self, ci, qi, qo):
         Qrack.qrack_lib.CLXOR(self.sid, ci, qi, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clnand(self, ci, qi, qo):
         Qrack.qrack_lib.CLNAND(self.sid, ci, qi, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clnor(self, ci, qi, qo):
         Qrack.qrack_lib.CLNOR(self.sid, ci, qi, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clxnor(self, ci, qi, qo):
         Qrack.qrack_lib.CLXNOR(self.sid, ci, qi, qo)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # Particular Quantum Circuits
@@ -804,12 +804,12 @@ class QrackSimulator:
     ## fourier transform
     def qft(self, qs):
         Qrack.qrack_lib.QFT(self.sid, len(qs), self._ulonglong_byref(qs))
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def iqft(self, qs):
         Qrack.qrack_lib.IQFT(self.sid, len(qs), self._ulonglong_byref(qs))
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # pseudo-quantum
@@ -817,18 +817,18 @@ class QrackSimulator:
     ## allocate and release
     def allocate_qubit(self, qid):
         Qrack.qrack_lib.allocateQubit(self.sid, qid)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def release(self, q):
         result = Qrack.qrack_lib.release(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def num_qubits(self):
         result = Qrack.qrack_lib.num_qubits(self.sid)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
@@ -836,7 +836,7 @@ class QrackSimulator:
     def compose(self, other, q):
         Qrack.qrack_lib.Compose(self.sid, other.sid, self._ulonglong_byref(q))
         self._qubitCount = self._qubitCount + other._qubitCount
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def decompose(self, q):
@@ -846,7 +846,7 @@ class QrackSimulator:
         other.sid = Qrack.qrack_lib.Decompose(self.sid, l, self._ulonglong_byref(q))
         self._qubitCount = self._qubitCount - l
         other._qubitCount = l
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return other
 
@@ -854,7 +854,7 @@ class QrackSimulator:
         l = len(q)
         Qrack.qrack_lib.Dispose(self.sid, l, self._ulonglong_byref(q))
         self._qubitCount = self._qubitCount - l
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     ## miscellaneous
@@ -898,7 +898,7 @@ class QrackSimulator:
     def in_ket(self, ket):
         if Qrack.fppow == 5 or Qrack.fppow == 6:
             Qrack.qrack_lib.InKet(self.sid, self._qrack_complex_byref(ket))
-            if self.get_error() != 0:
+            if self._get_error() != 0:
                 raise RuntimeError("QrackSimulator C++ library raised exception.")
         else:
             raise NotImplementedError(
@@ -910,7 +910,7 @@ class QrackSimulator:
             amp_count = 1 << self._qubitCount
             ket = self._qrack_complex_byref([complex(0, 0)] * amp_count)
             Qrack.qrack_lib.OutKet(self.sid, ket)
-            if self.get_error() != 0:
+            if self._get_error() != 0:
                 raise RuntimeError("QrackSimulator C++ library raised exception.")
             return [complex(r, i) for r, i in self._pairwise(ket)]
         raise NotImplementedError(
@@ -919,7 +919,7 @@ class QrackSimulator:
 
     def prob(self, q):
         result = Qrack.qrack_lib.Prob(self.sid, q)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
@@ -927,7 +927,7 @@ class QrackSimulator:
         result = Qrack.qrack_lib.PermutationExpectation(
             self.sid, len(c), self._ulonglong_byref(c)
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
@@ -935,7 +935,7 @@ class QrackSimulator:
         result = Qrack.qrack_lib.JointEnsembleProbability(
             self.sid, len(b), self._ulonglong_byref(b), q
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
@@ -943,18 +943,18 @@ class QrackSimulator:
         Qrack.qrack_lib.PhaseParity(
             self.sid, ctypes.c_double(la), len(q), self._ulonglong_byref(q)
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def try_separate_1qb(self, qi1):
         result = Qrack.qrack_lib.TrySeparate1Qb(self.sid, qi1)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def try_separate_2qb(self, qi1, qi2):
         result = Qrack.qrack_lib.TrySeparate2Qb(self.sid, qi1, qi2)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
@@ -962,13 +962,13 @@ class QrackSimulator:
         result = Qrack.qrack_lib.TrySeparateTol(
             self.sid, len(qs), self._ulonglong_byref(qs), t
         )
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def set_reactive_separate(self, irs):
         Qrack.qrack_lib.SetReactiveSeparate(self.sid, irs)
-        if self.get_error() != 0:
+        if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def run_pyzx_gates(self, gates):
@@ -993,10 +993,10 @@ class QrackSimulator:
                 self.mcz([gate.control], gate.target)
             elif gate.name == "CX":
                 self.h(gate.control)
-                if self.get_error() != 0:
+                if self._get_error() != 0:
                     raise RuntimeError("QrackSimulator C++ library raised exception.")
                 self.mcx([gate.control], gate.target)
-                if self.get_error() != 0:
+                if self._get_error() != 0:
                     raise RuntimeError("QrackSimulator C++ library raised exception.")
                 self.h(gate.control)
             elif gate.name == "SWAP":
@@ -1015,5 +1015,5 @@ class QrackSimulator:
                 self.mcz([gate.ctrl1, gate.ctrl2], gate.target)
             elif gate.name == "Tof":
                 self.mcx([gate.ctrl1, gate.ctrl2], gate.target)
-            if self.get_error() != 0:
+            if self._get_error() != 0:
                 raise RuntimeError("QrackSimulator C++ library raised exception.")
