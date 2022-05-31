@@ -1227,45 +1227,6 @@ class QrackSimulator:
 
     def run_qiskit_instructions(self, instructions, shots=1):
         self._shots = shots
-
-        instructions = []
-        if hasattr(experiment, 'instructions'):
-            instructions = experiment.instructions
-        elif hasattr(experiment, '_data'):
-            for datum in experiment._data:
-                qubits = []
-                for qubit in datum[1]:
-                    qubits.append(experiment.qubits.index(qubit))
-
-                clbits = []
-                for clbit in datum[2]:
-                    clbits.append(experiment.clbits.index(clbit))
-
-                conditional = None
-                condition = datum[0].condition
-                if condition is not None:
-                    if isinstance(condition[0], Clbit):
-                        conditional = experiment.clbits.index(condition[0])
-                    else:
-                        creg_index = experiment.cregs.index(condition[0])
-                        size = experiment.cregs[creg_index].size
-                        offset = 0
-                        for i in range(creg_index):
-                            offset += len(experiment.cregs[i])
-                        mask = ((1 << offset) - 1) ^ ((1 << (offset + size)) - 1)
-                        val = condition[1]
-                        conditional = offset if (size == 1) else QrackQasmQobjInstructionConditional(mask, val)
-
-                instructions.append(QasmQobjInstruction(
-                    datum[0].name,
-                    qubits = qubits,
-                    memory = clbits,
-                    condition=condition,
-                    conditional=conditional,
-                    params = datum[0].params
-                ))
-        else:
-            raise QrackError('Unrecognized "run_input" argument specified for run().')
     
         self._sample_qubits = []
         self._sample_clbits = []
