@@ -1237,10 +1237,10 @@ class QrackSimulator:
 
         return data
 
-    def run_qiskit_instructions(self, experiment, shots=1):
+    def run_qiskit_circuit(self, experiment, shots=1):
         if not _IS_QISKIT_AVAILABLE:
             raise RuntimeError(
-                "Before trying to run_qiskit_instructions() with QrackSimulator, you must install Qiskit!"
+                "Before trying to run_qiskit_circuit() with QrackSimulator, you must install Qiskit!"
             )
 
         self._shots = shots
