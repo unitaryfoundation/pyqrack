@@ -1362,4 +1362,6 @@ class QrackSimulator:
         if self._sample_measure and (len(self._sample_qubits) > 0):
             _data = self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots)
 
-        data = { 'counts': dict(Counter(_data)) }
+        del self._sim
+
+        return { 'counts': dict(Counter(_data)) }
