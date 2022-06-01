@@ -8,6 +8,18 @@ import ctypes
 from .qrack_system import Qrack
 from .pauli import Pauli
 
+_IS_QISKIT_AVAILABLE = True
+try:
+    from qiskit.circuit.quantumcircuit import QuantumCircuit
+    from qiskit.qobj.qasm_qobj import QasmQobjExperiment, QasmQobjInstruction
+    from collections import Counter
+except ImportError:
+    _IS_QISKIT_AVAILABLE = False
+
+class QrackQasmQobjInstructionConditional:
+    def __init__(self, mask, val):
+        self.mask = mask
+        self.val = val
 
 class QrackSimulator:
     def __init__(
@@ -24,6 +36,7 @@ class QrackSimulator:
         isOpenCL=True,
         isHostPointer=False,
         pyzxCircuit=None,
+        qiskitCircuit=None,
     ):
         self.sid = None
 
@@ -971,49 +984,382 @@ class QrackSimulator:
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
-    def run_pyzx_gates(self, gates):
-        for gate in gates:
-            if gate.name == "XPhase":
-                self.r(Pauli.PauliX, math.pi * gate.phase, gate.target)
-            elif gate.name == "ZPhase":
-                self.r(Pauli.PauliZ, math.pi * gate.phase, gate.target)
-            elif gate.name == "Z":
-                self.z(gate.target)
-            elif gate.name == "S":
-                self.s(gate.target)
-            elif gate.name == "T":
-                self.t(gate.target)
-            elif gate.name == "NOT":
-                self.x(gate.target)
-            elif gate.name == "HAD":
-                self.h(gate.target)
-            elif gate.name == "CNOT":
-                self.mcx([gate.control], gate.target)
-            elif gate.name == "CZ":
-                self.mcz([gate.control], gate.target)
-            elif gate.name == "CX":
-                self.h(gate.control)
-                if self._get_error() != 0:
-                    raise RuntimeError("QrackSimulator C++ library raised exception.")
-                self.mcx([gate.control], gate.target)
-                if self._get_error() != 0:
-                    raise RuntimeError("QrackSimulator C++ library raised exception.")
-                self.h(gate.control)
-            elif gate.name == "SWAP":
-                self.swap(gate.control, gate.target)
-            elif gate.name == "CRZ":
-                self.mcr(
-                    Pauli.PauliZ, math.pi * gate.phase, [gate.control], gate.target
-                )
-            elif gate.name == "CHAD":
-                self.mch([gate.control], gate.target)
-            elif gate.name == "ParityPhase":
-                self.phase_parity(math.pi * gate.phase, gate.targets)
-            elif gate.name == "FSim":
-                self.fsim(gate.theta, gate.phi, gate.control, gate.target)
-            elif gate.name == "CCZ":
-                self.mcz([gate.ctrl1, gate.ctrl2], gate.target)
-            elif gate.name == "Tof":
-                self.mcx([gate.ctrl1, gate.ctrl2], gate.target)
+    def _apply_pyzx_op(self, gate):
+        if gate.name == "XPhase":
+            self.r(Pauli.PauliX, math.pi * gate.phase, gate.target)
+        elif gate.name == "ZPhase":
+            self.r(Pauli.PauliZ, math.pi * gate.phase, gate.target)
+        elif gate.name == "Z":
+            self.z(gate.target)
+        elif gate.name == "S":
+            self.s(gate.target)
+        elif gate.name == "T":
+            self.t(gate.target)
+        elif gate.name == "NOT":
+            self.x(gate.target)
+        elif gate.name == "HAD":
+            self.h(gate.target)
+        elif gate.name == "CNOT":
+            self.mcx([gate.control], gate.target)
+        elif gate.name == "CZ":
+            self.mcz([gate.control], gate.target)
+        elif gate.name == "CX":
+            self.h(gate.control)
             if self._get_error() != 0:
                 raise RuntimeError("QrackSimulator C++ library raised exception.")
+            self.mcx([gate.control], gate.target)
+            if self._get_error() != 0:
+                raise RuntimeError("QrackSimulator C++ library raised exception.")
+            self.h(gate.control)
+        elif gate.name == "SWAP":
+            self.swap(gate.control, gate.target)
+        elif gate.name == "CRZ":
+            self.mcr(
+                Pauli.PauliZ, math.pi * gate.phase, [gate.control], gate.target
+            )
+        elif gate.name == "CHAD":
+            self.mch([gate.control], gate.target)
+        elif gate.name == "ParityPhase":
+            self.phase_parity(math.pi * gate.phase, gate.targets)
+        elif gate.name == "FSim":
+            self.fsim(gate.theta, gate.phi, gate.control, gate.target)
+        elif gate.name == "CCZ":
+            self.mcz([gate.ctrl1, gate.ctrl2], gate.target)
+        elif gate.name == "Tof":
+            self.mcx([gate.ctrl1, gate.ctrl2], gate.target)
+        if self._get_error() != 0:
+            raise RuntimeError("QrackSimulator C++ library raised exception.")
+
+    def run_pyzx_gates(self, gates):
+        for gate in gates:
+            _apply_pyzx_op(gate)
+
+    def _apply_op(self, operation):
+        name = operation.name
+
+        if (name == 'id') or (name == 'barrier'):
+            # Skip measurement logic
+            return
+
+        conditional = getattr(operation, 'conditional', None)
+        if isinstance(conditional, int):
+            conditional_bit_set = (self._classical_register >> conditional) & 1
+            if not conditional_bit_set:
+                return
+        elif conditional is not None:
+            mask = int(conditional.mask, 16)
+            if mask > 0:
+                value = self._classical_memory & mask
+                while (mask & 0x1) == 0:
+                    mask >>= 1
+                    value >>= 1
+                if value != int(conditional.val, 16):
+                    return
+
+        if (name == 'u1') or (name == 'p'):
+            self._sim.u(operation.qubits[0], 0, 0, operation.params[0])
+        elif name == 'u2':
+            self._sim.u(operation.qubits[0], math.pi / 2, operation.params[0], operation.params[1])
+        elif (name == 'u3') or (name == 'u'):
+            self._sim.u(operation.qubits[0], operation.params[0], operation.params[1], operation.params[2])
+        elif name == 'r':
+            self._sim.u(operation.qubits[0], operation.params[0], operation.params[1] - math.pi/2, -operation.params[1] + mathh.pi/2)
+        elif name == 'rx':
+            self._sim.r(Pauli.PauliX, operation.params[0], operation.qubits[0])
+        elif name == 'ry':
+            self._sim.r(Pauli.PauliY, operation.params[0], operation.qubits[0])
+        elif name == 'rz':
+            self._sim.r(Pauli.PauliZ, operation.params[0], operation.qubits[0])
+        elif name == 'h':
+            self._sim.h(operation.qubits[0])
+        elif name == 'x':
+            self._sim.x(operation.qubits[0])
+        elif name == 'y':
+            self._sim.y(operation.qubits[0])
+        elif name == 'z':
+            self._sim.z(operation.qubits[0])
+        elif name == 's':
+            self._sim.s(operation.qubits[0])
+        elif name == 'sdg':
+            self._sim.adjs(operation.qubits[0])
+        elif name == 'sx':
+            self._sim.mtrx([(1+1j)/2, (1-1j)/2, (1-1j)/2, (1+1j)/2], operation.qubits[0])
+        elif name == 'sxdg':
+            self._sim.mtrx([(1-1j)/2, (1+1j)/2, (1+1j)/2, (1-1j)/2], operation.qubits[0])
+        elif name == 't':
+            self._sim.t(operation.qubits[0])
+        elif name == 'tdg':
+            self._sim.adjt(operation.qubits[0])
+        elif name == 'cu1':
+            self._sim.mcu(operation.qubits[0:1], operation.qubits[1], 0, 0, operation.params[0])
+        elif name == 'cu2':
+            self._sim.mcu(operation.qubits[0:1], operation.qubits[1], math.pi / 2, operation.params[0], operation.params[1])
+        elif (name == 'cu3') or (name == 'cu'):
+            self._sim.mcu(operation.qubits[0:1], operation.qubits[1], operation.params[0], operation.params[1], operation.params[2])
+        elif name == 'cx':
+            self._sim.mcx(operation.qubits[0:1], operation.qubits[1])
+        elif name == 'cy':
+            self._sim.mcy(operation.qubits[0:1], operation.qubits[1])
+        elif name == 'cz':
+            self._sim.mcz(operation.qubits[0:1], operation.qubits[1])
+        elif name == 'ch':
+            self._sim.mch(operation.qubits[0:1], operation.qubits[1])
+        elif name == 'cp':
+            self._sim.mcmtrx(operation.qubits[0:1], [1, 0, 0, math.cos(operation.params[0]) + 1j * math.sin(operation.params[0])], operation.qubits[0])
+        elif name == 'csx':
+            self._sim.mcmtrx(operation.qubits[0:1], [(1+1j)/2, (1-1j)/2, (1-1j)/2, (1+1j)/2], operation.qubits[1])
+        elif name == 'csxdg':
+            self._sim.mcmtrx(operation.qubits[0:1], [(1-1j)/2, (1+1j)/2, (1+1j)/2, (1-1j)/2], operation.qubits[1])
+        elif name == 'dcx':
+            self._sim.mcx(operation.qubits[0:1], operation.qubits[1])
+            self._sim.mcx(operation.qubits[1:2], operation.qubits[0])
+        elif name == 'ccx':
+            self._sim.mcx(operation.qubits[0:2], operation.qubits[2])
+        elif name == 'ccy':
+            self._sim.mcy(operation.qubits[0:2], operation.qubits[2])
+        elif name == 'ccz':
+            self._sim.mcz(operation.qubits[0:2], operation.qubits[2])
+        elif name == 'mcx':
+            self._sim.mcx(operation.qubits[0:-1], operation.qubits[-1])
+        elif name == 'mcy':
+            self._sim.mcy(operation.qubits[0:-1], operation.qubits[-1])
+        elif name == 'mcz':
+            self._sim.mcz(operation.qubits[0:-1], operation.qubits[-1])
+        elif name == 'swap':
+            self._sim.swap(operation.qubits[0], operation.qubits[1])
+        elif name == 'iswap':
+            self._sim.iswap(operation.qubits[0], operation.qubits[1])
+        elif name == 'cswap':
+            self._sim.cswap(operation.qubits[0:1], operation.qubits[1], operation.qubits[2])
+        elif name == 'mcswap':
+            self._sim.cswap(operation.qubits[:-2], operation.qubits[-2], operation.qubits[-1])
+        elif name == 'reset':
+            qubits = operation.qubits
+            for qubit in qubits:
+                if self._sim.m(qubit):
+                    self._sim.x(qubit)
+        elif name == 'measure':
+            qubits = operation.qubits
+            clbits = operation.memory
+            cregbits = operation.register if hasattr(operation, 'register') else len(operation.qubits) * [-1]
+
+            self._sample_qubits += qubits
+            self._sample_clbits += clbits
+            self._sample_cregbits += cregbits
+
+            if not self._sample_measure:
+                for index in range(len(qubits)):
+                    qubit_outcome = self._sim.m(qubits[index])
+
+                    clbit = clbits[index]
+                    clmask = 1 << clbit
+                    self._classical_memory = (self._classical_memory & (~clmask)) | (qubit_outcome << clbit)
+
+                    cregbit = cregbits[index]
+                    if cregbit < 0:
+                        cregbit = clbit
+
+                    regbit = 1 << cregbit
+                    self._classical_register = (self._classical_register & (~regbit)) | (qubit_outcome << cregbit)
+
+        elif name == 'bfunc':
+            mask = int(operation.mask, 16)
+            relation = operation.relation
+            val = int(operation.val, 16)
+
+            cregbit = operation.register
+            cmembit = operation.memory if hasattr(operation, 'memory') else None
+
+            compared = (self._classical_register & mask) - val
+
+            if relation == '==':
+                outcome = (compared == 0)
+            elif relation == '!=':
+                outcome = (compared != 0)
+            elif relation == '<':
+                outcome = (compared < 0)
+            elif relation == '<=':
+                outcome = (compared <= 0)
+            elif relation == '>':
+                outcome = (compared > 0)
+            elif relation == '>=':
+                outcome = (compared >= 0)
+            else:
+                raise QrackError('Invalid boolean function relation.')
+
+            # Store outcome in register and optionally memory slot
+            regbit = 1 << cregbit
+            self._classical_register = \
+                (self._classical_register & (~regbit)) | (int(outcome) << cregbit)
+            if cmembit is not None:
+                membit = 1 << cmembit
+                self._classical_memory = \
+                    (self._classical_memory & (~membit)) | (int(outcome) << cmembit)
+        else:
+            err_msg = 'QrackSimulator encountered unrecognized operation "{0}"'
+            raise RuntimeError(err_msg.format(operation))
+
+    def _add_sample_measure(self, sample_qubits, sample_clbits, num_samples):
+        """Generate data samples from current statevector.
+        Taken almost straight from the terra source code.
+        Args:
+            measure_params (list): List of (qubit, clbit) values for
+                                   measure instructions to sample.
+            num_samples (int): The number of data samples to generate.
+        Returns:
+            list: A list of data values in hex format.
+        """
+        # Get unique qubits that are actually measured
+        measure_qubit = [qubit for qubit in sample_qubits]
+        measure_clbit = [clbit for clbit in sample_clbits]
+
+        # Sample and convert to bit-strings
+        data = []
+        if num_samples == 1:
+            sample = self._sim.m_all()
+            result = 0
+            for index in range(len(measure_qubit)):
+                qubit = measure_qubit[index]
+                qubit_outcome = ((sample >> qubit) & 1)
+                result |= qubit_outcome << index
+            measure_results = [result]
+        else:
+            measure_results = self._sim.measure_shots(measure_qubit, num_samples)
+
+        for sample in measure_results:
+            for index in range(len(measure_qubit)):
+                qubit_outcome = ((sample >> index) & 1)
+                clbit = measure_clbit[index]
+                clmask = 1 << clbit
+                self._classical_memory = (self._classical_memory & (~clmask)) | (qubit_outcome << clbit)
+
+            data.append(hex(int(bin(self._classical_memory)[2:], 2)))
+
+        return data
+
+    def run_qiskit_circuit(self, experiment, shots=1):
+        if not _IS_QISKIT_AVAILABLE:
+            raise RuntimeError(
+                "Before trying to run_qiskit_circuit() with QrackSimulator, you must install Qiskit!"
+            )
+
+        self._shots = shots
+
+        instructions = []
+        if isinstance(experiment, QasmQobjExperiment):
+            instructions = experiment.instructions
+        elif isinstance(experiment, QuantumCircuit):
+            for datum in experiment._data:
+                qubits = []
+                for qubit in datum[1]:
+                    qubits.append(experiment.qubits.index(qubit))
+
+                clbits = []
+                for clbit in datum[2]:
+                    clbits.append(experiment.clbits.index(clbit))
+
+                conditional = None
+                condition = datum[0].condition
+                if condition is not None:
+                    if isinstance(condition[0], Clbit):
+                        conditional = experiment.clbits.index(condition[0])
+                    else:
+                        creg_index = experiment.cregs.index(condition[0])
+                        size = experiment.cregs[creg_index].size
+                        offset = 0
+                        for i in range(creg_index):
+                            offset += len(experiment.cregs[i])
+                        mask = ((1 << offset) - 1) ^ ((1 << (offset + size)) - 1)
+                        val = condition[1]
+                        conditional = offset if (size == 1) else QrackQasmQobjInstructionConditional(mask, val)
+
+                instructions.append(QasmQobjInstruction(
+                    datum[0].name,
+                    qubits = qubits,
+                    memory = clbits,
+                    condition=condition,
+                    conditional=conditional,
+                    params = datum[0].params
+                ))
+        else:
+            raise RuntimeError('Unrecognized "run_input" argument specified for run().')
+
+        self._sample_qubits = []
+        self._sample_clbits = []
+        self._sample_cregbits = []
+        _data = []
+
+        self._sample_measure = True
+        shotsPerLoop = self._shots
+        shotLoopMax = 1
+
+        is_initializing = True
+        boundary_start = -1
+
+        for opcount in range(len(instructions)):
+            operation = instructions[opcount]
+
+            if operation.name == 'id' or operation.name == 'barrier':
+                continue
+
+            if is_initializing and ((operation.name == 'measure') or (operation.name == 'reset')):
+                continue
+
+            is_initializing = False
+
+            if (operation.name == 'measure') or (operation.name == 'reset'):
+                if boundary_start == -1:
+                    boundary_start = opcount
+
+            if (boundary_start != -1) and (operation.name != 'measure'):
+                shotsPerLoop = 1
+                shotLoopMax = self._shots
+                self._sample_measure = False
+                break
+
+        preamble_memory = 0
+        preamble_register = 0
+        preamble_sim = None
+
+        if self._sample_measure or boundary_start <= 0:
+            boundary_start = 0
+            self._sample_measure = True
+            shotsPerLoop = self._shots
+            shotLoopMax = 1
+        else:
+            boundary_start -= 1
+            if boundary_start > 0:
+                self._sim = self
+                self._classical_memory = 0
+                self._classical_register = 0
+
+                for operation in instructions[:boundary_start]:
+                    self._apply_op(operation)
+
+                preamble_memory = self._classical_memory
+                preamble_register = self._classical_register
+                preamble_sim = self._sim
+
+        for shot in range(shotLoopMax):
+            if preamble_sim is None:
+                self._sim = self
+                self._classical_memory = 0
+                self._classical_register = 0
+            else:
+                self._sim = QrackSimulator(cloneSid = preamble_sim.sid)
+                self._classical_memory = preamble_memory
+                self._classical_register = preamble_register
+
+            for operation in instructions[boundary_start:]:
+                self._apply_op(operation)
+
+            if not self._sample_measure and (len(self._sample_qubits) > 0):
+                _data += [hex(int(bin(self._classical_memory)[2:], 2))]
+                self._sample_qubits = []
+                self._sample_clbits = []
+                self._sample_cregbits = []
+
+        if self._sample_measure and (len(self._sample_qubits) > 0):
+            _data = self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots)
+
+        data = { 'counts': dict(Counter(_data)) }
