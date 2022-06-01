@@ -1243,8 +1243,6 @@ class QrackSimulator:
                 "Before trying to run_qiskit_circuit() with QrackSimulator, you must install Qiskit!"
             )
 
-        self._shots = shots
-
         instructions = []
         if isinstance(experiment, QasmQobjExperiment):
             instructions = experiment.instructions
@@ -1284,12 +1282,12 @@ class QrackSimulator:
         else:
             raise RuntimeError('Unrecognized "run_input" argument specified for run().')
 
+        self._shots = shots
         self._sample_qubits = []
         self._sample_clbits = []
         self._sample_cregbits = []
-        _data = []
-
         self._sample_measure = True
+        _data = []
         shotsPerLoop = self._shots
         shotLoopMax = 1
 
@@ -1363,5 +1361,10 @@ class QrackSimulator:
             _data = self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots)
 
         del self._sim
+        del self._shots
+        del self._sample_qubits
+        del self._sample_clbits
+        del self._sample_cregbits
+        del self._sample_measure
 
         return { 'counts': dict(Counter(_data)) }
