@@ -8,6 +8,18 @@ import ctypes
 from .qrack_system import Qrack
 from .pauli import Pauli
 
+_IS_QISKIT_AVAILABLE = True
+try:
+    from qiskit.circuit.quantumcircuit import QuantumCircuit
+    from qiskit.qobj.qasm_qobj import QasmQobjExperiment, QasmQobjInstruction
+    from collections import Counter
+except ImportError:
+    _IS_QISKIT_AVAILABLE = False
+
+class QrackQasmQobjInstructionConditional:
+    def __init__(self, mask, val):
+        self.mask = mask
+        self.val = val
 
 class QrackSimulator:
     def __init__(
@@ -1047,11 +1059,11 @@ class QrackSimulator:
         if (name == 'u1') or (name == 'p'):
             self._sim.u(operation.qubits[0], 0, 0, operation.params[0])
         elif name == 'u2':
-            self._sim.u(operation.qubits[0], np.pi / 2, operation.params[0], operation.params[1])
+            self._sim.u(operation.qubits[0], math.pi / 2, operation.params[0], operation.params[1])
         elif (name == 'u3') or (name == 'u'):
             self._sim.u(operation.qubits[0], operation.params[0], operation.params[1], operation.params[2])
         elif name == 'r':
-            self._sim.u(operation.qubits[0], operation.params[0], operation.params[1] - np.pi/2, -operation.params[1] + np.pi/2)
+            self._sim.u(operation.qubits[0], operation.params[0], operation.params[1] - math.pi/2, -operation.params[1] + mathh.pi/2)
         elif name == 'rx':
             self._sim.r(Pauli.PauliX, operation.params[0], operation.qubits[0])
         elif name == 'ry':
@@ -1081,7 +1093,7 @@ class QrackSimulator:
         elif name == 'cu1':
             self._sim.mcu(operation.qubits[0:1], operation.qubits[1], 0, 0, operation.params[0])
         elif name == 'cu2':
-            self._sim.mcu(operation.qubits[0:1], operation.qubits[1], np.pi / 2, operation.params[0], operation.params[1])
+            self._sim.mcu(operation.qubits[0:1], operation.qubits[1], math.pi / 2, operation.params[0], operation.params[1])
         elif (name == 'cu3') or (name == 'cu'):
             self._sim.mcu(operation.qubits[0:1], operation.qubits[1], operation.params[0], operation.params[1], operation.params[2])
         elif name == 'cx':
@@ -1093,7 +1105,7 @@ class QrackSimulator:
         elif name == 'ch':
             self._sim.mch(operation.qubits[0:1], operation.qubits[1])
         elif name == 'cp':
-            self._sim.mcmtrx(operation.qubits[0:1], [1, 0, 0, np.exp(1j * operation.params[0])], operation.qubits[0])
+            self._sim.mcmtrx(operation.qubits[0:1], [1, 0, 0, math.cos(operation.params[0]) + 1j * math.sin(operation.params[0])], operation.qubits[0])
         elif name == 'csx':
             self._sim.mcmtrx(operation.qubits[0:1], [(1+1j)/2, (1-1j)/2, (1-1j)/2, (1+1j)/2], operation.qubits[1])
         elif name == 'csxdg':
@@ -1225,13 +1237,57 @@ class QrackSimulator:
 
         return data
 
-    def run_qiskit_instructions(self, instructions, shots=1):
+    def run_qiskit_instructions(self, experiment, shots=1):
+        if not _IS_QISKIT_AVAILABLE:
+            raise RuntimeError(
+                "Before trying to run_qiskit_instructions() with QrackSimulator, you must install Qiskit!"
+            )
+
         self._shots = shots
-    
+
+        instructions = []
+        if isinstance(experiment, QasmQobjExperiment):
+            instructions = experiment.instructions
+        elif isinstance(experiment, QuantumCircuit):
+            for datum in experiment._data:
+                qubits = []
+                for qubit in datum[1]:
+                    qubits.append(experiment.qubits.index(qubit))
+
+                clbits = []
+                for clbit in datum[2]:
+                    clbits.append(experiment.clbits.index(clbit))
+
+                conditional = None
+                condition = datum[0].condition
+                if condition is not None:
+                    if isinstance(condition[0], Clbit):
+                        conditional = experiment.clbits.index(condition[0])
+                    else:
+                        creg_index = experiment.cregs.index(condition[0])
+                        size = experiment.cregs[creg_index].size
+                        offset = 0
+                        for i in range(creg_index):
+                            offset += len(experiment.cregs[i])
+                        mask = ((1 << offset) - 1) ^ ((1 << (offset + size)) - 1)
+                        val = condition[1]
+                        conditional = offset if (size == 1) else QrackQasmQobjInstructionConditional(mask, val)
+
+                instructions.append(QasmQobjInstruction(
+                    datum[0].name,
+                    qubits = qubits,
+                    memory = clbits,
+                    condition=condition,
+                    conditional=conditional,
+                    params = datum[0].params
+                ))
+        else:
+            raise RuntimeError('Unrecognized "run_input" argument specified for run().')
+
         self._sample_qubits = []
         self._sample_clbits = []
         self._sample_cregbits = []
-        self._data = []
+        _data = []
 
         self._sample_measure = True
         shotsPerLoop = self._shots
@@ -1298,12 +1354,12 @@ class QrackSimulator:
                 self._apply_op(operation)
 
             if not self._sample_measure and (len(self._sample_qubits) > 0):
-                self._data += [hex(int(bin(self._classical_memory)[2:], 2))]
+                _data += [hex(int(bin(self._classical_memory)[2:], 2))]
                 self._sample_qubits = []
                 self._sample_clbits = []
                 self._sample_cregbits = []
 
         if self._sample_measure and (len(self._sample_qubits) > 0):
-            self._data = self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots)
+            _data = self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots)
 
-        data = { 'counts': dict(Counter(self._data)) }
+        data = { 'counts': dict(Counter(_data)) }
