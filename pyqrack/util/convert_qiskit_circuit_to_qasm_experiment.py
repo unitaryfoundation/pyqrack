@@ -10,7 +10,7 @@ class QrackQasmQobjInstructionConditional:
         self.mask = mask
         self.val = val
 
-def convert_qiskit_circuit_to_qasm_experiment(experiment):
+def convert_qiskit_circuit_to_qasm_experiment(experiment, config=None, header=None):
     if not _IS_QISKIT_AVAILABLE:
         raise RuntimeError(
             "Before trying to convert_circuit_to_qasm_experiment() with QrackSimulator, you must install Qiskit!"
@@ -50,4 +50,4 @@ def convert_qiskit_circuit_to_qasm_experiment(experiment):
             params = datum[0].params
         ))
 
-    return QasmQobjExperiment(instructions = instructions)
+    return QasmQobjExperiment(config = config, header = header, instructions = instructions)
