@@ -21,6 +21,48 @@ class QrackQasmQobjInstructionConditional:
         self.mask = mask
         self.val = val
 
+def convert_circuit_to_qasm_experiment(experiment):
+    if not _IS_QISKIT_AVAILABLE:
+        raise RuntimeError(
+            "Before trying to convert_circuit_to_qasm_experiment() with QrackSimulator, you must install Qiskit!"
+        )
+
+    instructions = []
+    for datum in experiment._data:
+        qubits = []
+        for qubit in datum[1]:
+            qubits.append(experiment.qubits.index(qubit))
+
+        clbits = []
+        for clbit in datum[2]:
+            clbits.append(experiment.clbits.index(clbit))
+
+        conditional = None
+        condition = datum[0].condition
+        if condition is not None:
+            if isinstance(condition[0], Clbit):
+                conditional = experiment.clbits.index(condition[0])
+            else:
+                creg_index = experiment.cregs.index(condition[0])
+                size = experiment.cregs[creg_index].size
+                offset = 0
+                for i in range(creg_index):
+                    offset += len(experiment.cregs[i])
+                mask = ((1 << offset) - 1) ^ ((1 << (offset + size)) - 1)
+                val = condition[1]
+                conditional = offset if (size == 1) else QrackQasmQobjInstructionConditional(mask, val)
+
+        instructions.append(QasmQobjInstruction(
+            datum[0].name,
+            qubits = qubits,
+            memory = clbits,
+            condition=condition,
+            conditional=conditional,
+            params = datum[0].params
+        ))
+
+    return QasmQobjExperiment(instructions = instructions)
+
 class QrackSimulator:
     def __init__(
         self,
@@ -1226,16 +1268,7 @@ class QrackSimulator:
         else:
             measure_results = self._sim.measure_shots(measure_qubit, num_samples)
 
-        for sample in measure_results:
-            for index in range(len(measure_qubit)):
-                qubit_outcome = ((sample >> index) & 1)
-                clbit = measure_clbit[index]
-                clmask = 1 << clbit
-                self._classical_memory = (self._classical_memory & (~clmask)) | (qubit_outcome << clbit)
-
-            data.append(hex(int(bin(self._classical_memory)[2:], 2)))
-
-        return data
+        return measure_results
 
     def run_qiskit_circuit(self, experiment, shots=1):
         if not _IS_QISKIT_AVAILABLE:
@@ -1243,42 +1276,12 @@ class QrackSimulator:
                 "Before trying to run_qiskit_circuit() with QrackSimulator, you must install Qiskit!"
             )
 
+        if isinstance(experiment, QuantumCircuit):
+            experiment = convert_circuit_to_qasm_experiment(experiment)
+
         instructions = []
         if isinstance(experiment, QasmQobjExperiment):
             instructions = experiment.instructions
-        elif isinstance(experiment, QuantumCircuit):
-            for datum in experiment._data:
-                qubits = []
-                for qubit in datum[1]:
-                    qubits.append(experiment.qubits.index(qubit))
-
-                clbits = []
-                for clbit in datum[2]:
-                    clbits.append(experiment.clbits.index(clbit))
-
-                conditional = None
-                condition = datum[0].condition
-                if condition is not None:
-                    if isinstance(condition[0], Clbit):
-                        conditional = experiment.clbits.index(condition[0])
-                    else:
-                        creg_index = experiment.cregs.index(condition[0])
-                        size = experiment.cregs[creg_index].size
-                        offset = 0
-                        for i in range(creg_index):
-                            offset += len(experiment.cregs[i])
-                        mask = ((1 << offset) - 1) ^ ((1 << (offset + size)) - 1)
-                        val = condition[1]
-                        conditional = offset if (size == 1) else QrackQasmQobjInstructionConditional(mask, val)
-
-                instructions.append(QasmQobjInstruction(
-                    datum[0].name,
-                    qubits = qubits,
-                    memory = clbits,
-                    condition=condition,
-                    conditional=conditional,
-                    params = datum[0].params
-                ))
         else:
             raise RuntimeError('Unrecognized "run_input" argument specified for run().')
 
@@ -1367,4 +1370,4 @@ class QrackSimulator:
         del self._sample_cregbits
         del self._sample_measure
 
-        return { 'counts': dict(Counter(_data)) }
+        return _data
