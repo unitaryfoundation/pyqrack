@@ -1221,7 +1221,16 @@ class QrackSimulator:
         else:
             measure_results = self._sim.measure_shots(measure_qubit, num_samples)
 
-        return measure_results
+        for sample in measure_results:
+            for index in range(len(measure_qubit)):
+                qubit_outcome = ((sample >> index) & 1)
+                clbit = measure_clbit[index]
+                clmask = 1 << clbit
+                self._classical_memory = (self._classical_memory & (~clmask)) | (qubit_outcome << clbit)
+
+            data.append(hex(int(bin(self._classical_memory)[2:], 2)))
+
+        return data
 
     def run_qiskit_circuit(self, experiment, shots=1):
         if not _IS_QISKIT_AVAILABLE:
@@ -1308,7 +1317,7 @@ class QrackSimulator:
                 self._apply_op(operation)
 
             if not self._sample_measure and (len(self._sample_qubits) > 0):
-                _data += [int(bin(self._classical_memory)[2:], 2)]
+                _data += [hex(int(bin(self._classical_memory)[2:], 2))]
                 self._sample_qubits = []
                 self._sample_clbits = []
                 self._sample_cregbits = []
