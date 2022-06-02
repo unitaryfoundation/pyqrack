@@ -17,7 +17,7 @@ with open(README_PATH) as readme_file:
 setup(
     name='pyqrack',
     version=VERSION,
-    packages=['pyqrack', 'pyqrack.qrack_system'],
+    packages=['pyqrack', 'pyqrack.qrack_system', 'pyqrack.util'],
     description="pyqrack - Pure Python vm6502q/qrack Wrapper",
     long_description=README,
     long_description_content_type='text/markdown',
