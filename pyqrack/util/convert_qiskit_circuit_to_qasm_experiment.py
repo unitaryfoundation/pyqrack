@@ -5,10 +5,12 @@ try:
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
 
+
 class QrackQasmQobjInstructionConditional:
     def __init__(self, mask, val):
         self.mask = mask
         self.val = val
+
 
 def convert_qiskit_circuit_to_qasm_experiment(experiment, config=None, header=None):
     if not _IS_QISKIT_AVAILABLE:
@@ -39,15 +41,21 @@ def convert_qiskit_circuit_to_qasm_experiment(experiment, config=None, header=No
                     offset += len(experiment.cregs[i])
                 mask = ((1 << offset) - 1) ^ ((1 << (offset + size)) - 1)
                 val = condition[1]
-                conditional = offset if (size == 1) else QrackQasmQobjInstructionConditional(mask, val)
+                conditional = (
+                    offset
+                    if (size == 1)
+                    else QrackQasmQobjInstructionConditional(mask, val)
+                )
 
-        instructions.append(QasmQobjInstruction(
-            datum[0].name,
-            qubits = qubits,
-            memory = clbits,
-            condition=condition,
-            conditional=conditional,
-            params = datum[0].params
-        ))
+        instructions.append(
+            QasmQobjInstruction(
+                datum[0].name,
+                qubits=qubits,
+                memory=clbits,
+                condition=condition,
+                conditional=conditional,
+                params=datum[0].params,
+            )
+        )
 
-    return QasmQobjExperiment(config = config, header = header, instructions = instructions)
+    return QasmQobjExperiment(config=config, header=header, instructions=instructions)

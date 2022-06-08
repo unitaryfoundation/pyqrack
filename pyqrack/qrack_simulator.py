@@ -16,6 +16,7 @@ try:
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
 
+
 class QrackSimulator:
     def __init__(
         self,
@@ -1009,9 +1010,7 @@ class QrackSimulator:
         elif gate.name == "SWAP":
             self.swap(gate.control, gate.target)
         elif gate.name == "CRZ":
-            self.mcr(
-                Pauli.PauliZ, math.pi * gate.phase, [gate.control], gate.target
-            )
+            self.mcr(Pauli.PauliZ, math.pi * gate.phase, [gate.control], gate.target)
         elif gate.name == "CHAD":
             self.mch([gate.control], gate.target)
         elif gate.name == "ParityPhase":
@@ -1054,11 +1053,26 @@ class QrackSimulator:
         if (name == 'u1') or (name == 'p'):
             self._sim.u(operation.qubits[0], 0, 0, operation.params[0])
         elif name == 'u2':
-            self._sim.u(operation.qubits[0], math.pi / 2, operation.params[0], operation.params[1])
+            self._sim.u(
+                operation.qubits[0],
+                math.pi / 2,
+                operation.params[0],
+                operation.params[1],
+            )
         elif (name == 'u3') or (name == 'u'):
-            self._sim.u(operation.qubits[0], operation.params[0], operation.params[1], operation.params[2])
+            self._sim.u(
+                operation.qubits[0],
+                operation.params[0],
+                operation.params[1],
+                operation.params[2],
+            )
         elif name == 'r':
-            self._sim.u(operation.qubits[0], operation.params[0], operation.params[1] - math.pi/2, -operation.params[1] + mathh.pi/2)
+            self._sim.u(
+                operation.qubits[0],
+                operation.params[0],
+                operation.params[1] - math.pi / 2,
+                -operation.params[1] + mathh.pi / 2,
+            )
         elif name == 'rx':
             self._sim.r(Pauli.PauliX, operation.params[0], operation.qubits[0])
         elif name == 'ry':
@@ -1078,19 +1092,39 @@ class QrackSimulator:
         elif name == 'sdg':
             self._sim.adjs(operation.qubits[0])
         elif name == 'sx':
-            self._sim.mtrx([(1+1j)/2, (1-1j)/2, (1-1j)/2, (1+1j)/2], operation.qubits[0])
+            self._sim.mtrx(
+                [(1 + 1j) / 2, (1 - 1j) / 2, (1 - 1j) / 2, (1 + 1j) / 2],
+                operation.qubits[0],
+            )
         elif name == 'sxdg':
-            self._sim.mtrx([(1-1j)/2, (1+1j)/2, (1+1j)/2, (1-1j)/2], operation.qubits[0])
+            self._sim.mtrx(
+                [(1 - 1j) / 2, (1 + 1j) / 2, (1 + 1j) / 2, (1 - 1j) / 2],
+                operation.qubits[0],
+            )
         elif name == 't':
             self._sim.t(operation.qubits[0])
         elif name == 'tdg':
             self._sim.adjt(operation.qubits[0])
         elif name == 'cu1':
-            self._sim.mcu(operation.qubits[0:1], operation.qubits[1], 0, 0, operation.params[0])
+            self._sim.mcu(
+                operation.qubits[0:1], operation.qubits[1], 0, 0, operation.params[0]
+            )
         elif name == 'cu2':
-            self._sim.mcu(operation.qubits[0:1], operation.qubits[1], math.pi / 2, operation.params[0], operation.params[1])
+            self._sim.mcu(
+                operation.qubits[0:1],
+                operation.qubits[1],
+                math.pi / 2,
+                operation.params[0],
+                operation.params[1],
+            )
         elif (name == 'cu3') or (name == 'cu'):
-            self._sim.mcu(operation.qubits[0:1], operation.qubits[1], operation.params[0], operation.params[1], operation.params[2])
+            self._sim.mcu(
+                operation.qubits[0:1],
+                operation.qubits[1],
+                operation.params[0],
+                operation.params[1],
+                operation.params[2],
+            )
         elif name == 'cx':
             self._sim.mcx(operation.qubits[0:1], operation.qubits[1])
         elif name == 'cy':
@@ -1100,11 +1134,28 @@ class QrackSimulator:
         elif name == 'ch':
             self._sim.mch(operation.qubits[0:1], operation.qubits[1])
         elif name == 'cp':
-            self._sim.mcmtrx(operation.qubits[0:1], [1, 0, 0, math.cos(operation.params[0]) + 1j * math.sin(operation.params[0])], operation.qubits[0])
+            self._sim.mcmtrx(
+                operation.qubits[0:1],
+                [
+                    1,
+                    0,
+                    0,
+                    math.cos(operation.params[0]) + 1j * math.sin(operation.params[0]),
+                ],
+                operation.qubits[0],
+            )
         elif name == 'csx':
-            self._sim.mcmtrx(operation.qubits[0:1], [(1+1j)/2, (1-1j)/2, (1-1j)/2, (1+1j)/2], operation.qubits[1])
+            self._sim.mcmtrx(
+                operation.qubits[0:1],
+                [(1 + 1j) / 2, (1 - 1j) / 2, (1 - 1j) / 2, (1 + 1j) / 2],
+                operation.qubits[1],
+            )
         elif name == 'csxdg':
-            self._sim.mcmtrx(operation.qubits[0:1], [(1-1j)/2, (1+1j)/2, (1+1j)/2, (1-1j)/2], operation.qubits[1])
+            self._sim.mcmtrx(
+                operation.qubits[0:1],
+                [(1 - 1j) / 2, (1 + 1j) / 2, (1 + 1j) / 2, (1 - 1j) / 2],
+                operation.qubits[1],
+            )
         elif name == 'dcx':
             self._sim.mcx(operation.qubits[0:1], operation.qubits[1])
             self._sim.mcx(operation.qubits[1:2], operation.qubits[0])
@@ -1125,9 +1176,13 @@ class QrackSimulator:
         elif name == 'iswap':
             self._sim.iswap(operation.qubits[0], operation.qubits[1])
         elif name == 'cswap':
-            self._sim.cswap(operation.qubits[0:1], operation.qubits[1], operation.qubits[2])
+            self._sim.cswap(
+                operation.qubits[0:1], operation.qubits[1], operation.qubits[2]
+            )
         elif name == 'mcswap':
-            self._sim.cswap(operation.qubits[:-2], operation.qubits[-2], operation.qubits[-1])
+            self._sim.cswap(
+                operation.qubits[:-2], operation.qubits[-2], operation.qubits[-1]
+            )
         elif name == 'reset':
             qubits = operation.qubits
             for qubit in qubits:
@@ -1136,7 +1191,11 @@ class QrackSimulator:
         elif name == 'measure':
             qubits = operation.qubits
             clbits = operation.memory
-            cregbits = operation.register if hasattr(operation, 'register') else len(operation.qubits) * [-1]
+            cregbits = (
+                operation.register
+                if hasattr(operation, 'register')
+                else len(operation.qubits) * [-1]
+            )
 
             self._sample_qubits += qubits
             self._sample_clbits += clbits
@@ -1148,14 +1207,18 @@ class QrackSimulator:
 
                     clbit = clbits[index]
                     clmask = 1 << clbit
-                    self._classical_memory = (self._classical_memory & (~clmask)) | (qubit_outcome << clbit)
+                    self._classical_memory = (self._classical_memory & (~clmask)) | (
+                        qubit_outcome << clbit
+                    )
 
                     cregbit = cregbits[index]
                     if cregbit < 0:
                         cregbit = clbit
 
                     regbit = 1 << cregbit
-                    self._classical_register = (self._classical_register & (~regbit)) | (qubit_outcome << cregbit)
+                    self._classical_register = (
+                        self._classical_register & (~regbit)
+                    ) | (qubit_outcome << cregbit)
 
         elif name == 'bfunc':
             mask = int(operation.mask, 16)
@@ -1168,28 +1231,30 @@ class QrackSimulator:
             compared = (self._classical_register & mask) - val
 
             if relation == '==':
-                outcome = (compared == 0)
+                outcome = compared == 0
             elif relation == '!=':
-                outcome = (compared != 0)
+                outcome = compared != 0
             elif relation == '<':
-                outcome = (compared < 0)
+                outcome = compared < 0
             elif relation == '<=':
-                outcome = (compared <= 0)
+                outcome = compared <= 0
             elif relation == '>':
-                outcome = (compared > 0)
+                outcome = compared > 0
             elif relation == '>=':
-                outcome = (compared >= 0)
+                outcome = compared >= 0
             else:
                 raise QrackError('Invalid boolean function relation.')
 
             # Store outcome in register and optionally memory slot
             regbit = 1 << cregbit
-            self._classical_register = \
-                (self._classical_register & (~regbit)) | (int(outcome) << cregbit)
+            self._classical_register = (self._classical_register & (~regbit)) | (
+                int(outcome) << cregbit
+            )
             if cmembit is not None:
                 membit = 1 << cmembit
-                self._classical_memory = \
-                    (self._classical_memory & (~membit)) | (int(outcome) << cmembit)
+                self._classical_memory = (self._classical_memory & (~membit)) | (
+                    int(outcome) << cmembit
+                )
         else:
             err_msg = 'QrackSimulator encountered unrecognized operation "{0}"'
             raise RuntimeError(err_msg.format(operation))
@@ -1215,7 +1280,7 @@ class QrackSimulator:
             result = 0
             for index in range(len(measure_qubit)):
                 qubit = measure_qubit[index]
-                qubit_outcome = ((sample >> qubit) & 1)
+                qubit_outcome = (sample >> qubit) & 1
                 result |= qubit_outcome << index
             measure_results = [result]
         else:
@@ -1223,10 +1288,12 @@ class QrackSimulator:
 
         for sample in measure_results:
             for index in range(len(measure_qubit)):
-                qubit_outcome = ((sample >> index) & 1)
+                qubit_outcome = (sample >> index) & 1
                 clbit = measure_clbit[index]
                 clmask = 1 << clbit
-                self._classical_memory = (self._classical_memory & (~clmask)) | (qubit_outcome << clbit)
+                self._classical_memory = (self._classical_memory & (~clmask)) | (
+                    qubit_outcome << clbit
+                )
 
             data.append(hex(int(bin(self._classical_memory)[2:], 2)))
 
@@ -1265,7 +1332,9 @@ class QrackSimulator:
             if operation.name == 'id' or operation.name == 'barrier':
                 continue
 
-            if is_initializing and ((operation.name == 'measure') or (operation.name == 'reset')):
+            if is_initializing and (
+                (operation.name == 'measure') or (operation.name == 'reset')
+            ):
                 continue
 
             is_initializing = False
@@ -1309,7 +1378,7 @@ class QrackSimulator:
                 self._classical_memory = 0
                 self._classical_register = 0
             else:
-                self._sim = QrackSimulator(cloneSid = preamble_sim.sid)
+                self._sim = QrackSimulator(cloneSid=preamble_sim.sid)
                 self._classical_memory = preamble_memory
                 self._classical_register = preamble_register
 
@@ -1323,7 +1392,9 @@ class QrackSimulator:
                 self._sample_cregbits = []
 
         if self._sample_measure and (len(self._sample_qubits) > 0):
-            _data = self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots)
+            _data = self._add_sample_measure(
+                self._sample_qubits, self._sample_clbits, self._shots
+            )
 
         del self._sim
         del self._shots
