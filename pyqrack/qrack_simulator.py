@@ -18,6 +18,13 @@ except ImportError:
 
 
 class QrackSimulator:
+    """Interface for all the QRack functionality.
+
+    Attributes:
+        qubitCount(int): Number of qubits that are to be simulated.
+        sid(int): Corresponding simulator id.
+    """
+
     def __init__(
         self,
         qubitCount=-1,
@@ -151,46 +158,146 @@ class QrackSimulator:
 
     ## single-qubits gates
     def x(self, q):
+        """Applies X gate.
+
+        Applies the Pauli “X” operator to the qubit at position “q.”
+        The Pauli “X” operator is equivalent to a logical “NOT.”
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.X(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def y(self, q):
+        """Applies Y gate.
+
+        Applies the Pauli “Y” operator to the qubit at “q.”
+        The Pauli “Y” operator is equivalent to a logical “NOT" with
+        permutation phase.
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.Y(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def z(self, q):
+        """Applies Z gate.
+
+        Applies the Pauli “Z” operator to the qubit at “q.”
+        The Pauli “Z” operator flips the phase of `|1>`
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.Z(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def h(self, q):
+        """Applies H gate.
+
+        Applies the Hadarmard operator to the qubit at “q.”
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.H(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def s(self, q):
+        """Applies S gate.
+
+        Applies the 1/4 phase rotation to the qubit at “q.”
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.S(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def t(self, q):
+        """Applies T gate.
+
+        Applies the 1/8 phase rotation to the qubit at “q.”
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.T(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adjs(self, q):
+        """Adjoint of S gate
+
+        Applies the gate equivalent to the inverse of S gate.
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.AdjS(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adjt(self, q):
+        """Adjoint of T gate
+
+        Applies the gate equivalent to the inverse of T gate.
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.AdjT(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def u(self, q, th, ph, la):
+        """General unitary gate.
+
+        Applies a gate guaranteed to be unitary.
+        Spans all possible single bit unitary gates.
+
+        `U(theta, phi, lambda) = RZ(phi + pi/2)RX(theta)RZ(lambda - pi/2)`
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+            th: theta
+            ph: phi
+            la: lambda
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.U(
             self.sid, q, ctypes.c_double(th), ctypes.c_double(ph), ctypes.c_double(la)
         )
@@ -198,16 +305,54 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mtrx(self, m, q):
+        """Operation from matrix.
+
+        Applies arbitrary operation defined by the given matrix.
+
+        Args:
+            m: row-major complex list representing the operator.
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.Mtrx(self.sid, self._complex_byref(m), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def r(self, b, ph, q):
+        """Rotation gate.
+
+        Rotate the qubit along the given pauli basis by the given angle.
+
+
+        Args:
+            b: Pauli basis
+            ph: rotation angle
+            q: the qubit number on which the gate is applied to
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.R(self.sid, ctypes.c_ulonglong(b), ctypes.c_double(ph), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def exp(self, b, ph, q):
+        """Arbitrary exponentiation
+
+        `exp(b, theta) = e^{i*theta*[b_0 . b_1 ...]}`
+        where `.` is the tensor product.
+
+
+        Args:
+            b: Pauli basis
+            ph: coefficient of exponentiation
+            q: the qubit number on which the gate is applied to
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.Exp(
             self.sid,
             len(b),
@@ -220,46 +365,156 @@ class QrackSimulator:
 
     ## multi-qubit gates
     def mcx(self, c, q):
+        """Multi-controlled X gate
+
+        If all controlled qubits are `|1>` then the target qubit is flipped.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCX(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcy(self, c, q):
+        """Multi-controlled Y gate
+
+        If all controlled qubits are `|1>` then the Pauli "Y" gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCY(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcz(self, c, q):
+        """Multi-controlled Z gate
+
+        If all controlled qubits are `|1>` then the Pauli "Z" gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCZ(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mch(self, c, q):
+        """Multi-controlled H gate
+
+        If all controlled qubits are `|1>` then the Hadarmard gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCH(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcs(self, c, q):
+        """Multi-controlled S gate
+
+        If all controlled qubits are `|1>` then the "S" gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCS(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mct(self, c, q):
+        """Multi-controlled T gate
+
+        If all controlled qubits are `|1>` then the "T" gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCT(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcadjs(self, c, q):
+        """Multi-controlled adjs gate
+
+        If all controlled qubits are `|1>` then the adjs gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCAdjS(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcadjt(self, c, q):
+        """Multi-controlled adjt gate
+
+        If all controlled qubits are `|1>` then the adjt gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCAdjT(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcu(self, c, q, th, ph, la):
+        """Multi-controlled arbitraty unitary
+
+        If all controlled qubits are `|1>` then the unitary gate described by
+        parameters is applied to the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+            th: theta
+            ph: phi
+            la: lambda
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCU(
             self.sid,
             len(c),
@@ -273,6 +528,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcmtrx(self, c, m, q):
+        """Multi-controlled arbitraty operator
+
+        If all controlled qubits are `|1>` then the arbitrary operation by
+        parameters is applied to the target qubit.
+
+        Args:
+            c: list of controlled qubits
+            m: row-major complex list representing the operator.
+            q: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q
         )
@@ -280,46 +548,156 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macx(self, c, q):
+        """Anti multi-controlled X gate
+
+        If all controlled qubits are `|0>` then the target qubit is flipped.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACX(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macy(self, c, q):
+        """Anti multi-controlled Y gate
+
+        If all controlled qubits are `|0>` then the Pauli "Y" gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACY(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macz(self, c, q):
+        """Anti multi-controlled Z gate
+
+        If all controlled qubits are `|0>` then the Pauli "Z" gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACZ(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mach(self, c, q):
+        """Anti multi-controlled H gate
+
+        If all controlled qubits are `|0>` then the Hadarmard gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACH(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macs(self, c, q):
+        """Anti multi-controlled S gate
+
+        If all controlled qubits are `|0>` then the "S" gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACS(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mact(self, c, q):
+        """Anti multi-controlled T gate
+
+        If all controlled qubits are `|0>` then the "T" gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACT(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macadjs(self, c, q):
+        """Anti multi-controlled adjs gate
+
+        If all controlled qubits are `|0>` then the adjs gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACAdjS(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macadjt(self, c, q):
+        """Anti multi-controlled adjt gate
+
+        If all controlled qubits are `|0>` then the adjt gate is applied to
+        the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACAdjT(self.sid, len(c), self._ulonglong_byref(c), q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macu(self, c, q, th, ph, la):
+        """Anti multi-controlled arbitraty unitary
+
+        If all controlled qubits are `|0>` then the unitary gate described by
+        parameters is applied to the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            q: target qubit.
+            th: theta
+            ph: phi
+            la: lambda
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACU(
             self.sid,
             len(c),
@@ -333,6 +711,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def macmtrx(self, c, m, q):
+        """Anti multi-controlled arbitraty operator
+
+        If all controlled qubits are `|0>` then the arbitrary operation by
+        parameters is applied to the target qubit.
+
+        Args:
+            c: list of controlled qubits.
+            m: row-major complex matrix which defines the operator.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MACMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q
         )
@@ -340,6 +731,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def multiplex1_mtrx(self, c, q, m):
+        """Multiplex gate
+
+        A multiplex gate with a single target and an arbitrary number of
+        controls.
+
+        Args:
+            c: list of controlled qubits.
+            m: row-major complex matrix which defines the operator.
+            q: target qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.Multiplex1Mtrx(
             self.sid, len(c), self._ulonglong_byref(c), q, self._complex_byref(m)
         )
@@ -347,21 +751,65 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mx(self, q):
+        """Multi X-gate
+
+        Applies the Pauli “X” operator on all qubits.
+
+        Args:
+            q: list of qubits to apply X on.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MX(self.sid, len(q), self._ulonglong_byref(q))
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def my(self, q):
+        """Multi Y-gate
+
+        Applies the Pauli “Y” operator on all qubits.
+
+        Args:
+            q: list of qubits to apply Y on.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MY(self.sid, len(q), self._ulonglong_byref(q))
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mz(self, q):
+        """Multi Z-gate
+
+        Applies the Pauli “Z” operator on all qubits.
+
+        Args:
+            q: list of qubits to apply Z on.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MZ(self.sid, len(q), self._ulonglong_byref(q))
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcr(self, b, ph, c, q):
+        """Multi-controlled arbitrary rotation.
+
+        If all controlled qubits are `|1>` then the arbitrary rotation by
+        parameters is applied to the target qubit.
+
+        Args:
+            b: Pauli basis
+            ph: coefficient of exponentiation.
+            c: list of controlled qubits.
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCR(
             self.sid,
             ctypes.c_ulonglong(b),
@@ -374,6 +822,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcexp(self, b, ph, cs, q):
+        """Multi-controlled arbitrary exponentiation
+
+        If all controlled qubits are `|1>` then the target qubit is
+        exponentiated an pauli basis basis with coefficient.
+
+        Args:
+            b: Pauli basis
+            ph: coefficient of exponentiation.
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.MCExp(
             self.sid,
             len(b),
@@ -387,21 +848,68 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def swap(self, qi1, qi2):
+        """Swap Gate
+
+        Swaps the qubits at two given positions.
+
+        Args:
+            qi1: First position of qubit.
+            qi2: Second position of qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.SWAP(self.sid, qi1, qi2)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def iswap(self, qi1, qi2):
+        """Swap Gate with phase.
+
+        Swaps the qubits at two given positions.
+        If the bits are different then there is additional phase of `i`.
+
+        Args:
+            qi1: First position of qubit.
+            qi2: Second position of qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.ISWAP(self.sid, qi1, qi2)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adjiswap(self, qi1, qi2):
+        """Swap Gate with phase.
+
+        Swaps the qubits at two given positions.
+        If the bits are different then there is additional phase of `-i`.
+
+        Args:
+            qi1: First position of qubit.
+            qi2: Second position of qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.AdjISWAP(self.sid, qi1, qi2)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def fsim(self, th, ph, qi1, qi2):
+        """Fsim gate.
+
+        The 2-qubit “fSim” gate
+        Useful in the simulation of particles with fermionic statistics
+
+        Args:
+            qi1: First position of qubit.
+            qi2: Second position of qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.FSim(
             self.sid, ctypes.c_double(th), ctypes.c_double(ph), qi1, qi2
         )
@@ -409,35 +917,113 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def cswap(self, c, qi1, qi2):
+        """Controlled-swap Gate
+
+        Swaps the qubits at two given positions if the control qubits are `|1>`
+
+        Args:
+            c: list of controlled qubits.
+            qi1: First position of qubit.
+            qi2: Second position of qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.CSWAP(self.sid, len(c), self._ulonglong_byref(c), qi1, qi2)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def acswap(self, c, qi1, qi2):
+        """Anti controlled-swap Gate
+
+        Swaps the qubits at two given positions if the control qubits are `|0>`
+
+        Args:
+            c: list of controlled qubits.
+            qi1: First position of qubit.
+            qi2: Second position of qubit.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.ACSWAP(self.sid, len(c), self._ulonglong_byref(c), qi1, qi2)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # standard operations
     def m(self, q):
+        """Measurement gate
+
+        Measures the qubit at "q" and returns Boolean value.
+        This operator is not unitary & is probabilistic in nature.
+
+        Args:
+            q: qubit to measure
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Measurement result.
+        """
         result = Qrack.qrack_lib.M(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def force_m(self, q, r):
+        """Force-Measurement gate
+
+        Acts as if the measurement is applied and the result obtained is `r`
+
+        Args:
+            q: qubit to measure
+            r: the required result
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Measurement result.
+        """
         result = Qrack.qrack_lib.ForceM(self.sid, q, r)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def m_all(self):
+        """Measure-all gate
+
+        Measures measures all qubits.
+        This operator is not unitary & is probabilistic in nature.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Measurement result of all qubits.
+        """
         result = Qrack.qrack_lib.MAll(self.sid)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def measure_pauli(self, b, q):
+        """Pauli Measurement gate
+
+        Measures the qubit at "q" with the given pauli basis.
+        This operator is not unitary & is probabilistic in nature.
+
+        Args:
+            b: Pauli basis
+            q: qubit to measure
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Measurement result.
+        """
         result = Qrack.qrack_lib.Measure(
             self.sid, len(b), self._ulonglong_byref(b), self._ulonglong_byref(q)
         )
@@ -446,6 +1032,21 @@ class QrackSimulator:
         return result
 
     def measure_shots(self, q, s):
+        """Multi-shot measurement operator
+
+        Measures the qubit at "q" with the given pauli basis.
+        This operator is not unitary & is probabilistic in nature.
+
+        Args:
+            q: list of qubits to measure
+            s: number of shots
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            list of measurement result.
+        """
         m = self._ulonglong_byref([0] * s)
         Qrack.qrack_lib.MeasureShots(self.sid, len(q), self._ulonglong_byref(q), s, m)
         if self._get_error() != 0:
@@ -453,12 +1054,33 @@ class QrackSimulator:
         return [m[i] for i in range(s)]
 
     def reset_all(self):
+        """Reset gate
+
+        Resets all qubits to `|0>`
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.ResetAll(self.sid)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     # arithmetic-logic-unit (ALU)
     def _split_longs(self, a):
+        """Split operation
+
+        Splits the given integer into 64 bit numbers.
+
+
+        Args:
+            a: number to split
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            list of split numbers.
+        """
         aParts = []
         if a == 0:
             aParts.append(0)
@@ -468,6 +1090,20 @@ class QrackSimulator:
         return aParts
 
     def _split_longs_2(self, a, m):
+        """Split simultanoues operation
+
+        Splits 2 integers into same number of 64 bit numbers.
+
+        Args:
+            a: first number to split
+            m: second number to split
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            pair of lists of split numbers.
+        """
         aParts = []
         mParts = []
         if a == 0 and m == 0:
@@ -481,6 +1117,17 @@ class QrackSimulator:
         return aParts, mParts
 
     def add(self, a, q):
+        """Add integer to qubit
+
+        Adds the given integer to the given set of qubits.
+
+        Args:
+            a: first number to split
+            q: list of qubits to add the number
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.ADD(
             self.sid,
@@ -493,6 +1140,17 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def sub(self, a, q):
+        """Subtract integer to qubit
+
+        Subtracts the given integer to the given set of qubits.
+
+        Args:
+            a: first number to split
+            q: list of qubits to subtract the number
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.SUB(
             self.sid,
@@ -505,6 +1163,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adds(self, a, s, q):
+        """Signed Addition integer to qubit
+
+        Signed Addition of the given integer to the given set of qubits,
+        if there is an overflow the resultant will become negative.
+
+        Args:
+            a: number to add
+            s: qubit to store overflow
+            q: list of qubits to add the number
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.ADDS(
             self.sid,
@@ -518,6 +1189,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def subs(self, a, s, q):
+        """Subtract integer to qubit
+
+        Subtracts the given integer to the given set of qubits,
+        if there is an overflow the resultant will become negative.
+
+        Args:
+            a: number to subtract
+            s: qubit to store overflow
+            q: list of qubits to subtract the number
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.SUBS(
             self.sid,
@@ -531,6 +1215,20 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mul(self, a, q, o):
+        """Multiplies integer to qubit
+
+        Multiplies the given integer to the given set of qubits.
+        Carry register is required for maintaining the unitary nature of
+        operation, and must be as long as the input qubit register. 
+
+        Args:
+            a: number to multiply
+            q: list of qubits to multiply the number
+            o: carry register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MUL(
             self.sid,
@@ -544,6 +1242,20 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def div(self, a, q, o):
+        """Divides qubit by integer
+
+        'Divides' the given qubits by the integer.
+        Carry register is required for maintaining the unitary nature of
+        operation. 
+
+        Args:
+            a: integer to divide by
+            q: qubits to divide
+            o: carry register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.DIV(
             self.sid,
@@ -557,6 +1269,21 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def muln(self, a, m, q, o):
+        """Modulo Multiplication
+
+        Modulo Multiplication of the given integer to the given set of qubits
+        Carry register is required for maintaining the unitary nature of
+        operation. 
+
+        Args:
+            a: number to multiply
+            m: modulo number
+            q: list of qubits to multiply the number
+            o: carry register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.MULN(
             self.sid,
@@ -571,6 +1298,21 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def divn(self, a, m, q, o):
+        """Modulo Division
+
+        'Modulo Division' of the given set of qubits by the given integer
+        Carry register is required for maintaining the unitary nature of
+        operation, and must be as long as the input qubit registe. 
+
+        Args:
+            a: integer by which qubit will be divided
+            m: modulo integer
+            q: qubits to divide
+            o: carry register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.DIVN(
             self.sid,
@@ -585,6 +1327,20 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def pown(self, a, m, q, o):
+        """Modulo Power
+
+        Raises the qubit to the power `a` to which `mod m` is applied to.
+        Out-of-place register is required to store the resultant.
+
+        Args:
+            a: number in power
+            m: modulo number
+            q: list of qubits to exponentiate
+            o: out-of-place register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.POWN(
             self.sid,
@@ -599,6 +1355,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcadd(self, a, c, q):
+        """Controlled-add
+
+        Adds the given integer to the given set of qubits if all controlled
+        qubits are `|1>`.
+
+        Args:
+            a: number to add.
+            c: list of controlled qubits.
+            q: list of qubits to add the number
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MCADD(
             self.sid,
@@ -613,6 +1382,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcsub(self, a, c, q):
+        """Controlled-subtract
+
+        Subtracts the given integer to the given set of qubits if all controlled
+        qubits are `|1>`.
+
+        Args:
+            a: number to subtract.
+            c: list of controlled qubits.
+            q: list of qubits to add the number
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MCSUB(
             self.sid,
@@ -627,6 +1409,22 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcmul(self, a, c, q, o):
+        """Controlled-multiply
+
+        Multiplies the given integer to the given set of qubits if all controlled
+        qubits are `|1>`.
+        Out-of-place register is required to store the resultant.
+
+        Args:
+            a: number to multiply
+            c: list of controlled qubits.
+            q: list of qubits to add the number
+            o: carry register
+            o: out-of-place register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MCMUL(
             self.sid,
@@ -641,6 +1439,22 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcdiv(self, a, c, q, o):
+        """Controlled-divide.
+
+        'Divides' the given qubits by the integer if all controlled
+        qubits are `|1>`.
+        Carry register is required for maintaining the unitary nature of
+        operation. 
+
+        Args:
+            a: number to divide by
+            c: list of controlled qubits.
+            q: qubits to divide
+            o: carry register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MCDIV(
             self.sid,
@@ -655,6 +1469,23 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcmuln(self, a, c, m, q, o):
+        """Controlled-modulo multiplication
+
+        Modulo multiplication of the given integer to the given set of qubits
+        if all controlled qubits are `|1>`.
+        Carry register is required for maintaining the unitary nature of
+        operation. 
+
+        Args:
+            a: number to multiply
+            c: list of controlled qubits.
+            m: modulo number
+            q: list of qubits to add the number
+            o: carry register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.MCMULN(
             self.sid,
@@ -671,6 +1502,23 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcdivn(self, a, c, m, q, o):
+        """Controlled-divide.
+
+        Modulo division of the given qubits by the given number if all
+        controlled qubits are `|1>`.
+        Carry register is required for maintaining the unitary nature of
+        operation. 
+
+        Args:
+            a: number to divide by
+            c: list of controlled qubits.
+            m: modulo number
+            q: qubits to divide
+            o: carry register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.MCDIVN(
             self.sid,
@@ -687,6 +1535,22 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def mcpown(self, a, c, m, q, o):
+        """Controlled-modulo Power
+
+        Raises the qubit to the power `a` to which `mod m` is applied to if
+        all the controlled qubits are set to `|1>`.
+        Out-of-place register is required to store the resultant.
+
+        Args:
+            a: number in power
+            c: control qubits
+            m: modulo number
+            q: list of qubits to exponentiate
+            o: out-of-place register
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.MCPOWN(
             self.sid,
@@ -703,6 +1567,20 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def lda(self, qi, qv, t):
+        """Load Accumalator
+
+        Quantum counterpart for LDA from MOS-6502 assembly. `t` must be of
+        the length `2 ** len(qi)`. It loads each list entry index of t into
+        the qi register and each list entry value into the qv register.
+
+        Args:
+            qi: qubit register for index
+            qv: qubit register for value
+            t: list of values
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.LDA(
             self.sid,
             len(qi),
@@ -715,6 +1593,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def adc(self, s, qi, qv, t):
+        """Add with Carry
+
+        Quantum counterpart for ADC from MOS-6502 assembly. `t` must be of
+        the length `2 ** len(qi)`.
+
+        Args:
+            qi: qubit register for index
+            qv: qubit register for value
+            t: list of values
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.ADC(
             self.sid,
             s,
@@ -728,6 +1619,19 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def sbc(self, s, qi, qv, t):
+        """Subtract with Carry
+
+        Quantum counterpart for SBC from MOS-6502 assembly. `t` must be of
+        the length `2 ** len(qi)`
+
+        Args:
+            qi: qubit register for index
+            qv: qubit register for value
+            t: list of values
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.SBC(
             self.sid,
             s,
@@ -741,6 +1645,20 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def hash(self, q, t):
+        """Hash function
+
+        Replicates the behaviour of LDA without the index register.
+        For the operation to be unitary, the entries present in `t` must be
+        unique, and the length of `t` must be `2 ** len(qi)`.
+
+
+        Args:
+            q: qubit register for value
+            t: list of values
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.Hash(
             self.sid, len(q), self._ulonglong_byref(q), self._to_ubyte(len(q), t)
         )
@@ -749,61 +1667,215 @@ class QrackSimulator:
 
     # boolean logic gates
     def qand(self, qi1, qi2, qo):
+        """Logical AND
+
+        Logical AND of 2 qubits whose result is stored in the target qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.AND(self.sid, qi1, qi2, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qor(self, qi1, qi2, qo):
+        """Logical OR
+
+        Logical OR of 2 qubits whose result is stored in the target qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.OR(self.sid, qi1, qi2, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qxor(self, qi1, qi2, qo):
+        """Logical XOR
+
+        Logical exlusive-OR of 2 qubits whose result is stored in the target
+        qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.XOR(self.sid, qi1, qi2, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qnand(self, qi1, qi2, qo):
+        """Logical NAND
+
+        Logical NAND of 2 qubits whose result is stored in the target
+        qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.NAND(self.sid, qi1, qi2, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qnor(self, qi1, qi2, qo):
+        """Logical NOR
+
+        Logical NOR of 2 qubits whose result is stored in the target
+        qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.NOR(self.sid, qi1, qi2, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def qxnor(self, qi1, qi2, qo):
+        """Logical XOR
+
+        Logical exlusive-NOR of 2 qubits whose result is stored in the target
+        qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.XNOR(self.sid, qi1, qi2, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def cland(self, ci, qi, qo):
+        """Classical AND
+
+        Logical AND with one qubit and one classical bit whose result is
+        stored in target qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.CLAND(self.sid, ci, qi, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clor(self, ci, qi, qo):
+        """Classical OR
+
+        Logical OR with one qubit and one classical bit whose result is
+        stored in target qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.CLOR(self.sid, ci, qi, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clxor(self, ci, qi, qo):
+        """Classical XOR
+
+        Logical exlusive-OR with one qubit and one classical bit whose result is
+        stored in target qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.CLXOR(self.sid, ci, qi, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clnand(self, ci, qi, qo):
+        """Classical NAND
+
+        Logical NAND with one qubit and one classical bit whose result is
+        stored in target qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.CLNAND(self.sid, ci, qi, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clnor(self, ci, qi, qo):
+        """Classical NOR
+
+        Logical NOR with one qubit and one classical bit whose result is
+        stored in target qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.CLNOR(self.sid, ci, qi, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def clxnor(self, ci, qi, qo):
+        """Classical XNOR
+
+        Logical exlusive-NOR with one qubit and one classical bit whose result is
+        stored in target qubit.
+
+        Args:
+            qi1: qubit 1
+            qi2: qubit 2
+            qo: target qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.CLXNOR(self.sid, ci, qi, qo)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
@@ -812,11 +1884,32 @@ class QrackSimulator:
 
     ## fourier transform
     def qft(self, qs):
+        """Quantum Fourier Transform
+
+        Applies Quantum Fourier Transform on the list of qubits provided.
+
+        Args:
+            qs: list of qubits
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.QFT(self.sid, len(qs), self._ulonglong_byref(qs))
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def iqft(self, qs):
+        """Inverse-quantum Fourier Transform
+
+        Applies Inverse-quantum Fourier Transform on the list of qubits
+        provided.
+
+        Args:
+            qs: list of qubits
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.IQFT(self.sid, len(qs), self._ulonglong_byref(qs))
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
@@ -825,17 +1918,53 @@ class QrackSimulator:
 
     ## allocate and release
     def allocate_qubit(self, qid):
+        """Allocate Qubit
+
+        Allocate 1 new qubit with the given qubit ID.
+
+        Args:
+            qid: qubit id
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.allocateQubit(self.sid, qid)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def release(self, q):
+        """Release Qubit
+
+        Release qubit given by the given qubit ID.
+
+        Args:
+            q: qubit id
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            If the qubit was in `|0>` state with small tolerance.
+        """
         result = Qrack.qrack_lib.release(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def num_qubits(self):
+        """Get Qubit count
+
+        Returns the qubit count of the simulator.
+
+        Args:
+            q: qubit id
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Qubit count of the simulator
+        """
         result = Qrack.qrack_lib.num_qubits(self.sid)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
@@ -843,12 +1972,37 @@ class QrackSimulator:
 
     ## schmidt decomposition
     def compose(self, other, q):
+        """Compose qubits
+
+        Compose quantum description of given qubit with the current system.
+
+        Args:
+            q: qubit id
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.Compose(self.sid, other.sid, self._ulonglong_byref(q))
         self._qubitCount = self._qubitCount + other._qubitCount
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def decompose(self, q):
+        """Decompose system
+
+        Decompose the given qubit out of the system.
+        Warning: The qubit subsystem state must be separable, or the behavior 
+        of this method is undefined.
+
+        Args:
+            q: qubit id
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            State of the systems.
+        """
         other = QrackSimulator()
         Qrack.qrack_lib.destroy(other.sid)
         l = len(q)
@@ -860,6 +2014,22 @@ class QrackSimulator:
         return other
 
     def dispose(self, q):
+        """Dispose qubits
+
+        Minimally decompose a set of contiguous bits from the separably
+        composed unit, and discard the separable bits.
+        Warning: The qubit subsystem state must be separable, or the behavior 
+        of this method is undefined.
+
+        Args:
+            q: qubit
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            State of the systems.
+        """
         l = len(q)
         Qrack.qrack_lib.Dispose(self.sid, l, self._ulonglong_byref(q))
         self._qubitCount = self._qubitCount - l
@@ -868,6 +2038,13 @@ class QrackSimulator:
 
     ## miscellaneous
     def dump_ids(self):
+        """Dump all IDs
+
+        Dump all IDs from the selected simulator ID into the callback.
+
+        Returns:
+            List of ids
+        """
         global ids_list
         global ids_list_index
         ids_list = [0] * self._qubitCount
@@ -877,12 +2054,20 @@ class QrackSimulator:
 
     @ctypes.CFUNCTYPE(None, ctypes.c_ulonglong)
     def dump_ids_callback(i):
+        """C callback function"""
         global ids_list
         global ids_list_index
         ids_list[ids_list_index] = i
         ids_list_index = ids_list_index + 1
 
     def dump(self):
+        """Dump state vector
+
+        Dump state vector from the selected simulator ID into the callback.
+
+        Returns:
+            State vector list
+        """
         global state_vec_list
         global state_vec_list_index
         global state_vec_probability
@@ -894,6 +2079,7 @@ class QrackSimulator:
 
     @ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_double, ctypes.c_double)
     def dump_callback(r, i):
+        """C callback function"""
         global state_vec_list
         global state_vec_list_index
         global state_vec_probability
@@ -905,6 +2091,18 @@ class QrackSimulator:
         return True
 
     def in_ket(self, ket):
+        """Set state vector
+
+        Set state vector for the selected simulator ID. 
+        Warning: State vector is not always the internal representation leading 
+        to sub-optimal performance of the method.
+
+        Args:
+            ket: the state vector to which simulator will be set
+
+        Raises:
+            RuntimeError: Not implemented for the given builds.
+        """
         if Qrack.fppow == 5 or Qrack.fppow == 6:
             Qrack.qrack_lib.InKet(self.sid, self._qrack_complex_byref(ket))
             if self._get_error() != 0:
@@ -915,6 +2113,18 @@ class QrackSimulator:
             )
 
     def out_ket(self):
+        """Set state vector
+
+        Returns the raw state vector of the simulator.
+        Warning: State vector is not always the internal representation leading 
+        to sub-optimal performance of the method.
+
+        Raises:
+            RuntimeError: Not implemented for the given builds.
+
+        Returns:
+            list representing the state vector.
+        """
         if Qrack.fppow == 5 or Qrack.fppow == 6:
             amp_count = 1 << self._qubitCount
             ket = self._qrack_complex_byref([complex(0, 0)] * amp_count)
@@ -927,12 +2137,39 @@ class QrackSimulator:
         )
 
     def prob(self, q):
+        """Probability of `|1>`
+
+        Get the probability that a qubit is in the `|1>` state.
+
+        Args:
+            q: qubit id
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            probability of qubit being in `|1>`
+        """
         result = Qrack.qrack_lib.Prob(self.sid, q)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def permutation_expectation(self, c):
+        """Permutation expectation value
+
+        Get the permutation expectation value, based upon the order of
+        input qubits.
+
+        Args:
+            c: permutation
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
         result = Qrack.qrack_lib.PermutationExpectation(
             self.sid, len(c), self._ulonglong_byref(c)
         )
@@ -941,6 +2178,21 @@ class QrackSimulator:
         return result
 
     def joint_ensemble_probability(self, b, q):
+        """Ensemble probability
+
+        Find the joint probability for all specified qubits under the
+        respective Pauli basis transformations.
+
+        Args:
+            b: pauli basis
+            q: specified qubits
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
         result = Qrack.qrack_lib.JointEnsembleProbability(
             self.sid, len(b), self._ulonglong_byref(b), q
         )
@@ -949,6 +2201,18 @@ class QrackSimulator:
         return result
 
     def phase_parity(self, la, q):
+        """Phase to odd parity
+
+        Applies `e^(i*la)` phase factor to all combinations of bits with
+        odd parity, based upon permutations of qubits.
+
+        Args:
+            la: phase
+            q: specified qubits
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.PhaseParity(
             self.sid, ctypes.c_double(la), len(q), self._ulonglong_byref(q)
         )
@@ -956,18 +2220,60 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def try_separate_1qb(self, qi1):
+        """Manual seperation
+
+        Exposes manual control for schmidt decomposition which attempts to
+        decompose the qubit with possible performance improvement
+
+        Args:
+            qi1: qubit to be decomposed
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            State of the qubit.
+        """
         result = Qrack.qrack_lib.TrySeparate1Qb(self.sid, qi1)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def try_separate_2qb(self, qi1, qi2):
+        """Manual two-qubits seperation
+
+        two-qubits counterpart of `try_separate_1qb`.
+
+        Args:
+            qi1: first qubit to be decomposed
+            qi2: second qubit to be decomposed
+
+        Raises:
+            Runtimeerror: QrackSimulator raised an exception.
+
+        Returns:
+            State of both the qubits.
+        """
         result = Qrack.qrack_lib.TrySeparate2Qb(self.sid, qi1, qi2)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result
 
     def try_separate_tolerance(self, qs, t):
+        """Manual multi-qubits seperation
+
+        Multi-qubits counterpart of `try_separate_1qb`.
+
+        Args:
+            qs: list of qubits to be decomposed
+            t: allowed tolerance
+
+        Raises:
+            Runtimeerror: QrackSimulator raised an exception.
+
+        Returns:
+            State of all the qubits.
+        """
         result = Qrack.qrack_lib.TrySeparateTol(
             self.sid, len(qs), self._ulonglong_byref(qs), t
         )
@@ -976,6 +2282,17 @@ class QrackSimulator:
         return result
 
     def set_reactive_separate(self, irs):
+        """Set reactive separation option
+
+        If reactive separation is available, then this method turns it off.
+        Note that reactive separation is on by default.
+
+        Args:
+            irs: is aggresively separable
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         Qrack.qrack_lib.SetReactiveSeparate(self.sid, irs)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
@@ -1025,6 +2342,16 @@ class QrackSimulator:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def run_pyzx_gates(self, gates):
+        """PYZX Gates
+
+        Converts PYZX gates to `QRackSimulator` and immediately executes them.
+
+        Args:
+            gates: list of PYZX gates
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
         for gate in gates:
             _apply_pyzx_op(gate)
 
@@ -1261,11 +2588,14 @@ class QrackSimulator:
 
     def _add_sample_measure(self, sample_qubits, sample_clbits, num_samples):
         """Generate data samples from current statevector.
+
         Taken almost straight from the terra source code.
+
         Args:
             measure_params (list): List of (qubit, clbit) values for
                                    measure instructions to sample.
             num_samples (int): The number of data samples to generate.
+
         Returns:
             list: A list of data values in hex format.
         """

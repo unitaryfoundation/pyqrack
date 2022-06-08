@@ -10,10 +10,10 @@ from enum import IntEnum
 
 class Pauli(IntEnum):
     # Pauli Identity operator. Corresponds to Q# constant "PauliI."
-    PauliI = (0,)
+    PauliI = 0
     # Pauli X operator. Corresponds to Q# constant "PauliX."
-    PauliX = (1,)
+    PauliX = 1
     # Pauli Y operator. Corresponds to Q# constant "PauliY."
-    PauliY = (3,)
+    PauliY = 3
     # Pauli Z operator. Corresponds to Q# constant "PauliZ."
     PauliZ = 2
