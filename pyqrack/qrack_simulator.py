@@ -2284,7 +2284,7 @@ class QrackSimulator:
     def set_reactive_separate(self, irs):
         """Set reactive separation option
 
-        If reactive separation is available, then this method turns it off.
+        If reactive separation is available, then this method turns it off/on.
         Note that reactive separation is on by default.
 
         Args:
@@ -2294,6 +2294,22 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         Qrack.qrack_lib.SetReactiveSeparate(self.sid, irs)
+        if self._get_error() != 0:
+            raise RuntimeError("QrackSimulator C++ library raised exception.")
+
+    def set_t_injection(self, iti):
+        """Set t-injection option
+
+        If t-injection is available, then this method turns it off/on.
+        Note that t-injection is on by default.
+
+        Args:
+            iti: use "reverse t-injection gadget"
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetTInjection(self.sid, iti)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
 

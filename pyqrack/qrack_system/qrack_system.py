@@ -836,3 +836,5 @@ class QrackSystem:
 
         self.qrack_lib.SetReactiveSeparate.resType = c_bool
         self.qrack_lib.SetReactiveSeparate.argTypes = [c_ulonglong, c_bool]
+        self.qrack_lib.SetTInjection.resType = c_bool
+        self.qrack_lib.SetTInjection.argTypes = [c_ulonglong, c_bool]
