@@ -97,7 +97,7 @@ class QrackSimulator:
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
         elif qiskitCircuit is not None:
-            self.run_pyzx_gates(qiskitCircuit)
+            self.run_qiskit_circuit(qiskitCircuit)
 
     def __del__(self):
         if self.sid is not None:
