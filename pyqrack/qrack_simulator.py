@@ -45,6 +45,10 @@ class QrackSimulator:
 
         if pyzxCircuit is not None:
             qubitCount = pyzxCircuit.qubits
+        elif qiskitCircuit is not None and qubitCount < 0:
+            raise RuntimeError(
+                "Must specify qubitCount with qiskitCircuit parameter in QrackSimulator constructor!"
+            )
 
         if qubitCount > -1 and cloneSid > -1:
             raise RuntimeError(
@@ -92,6 +96,8 @@ class QrackSimulator:
 
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
+        elif qiskitCircuit is not None:
+            self.run_pyzx_gates(qiskitCircuit, 1)
 
     def __del__(self):
         if self.sid is not None:
