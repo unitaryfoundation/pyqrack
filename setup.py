@@ -6,7 +6,7 @@ from setuptools import setup
 
 requirements = []
 
-VERSION = "0.19.2"
+VERSION = "0.19.3"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
@@ -36,6 +36,8 @@ setup(
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.10",
         "Topic :: Scientific/Engineering",
     ],
     keywords="pyqrack qrack simulator quantum gpu",
