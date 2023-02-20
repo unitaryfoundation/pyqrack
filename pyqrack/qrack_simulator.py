@@ -357,6 +357,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(b) != len(q):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         Qrack.qrack_lib.Exp(
             self.sid,
             len(b),
@@ -839,6 +841,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(b) != len(q):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         Qrack.qrack_lib.MCExp(
             self.sid,
             len(b),
@@ -1028,6 +1032,8 @@ class QrackSimulator:
         Returns:
             Measurement result.
         """
+        if len(b) != len(q):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         result = Qrack.qrack_lib.Measure(
             self.sid, len(b), self._ulonglong_byref(b), self._ulonglong_byref(q)
         )
@@ -1223,7 +1229,7 @@ class QrackSimulator:
 
         Multiplies the given integer to the given set of qubits.
         Carry register is required for maintaining the unitary nature of
-        operation, and must be as long as the input qubit register. 
+        operation and must be as long as the input qubit register.
 
         Args:
             a: number to multiply
@@ -1233,6 +1239,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MUL(
             self.sid,
@@ -1249,8 +1257,9 @@ class QrackSimulator:
         """Divides qubit by integer
 
         'Divides' the given qubits by the integer.
+        (This is rather the adjoint of mul().)
         Carry register is required for maintaining the unitary nature of
-        operation. 
+        operation.
 
         Args:
             a: integer to divide by
@@ -1260,6 +1269,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts = self._split_longs(a)
         Qrack.qrack_lib.DIV(
             self.sid,
@@ -1276,8 +1287,7 @@ class QrackSimulator:
         """Modulo Multiplication
 
         Modulo Multiplication of the given integer to the given set of qubits
-        Carry register is required for maintaining the unitary nature of
-        operation. 
+        Out-of-place register is required to store the resultant.
 
         Args:
             a: number to multiply
@@ -1288,6 +1298,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.MULN(
             self.sid,
@@ -1305,8 +1317,8 @@ class QrackSimulator:
         """Modulo Division
 
         'Modulo Division' of the given set of qubits by the given integer
-        Carry register is required for maintaining the unitary nature of
-        operation, and must be as long as the input qubit registe. 
+        (This is rather the adjoint of muln().)
+        Out-of-place register is required to retrieve the resultant.
 
         Args:
             a: integer by which qubit will be divided
@@ -1317,6 +1329,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.DIVN(
             self.sid,
@@ -1345,6 +1359,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.POWN(
             self.sid,
@@ -1417,18 +1433,20 @@ class QrackSimulator:
 
         Multiplies the given integer to the given set of qubits if all controlled
         qubits are `|1>`.
-        Out-of-place register is required to store the resultant.
+        Carry register is required for maintaining the unitary nature of
+        operation.
 
         Args:
             a: number to multiply
             c: list of controlled qubits.
             q: list of qubits to add the number
             o: carry register
-            o: out-of-place register
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MCMUL(
             self.sid,
@@ -1447,8 +1465,9 @@ class QrackSimulator:
 
         'Divides' the given qubits by the integer if all controlled
         qubits are `|1>`.
+        (This is rather the adjoint of mcmul().)
         Carry register is required for maintaining the unitary nature of
-        operation. 
+        operation.
 
         Args:
             a: number to divide by
@@ -1459,6 +1478,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MCDIV(
             self.sid,
@@ -1477,19 +1498,20 @@ class QrackSimulator:
 
         Modulo multiplication of the given integer to the given set of qubits
         if all controlled qubits are `|1>`.
-        Carry register is required for maintaining the unitary nature of
-        operation. 
+        Out-of-place register is required to store the resultant.
 
         Args:
             a: number to multiply
             c: list of controlled qubits.
             m: modulo number
             q: list of qubits to add the number
-            o: carry register
+            o: out-of-place output register
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.MCMULN(
             self.sid,
@@ -1510,8 +1532,8 @@ class QrackSimulator:
 
         Modulo division of the given qubits by the given number if all
         controlled qubits are `|1>`.
-        Carry register is required for maintaining the unitary nature of
-        operation. 
+        (This is rather the adjoint of mcmuln().)
+        Out-of-place register is required to retrieve the resultant.
 
         Args:
             a: number to divide by
@@ -1523,6 +1545,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.MCDIVN(
             self.sid,
@@ -1555,6 +1579,8 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(q) != len(o):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
         Qrack.qrack_lib.MCPOWN(
             self.sid,
@@ -2197,6 +2223,8 @@ class QrackSimulator:
         Returns:
             Expectation value
         """
+        if len(b) != len(q):
+            raise RuntimeError("Lengths of list parameters are mismatched.")
         result = Qrack.qrack_lib.JointEnsembleProbability(
             self.sid, len(b), self._ulonglong_byref(b), q
         )
