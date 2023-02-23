@@ -118,6 +118,9 @@ class QrackSimulator:
             return (ctypes.c_float * len(a))(*a)
         return (ctypes.c_double * len(a))(*a)
 
+    def _bool_byref(self, a):
+        return (ctypes.c_bool * len(a))(*a)
+
     def _qrack_complex_byref(self, a):
         t = [(c.real, c.imag) for c in a]
         return self._real1_byref([float(item) for sublist in t for item in sublist])
@@ -2181,6 +2184,31 @@ class QrackSimulator:
             probability of qubit being in `|1>`
         """
         result = Qrack.qrack_lib.Prob(self.sid, q)
+        if self._get_error() != 0:
+            raise RuntimeError("QrackSimulator C++ library raised exception.")
+        return result
+
+    def prob_perm(self, q, c):
+        """Probability of permutation
+
+        Get the probability that the qubit IDs in "q" have the truth values
+        in "c", directly corresponding by vector index.
+
+        Args:
+            q(Vec<u64>): qubit ids
+            c(Vec<bool>): qubit truth values
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            probability that each qubit in "q[i]" has corresponding truth
+            value in "c[i]", at once
+        """
+
+        if len(q) != len(c):
+            raise RuntimeError("prob_perm argument lengths do not match.")
+        result = Qrack.qrack_lib.PermutationProb(self.sid, len(q), self._ulonglong_byref(q), self._bool_byref(c));
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return result

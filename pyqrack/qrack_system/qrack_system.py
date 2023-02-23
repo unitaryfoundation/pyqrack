@@ -131,6 +131,14 @@ class QrackSystem:
         self.qrack_lib.Prob.restype = c_double
         self.qrack_lib.Prob.argTypes = [c_ulonglong, c_ulonglong]
 
+        self.qrack_lib.PermutationProb.restype = c_double
+        self.qrack_lib.PermutationProb.argTypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong),
+            POINTER(c_bool)
+        ]
+
         self.qrack_lib.PermutationExpectation.restype = c_double
         self.qrack_lib.PermutationExpectation.argTypes = [
             c_ulonglong,
