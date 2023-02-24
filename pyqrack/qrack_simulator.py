@@ -2192,11 +2192,11 @@ class QrackSimulator:
         """Probability of permutation
 
         Get the probability that the qubit IDs in "q" have the truth values
-        in "c", directly corresponding by vector index.
+        in "c", directly corresponding by list index.
 
         Args:
             q: list of qubit ids
-            c: list of qubit truth values
+            c: list of qubit truth values bools
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
