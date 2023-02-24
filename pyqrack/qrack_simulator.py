@@ -2195,8 +2195,8 @@ class QrackSimulator:
         in "c", directly corresponding by vector index.
 
         Args:
-            q(Vec<u64>): qubit ids
-            c(Vec<bool>): qubit truth values
+            q: list of qubit ids
+            c: list of qubit truth values
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
