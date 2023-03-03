@@ -2394,11 +2394,7 @@ class QrackSimulator:
             self.mcz([gate.control], gate.target)
         elif gate.name == "CX":
             self.h(gate.control)
-            if self._get_error() != 0:
-                raise RuntimeError("QrackSimulator C++ library raised exception.")
             self.mcx([gate.control], gate.target)
-            if self._get_error() != 0:
-                raise RuntimeError("QrackSimulator C++ library raised exception.")
             self.h(gate.control)
         elif gate.name == "SWAP":
             self.swap(gate.control, gate.target)
@@ -2661,6 +2657,9 @@ class QrackSimulator:
         else:
             err_msg = 'QrackSimulator encountered unrecognized operation "{0}"'
             raise RuntimeError(err_msg.format(operation))
+
+        if self._get_error() != 0:
+            raise RuntimeError("QrackSimulator C++ library raised exception.")
 
     def _add_sample_measure(self, sample_qubits, sample_clbits, num_samples):
         """Generate data samples from current statevector.
