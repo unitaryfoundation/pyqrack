@@ -2658,9 +2658,6 @@ class QrackSimulator:
             err_msg = 'QrackSimulator encountered unrecognized operation "{0}"'
             raise RuntimeError(err_msg.format(operation))
 
-        if self._get_error() != 0:
-            raise RuntimeError("QrackSimulator C++ library raised exception.")
-
     def _add_sample_measure(self, sample_qubits, sample_clbits, num_samples):
         """Generate data samples from current statevector.
 
