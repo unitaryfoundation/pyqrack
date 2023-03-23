@@ -2541,7 +2541,7 @@ class QrackSimulator:
                     0,
                     math.cos(operation.params[0]) + 1j * math.sin(operation.params[0]),
                 ],
-                operation.qubits[0],
+                operation.qubits[1],
             )
         elif name == 'csx':
             self._sim.mcmtrx(
