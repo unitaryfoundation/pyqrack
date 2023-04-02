@@ -108,6 +108,9 @@ class QrackSimulator:
             Qrack.qrack_lib.destroy(self.sid)
             self.sid = None
 
+    def _int_byref(self, a):
+        return (ctypes.c_int * len(a))(*a)
+
     def _ulonglong_byref(self, a):
         return (ctypes.c_ulonglong * len(a))(*a)
 
@@ -992,7 +995,7 @@ class QrackSimulator:
         if len(b) != len(q):
             raise RuntimeError("Lengths of list parameters are mismatched.")
         result = Qrack.qrack_lib.Measure(
-            self.sid, len(b), self._ulonglong_byref(b), self._ulonglong_byref(q)
+            self.sid, len(b), self._int_byref(b), self._ulonglong_byref(q)
         )
         self._throw_if_error()
         return result
