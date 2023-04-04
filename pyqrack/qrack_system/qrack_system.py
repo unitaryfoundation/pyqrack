@@ -848,6 +848,9 @@ class QrackSystem:
         self.qrack_lib.ResetUnitaryFidelity.restype = None
         self.qrack_lib.ResetUnitaryFidelity.argtypes = [c_ulonglong]
 
+        self.qrack_lib.SetSdrp.restype = None
+        self.qrack_lib.SetSdrp.argtypes = [c_ulonglong, c_double]
+
         self.qrack_lib.SetReactiveSeparate.restype = c_bool
         self.qrack_lib.SetReactiveSeparate.argtypes = [c_ulonglong, c_bool]
         self.qrack_lib.SetTInjection.restype = c_bool

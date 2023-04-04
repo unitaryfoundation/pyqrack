@@ -2278,13 +2278,31 @@ class QrackSimulator:
         nearest-neighbor variant of quantum volume circuits.
 
         Resetting the fidelity calculation to 1.0 happens automatically
-        when calling `mall` are can be done manually with
+        when calling `m_all` or can be done manually with
         `reset_unitary_fidelity()`.
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
         Qrack.qrack_lib.ResetUnitaryFidelity(self.sid)
+        self._throw_if_error()
+
+    def set_sdrp(self, sdrp):
+        """Set "Schmidt decomposition rounding parameter"
+
+        When using "Schmidt decomposition rounding parameter" ("SDRP")
+        approximate simulation, QrackSimulator() can make an excellent
+        estimate of its overall fidelity at any time, tested against a
+        nearest-neighbor variant of quantum volume circuits.
+
+        Resetting the fidelity calculation to 1.0 happens automatically
+        when calling `m_all` or can be done manually with
+        `reset_unitary_fidelity()`.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetSdrp(self.sid, sdrp)
         self._throw_if_error()
 
     def set_reactive_separate(self, irs):
