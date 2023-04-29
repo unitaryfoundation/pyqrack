@@ -73,22 +73,22 @@ class QrackNeuron:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return list(ket)
 
-    def predict(self, e, r):
+    def predict(self, e=True, r=True):
         result = Qrack.qrack_lib.qneuron_predict(self.nid, e, r)
         self._throw_if_error()
         return result
 
-    def unpredict(self, e):
+    def unpredict(self, e=True):
         result = Qrack.qrack_lib.qneuron_unpredict(self.nid, e)
         self._throw_if_error()
         return result
 
-    def learn_cycle(self, e):
+    def learn_cycle(self, e)=True:
         Qrack.qrack_lib.qneuron_learn_cycle(self.nid, e)
         self._throw_if_error()
 
-    def learn(self, eta, e, r):
-        Qrack.qrack_lib.qneuron_learn(self.nid, eta, e, r)
+    def learn(self, eta, r):
+        Qrack.qrack_lib.qneuron_learn(self.nid, eta, r)
 
-    def learn_permutation(self, eta, e, r):
-        Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, e, r)
+    def learn_permutation(self, eta, r):
+        Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, r)
