@@ -28,7 +28,7 @@ class QrackNeuron:
         simulator,
         controls,
         target,
-        tolerance = sys.float_info.epsilon
+        tolerance = sys.float_info.epsilon,
         _init = True
     ):
         self.simulator = simulator
@@ -59,15 +59,18 @@ class QrackNeuron:
     def _ulonglong_byref(self, a):
         return (ctypes.c_ulonglong * len(a))(*a)
 
-    def _double_byref(self, a):
+    def _real1_byref(self, a):
+        # This needs to be c_double, if PyQrack is built with fp64.
+        if Qrack.fppow < 6:
+            return (ctypes.c_float * len(a))(*a)
         return (ctypes.c_double * len(a))(*a)
 
     def set_qneuron_angles(self, a):
-        Qrack.qrack_lib.set_qneuron_angles(self.nid, self._double_byref(a))
+        Qrack.qrack_lib.set_qneuron_angles(self.nid, self._real1_byref(a))
         self._throw_if_error()
 
     def get_qneuron_angles(self, a):
-        ket = self._qrack_double_byref([0.0] * self.amp_count)
+        ket = self._real1_byref([0.0] * self.amp_count)
         Qrack.qrack_lib.get_qneuron_angles(self.nid, ket)
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
@@ -83,7 +86,7 @@ class QrackNeuron:
         self._throw_if_error()
         return result
 
-    def learn_cycle(self, e)=True:
+    def learn_cycle(self, e=True):
         Qrack.qrack_lib.qneuron_learn_cycle(self.nid, e)
         self._throw_if_error()
 
