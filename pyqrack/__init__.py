@@ -5,5 +5,6 @@
 
 from .qrack_system import QrackSystem, Qrack
 from .qrack_simulator import QrackSimulator
+from .qrack_neuron import QrackNeuron
 from .pauli import Pauli
 from .util import convert_qiskit_circuit_to_qasm_experiment
