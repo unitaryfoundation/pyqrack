@@ -11,6 +11,16 @@ from .qrack_system import Qrack
 class QrackNeuron:
     """Class that exposes the QNeuron class of Qrack
 
+    This model of a "quantum neuron" is based on the concept of a "uniformly controlled"
+    rotation of a single output qubit around the Pauli Y axis, and has been developed by
+    others. (See https://arxiv.org/abs/quant-ph/0407010 for an introduction to "uniformly
+    controlled" gates, which could also be called single-qubit-target multiplexer gates.)
+
+    QrackNeuron is meant to be interchangeable with a single classical neuron, as in
+    conventional neural net software. It differs from classical neurons in conventional
+    neural nets, in that the "synaptic cleft" is modelled as a single qubit. Hence, this
+    neuron can train and predict in superposition.
+
     Attributes:
         nid(int): Qrack ID of this neuron
         simulator(QrackSimulator): Simulator instance for all synaptic clefts of the neuron
@@ -79,8 +89,8 @@ class QrackNeuron:
     def set_qneuron_angles(self, a):
         """Directly sets the neuron parameters.
 
-        Set all parameters of the neuron directly, by a list
-        enumerated over the integer permutations of input quibts.
+        Set all synaptic parameters of the neuron directly, by a list
+        enumerated over the integer permutations of input qubits.
 
         Args:
             a(list(double)): List of input permutation angles
@@ -94,8 +104,8 @@ class QrackNeuron:
     def get_qneuron_angles(self):
         """Directly gets the neuron parameters.
 
-        Get all parameters of the neuron directly, as a list
-        enumerated over the integer permutations of input quibts.
+        Get all synaptic parameters of the neuron directly, as a list
+        enumerated over the integer permutations of input qubits.
 
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
@@ -109,7 +119,12 @@ class QrackNeuron:
     def predict(self, e=True, r=True):
         """Predict based on training
 
-        'Predict' the anticipated output, based on input and training.
+       "Predict" the anticipated output, based on input and training.
+        By default, "predict()" will initialize the output qubit as by
+        reseting to |0> and then acting a Hadamard gate. From that
+        state, the method amends the output qubit upon the basis of
+        the state of its input qubits, applying a rotation around
+        Pauli Y axis according to the angle learned for the input.
 
         Args:
             e(bool): If False, predict the opposite
@@ -156,7 +171,9 @@ class QrackNeuron:
     def learn(self, eta, e=True, r=True):
         """Learn from current qubit state
 
-        Learn to associate current inputs with output
+        "Learn" to associate current inputs with output. Based on
+        input qubit states and volatility 'eta,' the input state
+        angle is updated to prefer the "e" ("expected") output.
 
         Args:
             eta(double): Training volatility, 0 to 1
@@ -174,6 +191,8 @@ class QrackNeuron:
 
         Learn to associate current inputs with output, under the
         assumption that the inputs and outputs are "classical."
+        Based on input qubit states and volatility 'eta,' the input
+        state angle is updated to prefer the "e" ("expected") output.
 
         Args:
             eta(double): Training volatility, 0 to 1
