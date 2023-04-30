@@ -119,7 +119,7 @@ class QrackNeuron:
     def predict(self, e=True, r=True):
         """Predict based on training
 
-       "Predict" the anticipated output, based on input and training.
+        "Predict" the anticipated output, based on input and training.
         By default, "predict()" will initialize the output qubit as by
         reseting to |0> and then acting a Hadamard gate. From that
         state, the method amends the output qubit upon the basis of
