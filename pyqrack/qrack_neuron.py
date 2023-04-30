@@ -90,10 +90,10 @@ class QrackNeuron:
         Qrack.qrack_lib.qneuron_learn_cycle(self.nid, e)
         self._throw_if_error()
 
-    def learn(self, eta, r):
-        Qrack.qrack_lib.qneuron_learn(self.nid, eta, r)
+    def learn(self, eta, e=True, r=True):
+        Qrack.qrack_lib.qneuron_learn(self.nid, eta, e, r)
         self._throw_if_error()
 
-    def learn_permutation(self, eta, r):
-        Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, r)
+    def learn_permutation(self, eta, e=True, r=True):
+        Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, e, r)
         self._throw_if_error()
