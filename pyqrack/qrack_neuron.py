@@ -13,11 +13,11 @@ class QrackNeuron:
 
     Attributes:
         qubitCount(int): Number of qubits that are to be simulated.
-        sid(int): Corresponding simulator id.
+        nid(int): Corresponding simulator id.
     """
 
     def _get_error(self):
-        return Qrack.qrack_lib.get_error(self.sid)
+        return Qrack.qrack_lib.get_error(self.simulator.sid)
 
     def _throw_if_error(self):
         if self._get_error() != 0:
