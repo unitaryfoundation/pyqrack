@@ -10,11 +10,11 @@ from enum import IntEnum
 
 class NeuronActivationFn(IntEnum):
     # Default
-    Sigmoid = 0,
+    Sigmoid = 0
     # Rectified linear 
-    ReLU = 1,
+    ReLU = 1
     # Gaussian linear
-    GeLU = 2,
+    GeLU = 2
     # Version of (default) "Sigmoid" with tunable sharpness
     Generalized_Logistic = 3
     # Leaky rectified linear
