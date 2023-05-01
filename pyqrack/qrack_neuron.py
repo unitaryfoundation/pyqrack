@@ -44,6 +44,7 @@ class QrackNeuron:
         simulator,
         controls,
         target,
+        is_relu = False,
         alpha = 1.0,
         tolerance = sys.float_info.epsilon,
         _init = True
@@ -51,6 +52,7 @@ class QrackNeuron:
         self.simulator = simulator
         self.controls = controls
         self.target = target
+        self.is_relu = is_relu
         self.alpha = alpha
         self.tolerance = tolerance
 
@@ -59,7 +61,7 @@ class QrackNeuron:
         if not _init:
             return
 
-        self.nid = Qrack.qrack_lib.init_qneuron(simulator.sid, len(controls), self._ulonglong_byref(controls), target, alpha, tolerance)
+        self.nid = Qrack.qrack_lib.init_qneuron(simulator.sid, len(controls), self._ulonglong_byref(controls), target, is_relu, alpha, tolerance)
 
         self._throw_if_error()
 
@@ -134,6 +136,20 @@ class QrackNeuron:
         """
         self.alpha = a
         Qrack.qrack_lib.set_qneuron_alpha(self.nid, a)
+        self._throw_if_error()
+
+    def set_relu(self, r):
+        """Sets whether to use a ReLU activation function, (on/off)
+
+        Another nonlinear activation function supported by QrackNeuron
+        is ReLU. With `set_relu()`, use of a ReLU activation function
+        can be turned on or off at will.
+
+        Raises:
+            RuntimeError: QrackNeuron C++ library raised an exception.
+        """
+        self.is_relu = r
+        Qrack.qrack_lib.set_qneuron_relu(self.nid, r)
         self._throw_if_error()
 
     def predict(self, e=True, r=True):
