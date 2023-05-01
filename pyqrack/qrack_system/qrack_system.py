@@ -867,10 +867,14 @@ class QrackSystem:
         self.qrack_lib.destroy_qneuron.argtypes = [c_ulonglong]
 
         self.qrack_lib.set_qneuron_angles.restype = None
-        self.qrack_lib.set_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_double)]
-
         self.qrack_lib.get_qneuron_angles.restype = None
-        self.qrack_lib.get_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_double)]
+
+        if self.fppow == 5:
+            self.qrack_lib.set_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_float)]
+            self.qrack_lib.get_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_float)]
+        if self.fppow == 6:
+            self.qrack_lib.set_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_double)]
+            self.qrack_lib.get_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_double)]
 
         self.qrack_lib.qneuron_predict.restype = c_double
         self.qrack_lib.qneuron_predict.argtypes = [c_ulonglong, c_bool, c_bool]
