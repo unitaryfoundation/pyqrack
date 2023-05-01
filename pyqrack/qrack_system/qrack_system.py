@@ -858,7 +858,7 @@ class QrackSystem:
         self.qrack_lib.SetTInjection.argtypes = [c_ulonglong, c_bool]
 
         self.qrack_lib.init_qneuron.restype = c_ulonglong
-        self.qrack_lib.init_qneuron.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_double]
+        self.qrack_lib.init_qneuron.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_double, c_double]
 
         self.qrack_lib.clone_qneuron.restype = c_ulonglong
         self.qrack_lib.clone_qneuron.argtypes = [c_ulonglong]
@@ -875,6 +875,12 @@ class QrackSystem:
         if self.fppow == 6:
             self.qrack_lib.set_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_double)]
             self.qrack_lib.get_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_double)]
+
+        self.qrack_lib.set_qneuron_alpha.restype = None
+        self.qrack_lib.set_qneuron_alpha.argtypes = [c_ulonglong, c_double]
+
+        self.qrack_lib.get_qneuron_alpha.restype = c_double
+        self.qrack_lib.get_qneuron_alpha.argtypes = [c_ulonglong]
 
         self.qrack_lib.qneuron_predict.restype = c_double
         self.qrack_lib.qneuron_predict.argtypes = [c_ulonglong, c_bool, c_bool]

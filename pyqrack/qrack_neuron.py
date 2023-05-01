@@ -44,12 +44,14 @@ class QrackNeuron:
         simulator,
         controls,
         target,
+        alpha = 1.0,
         tolerance = sys.float_info.epsilon,
         _init = True
     ):
         self.simulator = simulator
         self.controls = controls
         self.target = target
+        self.alpha = alpha
         self.tolerance = tolerance
 
         self.amp_count = 1 << (len(controls) + 1)
@@ -57,7 +59,7 @@ class QrackNeuron:
         if not _init:
             return
 
-        self.nid = Qrack.qrack_lib.init_qneuron(simulator.sid, len(controls), self._ulonglong_byref(controls), target, tolerance)
+        self.nid = Qrack.qrack_lib.init_qneuron(simulator.sid, len(controls), self._ulonglong_byref(controls), target, alpha, tolerance)
 
         self._throw_if_error()
 
@@ -89,7 +91,7 @@ class QrackNeuron:
             return (ctypes.c_float * len(a))(*a)
         return (ctypes.c_double * len(a))(*a)
 
-    def set_qneuron_angles(self, a):
+    def set_angles(self, a):
         """Directly sets the neuron parameters.
 
         Set all synaptic parameters of the neuron directly, by a list
@@ -104,7 +106,7 @@ class QrackNeuron:
         Qrack.qrack_lib.set_qneuron_angles(self.nid, self._real1_byref(a))
         self._throw_if_error()
 
-    def get_qneuron_angles(self):
+    def get_angles(self):
         """Directly gets the neuron parameters.
 
         Get all synaptic parameters of the neuron directly, as a list
@@ -118,6 +120,21 @@ class QrackNeuron:
         if self._get_error() != 0:
             raise RuntimeError("QrackSimulator C++ library raised exception.")
         return list(ket)
+
+    def set_alpha(self, a):
+        """Set the neuron 'alpha' parameter.
+
+        To enable nonlinear activation, `QrackNeuron` has an 'alpha'
+        parameter that is applied as a power to its angles, before
+        learning and prediction. This makes the activation function
+        sharper (or less sharp).
+
+        Raises:
+            RuntimeError: QrackNeuron C++ library raised an exception.
+        """
+        self.alpha = a
+        Qrack.qrack_lib.set_qneuron_alpha(self.nid, a)
+        self._throw_if_error()
 
     def predict(self, e=True, r=True):
         """Predict based on training
