@@ -7,6 +7,7 @@ import ctypes
 import sys
 
 from .qrack_system import Qrack
+from .neuron_activation_fn import NeuronActivationFn
 
 class QrackNeuron:
     """Class that exposes the QNeuron class of Qrack
@@ -44,8 +45,7 @@ class QrackNeuron:
         simulator,
         controls,
         target,
-        is_relu = False,
-        is_gelu = False,
+        activation_fn = NeuronActivationFn.Sigmoid,
         alpha = 1.0,
         tolerance = sys.float_info.epsilon,
         _init = True
@@ -53,8 +53,7 @@ class QrackNeuron:
         self.simulator = simulator
         self.controls = controls
         self.target = target
-        self.is_relu = is_relu
-        self.is_gelu = is_gelu
+        self.activation_fn = activation_fn
         self.alpha = alpha
         self.tolerance = tolerance
 
@@ -63,7 +62,7 @@ class QrackNeuron:
         if not _init:
             return
 
-        self.nid = Qrack.qrack_lib.init_qneuron(simulator.sid, len(controls), self._ulonglong_byref(controls), target, is_relu, is_gelu, alpha, tolerance)
+        self.nid = Qrack.qrack_lib.init_qneuron(simulator.sid, len(controls), self._ulonglong_byref(controls), target, activation_fn, alpha, tolerance)
 
         self._throw_if_error()
 
@@ -81,7 +80,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        result = QrackNeuron(self.simulator, self.controls, self.target, self.tolerance)
+        result = QrackNeuron(self.simulator, self.controls, self.target, self.activation_fn, self.alpha, self.tolerance)
         self.nid = Qrack.qrack_lib.clone_qneuron(self.simulator.sid)
         self._throw_if_error()
         return result
@@ -140,32 +139,18 @@ class QrackNeuron:
         Qrack.qrack_lib.set_qneuron_alpha(self.nid, a)
         self._throw_if_error()
 
-    def set_relu(self, r):
-        """Sets whether to use a ReLU activation function, (on/off)
+    def set_activation_fn(self, f):
+        """Sets the activation function of this QrackNeuron
 
-        Another nonlinear activation function supported by QrackNeuron
-        is ReLU. With `set_relu()`, use of a ReLU activation function
-        can be turned on or off at will.
-
-        Raises:
-            RuntimeError: QrackNeuron C++ library raised an exception.
-        """
-        self.is_relu = r
-        Qrack.qrack_lib.set_qneuron_relu(self.nid, r)
-        self._throw_if_error()
-
-    def set_gelu(self, g):
-        """Sets whether to use a ReLU activation function, (on/off)
-
-        Another nonlinear activation function supported by QrackNeuron
-        is ReLU. With `set_relu()`, use of a ReLU activation function
-        can be turned on or off at will.
+        Nonlinear activation functions can be important to neural net
+        applications, like DNN. The available activation functions are
+        enumerated in `NeuronActivationFn`. 
 
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        self.is_gelu = r
-        Qrack.qrack_lib.set_qneuron_gelu(self.nid, g)
+        self.activation_fn = f
+        Qrack.qrack_lib.set_qneuron_activation_fn(self.nid, f)
         self._throw_if_error()
 
     def predict(self, e=True, r=True):
