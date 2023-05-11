@@ -520,7 +520,7 @@ class QrackSimulator:
         self._throw_if_error()
 
     def mcmtrx(self, c, m, q):
-        """Multi-controlled arbitraty operator
+        """Multi-controlled arbitrary operator
 
         If all controlled qubits are `|1>` then the arbitrary operation by
         parameters is applied to the target qubit.

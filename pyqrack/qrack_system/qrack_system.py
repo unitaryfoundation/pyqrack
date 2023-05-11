@@ -902,3 +902,27 @@ class QrackSystem:
 
         self.qrack_lib.qneuron_learn_permutation.restype = None
         self.qrack_lib.qneuron_learn_permutation.argtypes = [c_ulonglong, c_double, c_bool, c_bool]
+
+        self.qrack_lib.init_qcircuit.restype = c_ulonglong
+        self.qrack_lib.init_qcircuit.argtypes = []
+
+        self.qrack_lib.init_qcircuit_clone.restype = c_ulonglong
+        self.qrack_lib.init_qcircuit_clone.argtypes = [c_ulonglong]
+
+        self.qrack_lib.destroy_qcircuit.restype = None
+        self.qrack_lib.destroy_qcircuit.argtypes = [c_ulonglong]
+
+        self.qrack_lib.get_qcircuit_qubit_count.restype = c_ulonglong
+        self.qrack_lib.get_qcircuit_qubit_count.argtypes = [c_ulonglong]
+
+        self.qrack_lib.qcircuit_swap.restype = None
+        self.qrack_lib.qcircuit_swap.argtypes = [c_ulonglong, c_ulonglong, c_ulonglong]
+
+        self.qrack_lib.qcircuit_append_1qb.restype = None
+        self.qrack_lib.qcircuit_append_1qb.argtypes = [c_ulonglong, POINTER(c_double), c_ulonglong]
+
+        self.qrack_lib.qcircuit_append_mc.restype = None
+        self.qrack_lib.qcircuit_append_mc.argtypes = [c_ulonglong, POINTER(c_double), c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_ulonglong]
+
+        self.qrack_lib.qcircuit_run.restype = None
+        self.qrack_lib.qcircuit_run.argtypes = [c_ulonglong, c_ulonglong]
