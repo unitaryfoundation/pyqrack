@@ -115,3 +115,31 @@ class QrackCircuit:
         """
         Qrack.qrack_lib.qcircuit_run(self.cid, qsim.sid)
         qsim._throw_if_error()
+
+    def out_to_file(self, filename):
+        """Output optimized circuit to file
+
+        Outputs the (optimized) circuit to a file named
+        according to the "filename" parameter.
+
+        Args:
+            filename: Name of file
+
+        Raises:
+            RuntimeError: QrackCircuit raised an exception.
+        """
+        Qrack.qrack_lib.qcircuit_out_to_file(self.cid, filename.encode('utf-8'))
+
+    def in_from_file(self, filename):
+        """Read in optimized circuit from file
+
+        Reads in an (optimized) circuit from a file named
+        according to the "filename" parameter.
+
+        Args:
+            filename: Name of file
+
+        Raises:
+            RuntimeError: QrackCircuit raised an exception.
+        """
+        Qrack.qrack_lib.qcircuit_in_from_file(self.cid, filename.encode('utf-8'))

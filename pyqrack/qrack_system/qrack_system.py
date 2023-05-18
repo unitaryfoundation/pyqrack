@@ -926,3 +926,9 @@ class QrackSystem:
 
         self.qrack_lib.qcircuit_run.restype = None
         self.qrack_lib.qcircuit_run.argtypes = [c_ulonglong, c_ulonglong]
+
+        self.qrack_lib.qcircuit_out_to_file.restype = None
+        self.qrack_lib.qcircuit_out_to_file.argtypes = [c_ulonglong, c_char_p]
+
+        self.qrack_lib.qcircuit_in_from_file.restype = None
+        self.qrack_lib.qcircuit_in_from_file.argtypes = [c_ulonglong, c_char_p]
