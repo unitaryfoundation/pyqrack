@@ -116,6 +116,10 @@ class QrackCircuit:
         Qrack.qrack_lib.qcircuit_run(self.cid, qsim.sid)
         qsim._throw_if_error()
 
+        qb_count = self.get_qubit_count()
+        if qsim._qubitCount < qb_count:
+            qsim._qubitCount = qb_count
+
     def out_to_file(self, filename):
         """Output optimized circuit to file
 
