@@ -46,7 +46,7 @@ class QrackCircuit:
         Raises:
             RuntimeError: QracQrackCircuitNeuron C++ library raised an exception.
         """
-        qubit_count = Qrack.qrack_lib.get_qcircuit_qubit_count(self.cid)
+        return Qrack.qrack_lib.get_qcircuit_qubit_count(self.cid)
 
     def swap(self, q1, q2):
         """Add a 'Swap' gate to the circuit
