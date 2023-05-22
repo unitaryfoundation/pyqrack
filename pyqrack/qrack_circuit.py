@@ -163,7 +163,7 @@ class QrackCircuit:
 
         Raises:
             RuntimeErorr: Before trying to file_to_qiskit_circuit() with
-                QrackCircuit, you must install Qiski, numpy, and math!
+                QrackCircuit, you must install Qiskit, numpy, and math!
         """
         if not _IS_QISKIT_AVAILABLE:
             raise RuntimeError(
@@ -261,7 +261,7 @@ class QrackCircuit:
 
         Raises:
             RuntimeErorr: Before trying to file_to_qiskit_circuit() with
-                QrackCircuit, you must install Qiski, numpy, and math!
+                QrackCircuit, you must install Qiskit, numpy, and math!
         """
         if not _IS_QISKIT_AVAILABLE:
             raise RuntimeError(
