@@ -10,6 +10,7 @@ from .qrack_system import Qrack
 _IS_QISKIT_AVAILABLE = True
 try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
+    from qiskit.compiler.transpiler import transpile
     import numpy as np
     import math
 except ImportError:
@@ -249,3 +250,44 @@ class QrackCircuit:
             circ.uc(gate_list, controls, target)
 
         return circ
+
+    def in_from_qiskit_circuit(self, circ):
+        """Read a Qiskit circuit into a QrackCircuit
+
+        Reads in a circuit from a Qiskit `QuantumCircuit`
+
+        Args:
+            circ: Qiskit circuit
+
+        Raises:
+            RuntimeErorr: Before trying to file_to_qiskit_circuit() with
+                QrackCircuit, you must install Qiski, numpy, and math!
+        """
+        if not _IS_QISKIT_AVAILABLE:
+            raise RuntimeError(
+                "Before trying to file_to_qiskit_circuit() with QrackCircuit, you must install Qiskit, numpy, and math!"
+            )
+
+        basis_gates = ["u", "cx"]
+        circ = transpile(circ, basis_gates=basis_gates, optimization_level=3)
+        for gate in circ.data:
+            o = gate.operation
+            if o.name == "u":
+                th = o.params[0]
+                ph = o.params[1]
+                lm = o.params[2]
+
+                c = math.cos(th / 2)
+                s = math.sin(th / 2)
+
+                op = []
+                op.append(c)
+                op.append(-np.exp(1j * lm) * s)
+                op.append(np.exp(1j * ph) * s)
+                op.append(np.exp(1j * (ph + lm)) * c)
+                self.mtrx(op, gate.qubits[0].index)
+            else:
+                ctrls = []
+                for c in gate.qubits[1:]:
+                    ctrls.append(c.index)
+                self.ucmtrx(ctrls, [0, 1, 1, 0], gate.qubits[0].index, 1)
