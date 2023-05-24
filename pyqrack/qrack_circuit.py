@@ -230,7 +230,7 @@ class QrackCircuit:
                 c = math.cos(th / 2)
                 s = math.sin(th / 2)
                 op3 = np.exp(1j * (ph + lm)) * c
-                if np.abs(op[1][1] - op3) > 1e6:
+                if np.abs(op[1][1] - op3) > 1e-6:
                     print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
 
                 op[0][0] = c
