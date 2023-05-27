@@ -151,7 +151,7 @@ class QrackCircuit:
         """
         Qrack.qrack_lib.qcircuit_in_from_file(self.cid, filename.encode('utf-8'))
 
-    def file_to_qiskit_circut(filename):
+    def file_to_qiskit_circuit(filename):
         """Convert an output file to a Qiskit circuit
 
         Reads in an (optimized) circuit from a file named
@@ -205,39 +205,35 @@ class QrackCircuit:
                     amp = tokens[i].replace("(","").replace(")","").split(',')
                     row.append(float(amp[0]) + float(amp[1])*1j)
                     i = i + 1
-                op[0][0] = row[0]
-                op[0][1] = row[1]
+                l = math.sqrt(np.real(row[0] * np.conj(row[0]) + row[1] * np.conj(row[1])))
+                op[0][0] = row[0] / l
+                op[0][1] = row[1] / l
+
+                if np.abs(op[0][0] - row[0]) > 1e-5:
+                    print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
+                if np.abs(op[0][1] - row[1]) > 1e-5:
+                    print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
 
                 row = []
                 for _ in range(2):
                     amp = tokens[i].replace("(","").replace(")","").split(',')
                     row.append(float(amp[0]) + float(amp[1])*1j)
                     i = i + 1
-                op[1][0] = row[0]
-                op[1][1] = row[1]
+                l = math.sqrt(np.real(row[0] * np.conj(row[0]) + row[1] * np.conj(row[1])))
+                op[1][0] = row[0] / l
+                op[1][1] = row[1] / l
 
-                # Qiskit has a lower tolerance for deviation from numerically unitary.
+                ph = np.real(np.log(np.linalg.det(op)) / 1j)
 
-                th = math.acos(np.real(op[0][0])) * 2
-                s = math.sin(th / 2)
-                if s < 1e-6:
-                    ph = np.real(np.log(op[1][1] / math.cos(th / 2)) / 1j) / 2
-                    lm = ph
-                else:
-                    ph = np.real(np.log(op[1][0] / s) / 1j)
-                    lm = np.real(-np.log(op[0][1] / s) / 1j)
+                op[1][0] = -np.exp(1j * ph) * np.conj(op[0][1])
+                op[1][1] = np.exp(1j * ph) * np.conj(op[0][0])
 
-                c = math.cos(th / 2)
-                s = math.sin(th / 2)
-                op3 = np.exp(1j * (ph + lm)) * c
-                if np.abs(op[1][1] - op3) > 1e-6:
+                if np.abs(op[1][0] - row[0]) > 1e-5:
+                    print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
+                if np.abs(op[1][1] - row[1]) > 1e-5:
                     print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
 
-                op[0][0] = c
-                op[0][1] = -np.exp(1j * lm) * s
-                op[1][0] = np.exp(1j * ph) * s
-                op[1][1] = op3
-
+                # Qiskit has a lower tolerance for deviation from numerically unitary.
                 payloads[key] = np.array(op)
 
             gate_list = []
