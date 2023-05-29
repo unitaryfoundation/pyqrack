@@ -711,6 +711,26 @@ class QrackSimulator:
         )
         self._throw_if_error()
 
+    def ucmtrx(self, c, m, q, p):
+        """Multi-controlled arbitrary operator with arbitrary controls
+
+        If all control qubits match 'p' permutation by bit order, then the arbitrary
+        operation by parameters is applied to the target qubit.
+
+        Args:
+            c: list of control qubits
+            m: row-major complex list representing the operator.
+            q: target qubit
+            p: permutation of list of control qubits
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.UCMtrx(
+            self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q, p
+        )
+        self._throw_if_error()
+
     def multiplex1_mtrx(self, c, q, m):
         """Multiplex gate
 

@@ -386,6 +386,16 @@ class QrackSystem:
             c_ulonglong,
         ]
 
+        self.qrack_lib.UCMtrx.restype = None
+        self.qrack_lib.UCMtrx.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong),
+            POINTER(c_double),
+            c_ulonglong,
+            c_ulonglong,
+        ]
+
         self.qrack_lib.Multiplex1Mtrx.restype = None
         self.qrack_lib.Multiplex1Mtrx.argtypes = [
             c_ulonglong,
