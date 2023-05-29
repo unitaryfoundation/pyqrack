@@ -100,12 +100,6 @@ class QrackCircuit:
             RuntimeError: QrackSimulator raised an exception.
         """
 
-        p_list = [((p >> i) & 1) for i in range(len(c))]
-        p_list = [x for _, x in sorted(zip(c, p_list))]
-        p = 0
-        for i in range(len(p_list)):
-            p |= p_list[i] << i
-
         Qrack.qrack_lib.qcircuit_append_mc(
             self.cid, self._complex_byref(m), len(c), self._ulonglong_byref(c), q, p
         )
