@@ -43,6 +43,11 @@ setup(
     keywords="pyqrack qrack simulator quantum gpu",
     install_requires=requirements,
     setup_requires=[],
+    extras_require={
+        "dev": [
+            "pytest>=7.3.1",
+        ],
+    },
     include_package_data=True,
     zip_safe=False,
 )
