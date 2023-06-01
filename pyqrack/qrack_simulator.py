@@ -316,8 +316,11 @@ class QrackSimulator:
             q: the qubit number on which the gate is applied to.
 
         Raises:
+            ValueError: 2x2 matrix 'm' in QrackSimulator.mtrx() must contain at least 4 elements.
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(m) < 4:
+            raise ValueError("2x2 matrix 'm' in QrackSimulator.mtrx() must contain at least 4 elements.")
         Qrack.qrack_lib.Mtrx(self.sid, self._complex_byref(m), q)
         self._throw_if_error()
 
@@ -531,8 +534,11 @@ class QrackSimulator:
             q: target qubit
 
         Raises:
+            ValueError: 2x2 matrix 'm' in QrackSimulator.mcmtrx() must contain at least 4 elements.
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(m) < 4:
+            raise ValueError("2x2 matrix 'm' in QrackSimulator.mcmtrx() must contain at least 4 elements.")
         Qrack.qrack_lib.MCMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q
         )
@@ -704,8 +710,11 @@ class QrackSimulator:
             q: target qubit.
 
         Raises:
+            ValueError: 2x2 matrix 'm' in QrackSimulator.macmtrx() must contain at least 4 elements.
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(m) < 4:
+            raise ValueError("2x2 matrix 'm' in QrackSimulator.macmtrx() must contain at least 4 elements.")
         Qrack.qrack_lib.MACMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q
         )
@@ -724,8 +733,11 @@ class QrackSimulator:
             p: permutation of list of control qubits
 
         Raises:
+            ValueError: 2x2 matrix 'm' in QrackSimulator.ucmtrx() must contain at least 4 elements.
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(m) < 4:
+            raise ValueError("2x2 matrix 'm' in QrackSimulator.ucmtrx() must contain at least 4 elements.")
         Qrack.qrack_lib.UCMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q, p
         )
@@ -743,8 +755,11 @@ class QrackSimulator:
             q: target qubit.
 
         Raises:
+            ValueError: Multiplex matrix 'm' in QrackSimulator.multiplex1_mtrx() must contain at least 4 elements.
             RuntimeError: QrackSimulator raised an exception.
         """
+        if len(m) < ((1 << len(c)) * 4):
+            raise ValueError("Multiplex matrix 'm' in QrackSimulator.multiplex1_mtrx() must contain at least (4 * 2 ** len(c)) elements.")
         Qrack.qrack_lib.Multiplex1Mtrx(
             self.sid, len(c), self._ulonglong_byref(c), q, self._complex_byref(m)
         )

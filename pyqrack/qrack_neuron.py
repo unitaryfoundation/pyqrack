@@ -104,8 +104,11 @@ class QrackNeuron:
             a(list(double)): List of input permutation angles
 
         Raises:
-            RuntimeError: QrackNeuron C++ library raised an exception.
+            ValueError: Angles 'a' in QrackNeuron.set_angles() must contain at least (2 ** len(self.controls)) elements.
+            RuntimeError: QrackSimulator raised an exception.
         """
+        if len(a) < (1 << len(self.controls)):
+            raise ValueError("Angles 'a' in QrackNeuron.set_angles() must contain at least (2 ** len(self.controls)) elements.")
         Qrack.qrack_lib.set_qneuron_angles(self.nid, self._real1_byref(a))
         self._throw_if_error()
 

@@ -79,8 +79,11 @@ class QrackCircuit:
             q: the qubit number on which the gate is applied to.
 
         Raises:
-            RuntimeError: QrackCircuit C++ library raised an exception.
+            ValueError: 2x2 matrix 'm' in QrackCircuit.mtrx() must contain at least 4 elements.
+            RuntimeError: QrackSimulator raised an exception.
         """
+        if len(m) < 4:
+            raise ValueError("2x2 matrix 'm' in QrackCircuit.mtrx() must contain at least 4 elements.")
         Qrack.qrack_lib.qcircuit_append_1qb(self.cid, self._complex_byref(m), q)
 
     def ucmtrx(self, c, m, q, p):
@@ -97,9 +100,11 @@ class QrackCircuit:
             p: permutation of target qubits
 
         Raises:
+            ValueError: 2x2 matrix 'm' in QrackCircuit.ucmtrx() must contain at least 4 elements.
             RuntimeError: QrackSimulator raised an exception.
         """
-
+        if len(m) < 4:
+            raise ValueError("2x2 matrix 'm' in QrackCircuit.ucmtrx() must contain at least 4 elements.")
         Qrack.qrack_lib.qcircuit_append_mc(
             self.cid, self._complex_byref(m), len(c), self._ulonglong_byref(c), q, p
         )
