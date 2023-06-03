@@ -268,18 +268,19 @@ class QrackCircuit:
         for gate in circ.data:
             o = gate.operation
             if o.name == "u":
-                th = o.params[0]
-                ph = o.params[1]
-                lm = o.params[2]
+                th = float(o.params[0])
+                ph = float(o.params[1])
+                lm = float(o.params[2])
 
                 c = math.cos(th / 2)
                 s = math.sin(th / 2)
 
-                op = []
-                op.append(c)
-                op.append(-np.exp(1j * lm) * s)
-                op.append(np.exp(1j * ph) * s)
-                op.append(np.exp(1j * (ph + lm)) * c)
+                op = [
+                    c + 0j,
+                    -np.exp(1j * lm) * s,
+                    np.exp(1j * ph) * s,
+                    np.exp(1j * (ph + lm)) * c
+                ]
                 self.mtrx(op, gate.qubits[0].index)
             else:
                 ctrls = []

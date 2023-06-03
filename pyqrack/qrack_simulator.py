@@ -2446,34 +2446,34 @@ class QrackSimulator:
                     return
 
         if (name == 'u1') or (name == 'p'):
-            self._sim.u(operation.qubits[0], 0, 0, operation.params[0])
+            self._sim.u(operation.qubits[0], 0, 0, float(operation.params[0]))
         elif name == 'u2':
             self._sim.u(
                 operation.qubits[0],
                 math.pi / 2,
-                operation.params[0],
-                operation.params[1],
+                float(operation.params[0]),
+                float(operation.params[1]),
             )
         elif (name == 'u3') or (name == 'u'):
             self._sim.u(
                 operation.qubits[0],
-                operation.params[0],
-                operation.params[1],
-                operation.params[2],
+                float(operation.params[0]),
+                float(operation.params[1]),
+                float(operation.params[2]),
             )
         elif name == 'r':
             self._sim.u(
                 operation.qubits[0],
-                operation.params[0],
-                operation.params[1] - math.pi / 2,
-                -operation.params[1] + mathh.pi / 2,
+                float(operation.params[0]),
+                float(operation.params[1]) - math.pi / 2,
+                (-1 * float(operation.params[1])) + math.pi / 2,
             )
         elif name == 'rx':
-            self._sim.r(Pauli.PauliX, operation.params[0], operation.qubits[0])
+            self._sim.r(Pauli.PauliX, float(operation.params[0]), operation.qubits[0])
         elif name == 'ry':
-            self._sim.r(Pauli.PauliY, operation.params[0], operation.qubits[0])
+            self._sim.r(Pauli.PauliY, float(operation.params[0]), operation.qubits[0])
         elif name == 'rz':
-            self._sim.r(Pauli.PauliZ, operation.params[0], operation.qubits[0])
+            self._sim.r(Pauli.PauliZ, float(operation.params[0]), operation.qubits[0])
         elif name == 'h':
             self._sim.h(operation.qubits[0])
         elif name == 'x':
@@ -2502,23 +2502,23 @@ class QrackSimulator:
             self._sim.adjt(operation.qubits[0])
         elif name == 'cu1':
             self._sim.mcu(
-                operation.qubits[0:1], operation.qubits[1], 0, 0, operation.params[0]
+                operation.qubits[0:1], operation.qubits[1], 0, 0, float(operation.params[0])
             )
         elif name == 'cu2':
             self._sim.mcu(
                 operation.qubits[0:1],
                 operation.qubits[1],
                 math.pi / 2,
-                operation.params[0],
-                operation.params[1],
+                float(operation.params[0]),
+                float(operation.params[1]),
             )
         elif (name == 'cu3') or (name == 'cu'):
             self._sim.mcu(
                 operation.qubits[0:1],
                 operation.qubits[1],
-                operation.params[0],
-                operation.params[1],
-                operation.params[2],
+                float(operation.params[0]),
+                float(operation.params[1]),
+                float(operation.params[2]),
             )
         elif name == 'cx':
             self._sim.mcx(operation.qubits[0:1], operation.qubits[1])
@@ -2535,7 +2535,7 @@ class QrackSimulator:
                     1,
                     0,
                     0,
-                    math.cos(operation.params[0]) + 1j * math.sin(operation.params[0]),
+                    math.cos(float(operation.params[0])) + 1j * math.sin(float(operation.params[0])),
                 ],
                 operation.qubits[1],
             )
