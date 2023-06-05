@@ -21,7 +21,7 @@ try:
     import quimb as qu
     import quimb.tensor as qtn
 except ImportError:
-    IS_QUIMB_AVAILABLE = False
+    _IS_QUIMB_AVAILABLE = False
 
 class QrackCircuit:
     """Class that exposes the QCircuit class of Qrack
