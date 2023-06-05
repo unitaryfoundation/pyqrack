@@ -297,18 +297,18 @@ class QrackCircuit:
                 self.ucmtrx(ctrls, [0, 1, 1, 0], circ.find_bit(gate.qubits[1])[0], 1)
 
     def file_to_quimb_circuit(filename):
-        """Convert an output file to a Qiskit circuit
+        """Convert an output file to a Quimb circuit
 
         Reads in an (optimized) circuit from a file named
         according to the "filename" parameter and outputs
-        a Qiskit circuit.
+        a Quimb circuit.
 
         Args:
             filename: Name of file
 
         Raises:
-            RuntimeErorr: Before trying to file_to_qiskit_circuit() with
-                QrackCircuit, you must install Qiskit, numpy, and math!
+            RuntimeErorr: Before trying to file_to_quimb_circuit() with
+                QrackCircuit, you must install quimb, Qiskit, numpy, and math!
         """
         if not _IS_QUIMB_AVAILABLE:
             raise RuntimeError(
