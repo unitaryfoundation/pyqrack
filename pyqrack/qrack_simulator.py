@@ -96,8 +96,6 @@ class QrackSimulator:
 
         self._throw_if_error()
 
-        self._qubitCount = qubitCount
-
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
         elif qiskitCircuit is not None:
@@ -1968,7 +1966,6 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         Qrack.qrack_lib.Compose(self.sid, other.sid, self._ulonglong_byref(q))
-        self._qubitCount = self._qubitCount + other._qubitCount
         self._throw_if_error()
 
     def decompose(self, q):
@@ -1991,8 +1988,6 @@ class QrackSimulator:
         Qrack.qrack_lib.destroy(other.sid)
         l = len(q)
         other.sid = Qrack.qrack_lib.Decompose(self.sid, l, self._ulonglong_byref(q))
-        self._qubitCount = self._qubitCount - l
-        other._qubitCount = l
         self._throw_if_error()
         return other
 
@@ -2015,7 +2010,6 @@ class QrackSimulator:
         """
         l = len(q)
         Qrack.qrack_lib.Dispose(self.sid, l, self._ulonglong_byref(q))
-        self._qubitCount = self._qubitCount - l
         self._throw_if_error()
 
     ## miscellaneous
@@ -2029,7 +2023,7 @@ class QrackSimulator:
         """
         global ids_list
         global ids_list_index
-        ids_list = [0] * self._qubitCount
+        ids_list = [0] * self.num_qubits()
         ids_list_index = 0
         Qrack.qrack_lib.DumpIds(self.sid, self.dump_ids_callback)
         return ids_list
@@ -2053,7 +2047,7 @@ class QrackSimulator:
         global state_vec_list
         global state_vec_list_index
         global state_vec_probability
-        state_vec_list = [complex(0, 0)] * (1 << self._qubitCount)
+        state_vec_list = [complex(0, 0)] * (1 << self.num_qubits())
         state_vec_list_index = 0
         state_vec_probability = 0
         Qrack.qrack_lib.Dump(self.sid, self.dump_callback)
@@ -2108,7 +2102,7 @@ class QrackSimulator:
             list representing the state vector.
         """
         if Qrack.fppow == 5 or Qrack.fppow == 6:
-            amp_count = 1 << self._qubitCount
+            amp_count = 1 << self.num_qubits()
             ket = self._qrack_complex_byref([complex(0, 0)] * amp_count)
             Qrack.qrack_lib.OutKet(self.sid, ket)
             if self._get_error() != 0:
