@@ -345,7 +345,16 @@ class QrackCircuit:
             psi0_tag=psi0_tag,
             bra_site_ind_id=bra_site_ind_id
         ) if circuit_type == QuimbCircuitType.Circuit else (
-            qtn.CircuitDense(N=qcirc.num_qubits, psi0=psi0, gate_opts=gate_opts, tags=tags) if circuit_type == QuimbCircuitType.CircuitDense else qtn.CircuitMPS(N=qcirc.num_qubits, psi0=psi0, gate_opts=gate_opts)
+            qtn.CircuitDense(N=qcirc.num_qubits, psi0=psi0, gate_opts=gate_opts, tags=tags) if circuit_type == QuimbCircuitType.CircuitDense else
+                qtn.CircuitMPS(
+                    N=qcirc.num_qubits,
+                    psi0=psi0,
+                    gate_opts=gate_opts,
+                    tags=tags,
+                    psi0_dtype=psi0_dtype,
+                    psi0_tag=psi0_tag,
+                    bra_site_ind_id=bra_site_ind_id
+                )
         )
         for gate in qcirc.data:
             o = gate.operation
