@@ -437,9 +437,5 @@ class QrackCircuit:
         # Convert from TensorCircuit to Qiskit
         qcirc = tcirc.to_qiskit(enable_instruction, enable_inputs)
 
-        # Transpile in a compatible gate basis, for QrackCircuit
-        basis_gates = ["u", "cx"]
-        qcirc = transpile(qcirc, basis_gates=basis_gates, optimization_level=3)
-
         # Convert to QrackCircuit
         return QrackCircuit.in_from_qiskit_circuit(qcirc)
