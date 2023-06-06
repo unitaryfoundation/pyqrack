@@ -402,7 +402,7 @@ class QrackCircuit:
 
         Raises:
             RuntimeErorr: Before trying to file_to_quimb_circuit() with
-                QrackCircuit, you must install quimb, Qiskit, numpy, and math!
+                QrackCircuit, you must install TensorCircuit, Qiskit, numpy, and math!
         """
         if not _IS_TENSORCIRCUIT_AVAILABLE:
             raise RuntimeError(
@@ -427,7 +427,7 @@ class QrackCircuit:
 
         Raises:
             RuntimeErorr: Before trying to in_from_tensorcircuit() with
-                QrackCircuit, you must install quimb, Qiskit, numpy, and math!
+                QrackCircuit, you must install TensorCircuit, Qiskit, numpy, and math!
         """
         if not _IS_TENSORCIRCUIT_AVAILABLE:
             raise RuntimeError(
