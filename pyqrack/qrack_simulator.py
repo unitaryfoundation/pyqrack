@@ -2364,6 +2364,24 @@ class QrackSimulator:
         Qrack.qrack_lib.SetTInjection(self.sid, iti)
         self._throw_if_error()
 
+    def set_hardware_encoded(self, she):
+        """Set option to encode t-gadgets for hardware
+
+        If t-injection is on, and we output a stabilizer state to file,
+        this option turns on auxiliary error correction channels, if true,
+        allowing ancilla syndrome correction with mid-ciruit measurement
+        instead of post selection.
+        Note that this encoding option is off by default.
+
+        Args:
+            she: use "stabilizer hardware encoding"
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetStabilizerHardwareEncoded(self.sid, she)
+        self._throw_if_error()
+
     def out_to_file(self, filename):
         """Output state to file (stabilizer only!)
 

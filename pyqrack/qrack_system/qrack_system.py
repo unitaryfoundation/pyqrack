@@ -867,6 +867,9 @@ class QrackSystem:
         self.qrack_lib.SetTInjection.restype = c_bool
         self.qrack_lib.SetTInjection.argtypes = [c_ulonglong, c_bool]
 
+        self.qrack_lib.SetStabilizerHardwareEncoded.restype = c_bool
+        self.qrack_lib.SetStabilizerHardwareEncoded.argtypes = [c_ulonglong, c_bool]
+
         self.qrack_lib.qstabilizer_out_to_file.restype = None
         self.qrack_lib.qstabilizer_out_to_file.argtypes = [c_ulonglong, c_char_p]
 
