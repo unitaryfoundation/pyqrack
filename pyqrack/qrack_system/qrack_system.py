@@ -867,6 +867,12 @@ class QrackSystem:
         self.qrack_lib.SetTInjection.restype = c_bool
         self.qrack_lib.SetTInjection.argtypes = [c_ulonglong, c_bool]
 
+        self.qrack_lib.qstabilizer_out_to_file.restype = None
+        self.qrack_lib.qstabilizer_out_to_file.argtypes = [c_ulonglong, c_char_p]
+
+        self.qrack_lib.qstabilizer_in_from_file.restype = None
+        self.qrack_lib.qstabilizer_in_from_file.argtypes = [c_ulonglong, c_char_p]
+
         self.qrack_lib.init_qneuron.restype = c_ulonglong
         self.qrack_lib.init_qneuron.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), c_ulonglong, c_ulonglong, c_double, c_double]
 
