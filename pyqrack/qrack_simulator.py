@@ -12,9 +12,16 @@ _IS_QISKIT_AVAILABLE = True
 try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.qobj.qasm_qobj import QasmQobjExperiment
+    from qiskit.quantum_info.operators.symplectic.clifford import Clifford
     from .util import convert_qiskit_circuit_to_qasm_experiment
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
+
+_IS_NUMPY_AVAILABLE = True
+try:
+    import numpy as np
+except:
+    _IS_NUMPY_AVAILABLE = False
 
 
 class QrackSimulator:
@@ -2416,6 +2423,101 @@ class QrackSimulator:
         out._throw_if_error()
 
         return out
+
+    def file_to_qiskit_circuit(filename):
+        """Convert an output state file to a Qiskit circuit
+
+        Reads in an (optimized) circuit from a file named
+        according to the "filename" parameter and outputs
+        a Qiskit circuit.
+
+        Args:
+            filename: Name of file
+
+        Raises:
+            RuntimeErorr: Before trying to file_to_qiskit_circuit() with
+                QrackCircuit, you must install Qiskit, numpy, and math!
+        """
+        if not (_IS_QISKIT_AVAILABLE and _IS_NUMPY_AVAILABLE):
+            raise RuntimeError(
+                "Before trying to file_to_qiskit_circuit() with QrackCircuit, you must install Qiskit, numpy, and math!"
+            )
+
+        lines = []
+        with open(filename, 'r') as file:
+            lines = file.readlines()
+
+        logical_qubits = int(lines[0])
+        stabilizer_qubits = int(lines[1])
+        rows = stabilizer_qubits << 1
+
+        tableau = []
+        for line in lines[2:(rows + 2)]:
+            bits = line.split()
+            row = []
+            for bit in bits:
+                row.append(bool(int(bit)))
+            row[-1] = (int(bits[-1]) >> 1) & 1
+            tableau.append(row)
+
+        non_clifford_gates = []
+        g = 0
+        for line in lines[(rows + 2):]:
+            i = 0
+            tokens = line.split()
+            op = np.zeros((2,2), dtype=complex)
+            row = []
+            for _ in range(2):
+                amp = tokens[i].replace("(","").replace(")","").split(',')
+                row.append(float(amp[0]) + float(amp[1])*1j)
+                i = i + 1
+            l = math.sqrt(np.real(row[0] * np.conj(row[0]) + row[1] * np.conj(row[1])))
+            op[0][0] = row[0] / l
+            op[0][1] = row[1] / l
+
+            if np.abs(op[0][0] - row[0]) > 1e-5:
+                print("Warning: gate ", str(g), " might not be unitary!")
+            if np.abs(op[0][1] - row[1]) > 1e-5:
+                print("Warning: gate ", str(g), " might not be unitary!")
+
+            row = []
+            for _ in range(2):
+                amp = tokens[i].replace("(","").replace(")","").split(',')
+                row.append(float(amp[0]) + float(amp[1])*1j)
+                i = i + 1
+            l = math.sqrt(np.real(row[0] * np.conj(row[0]) + row[1] * np.conj(row[1])))
+            op[1][0] = row[0] / l
+            op[1][1] = row[1] / l
+
+            ph = np.real(np.log(np.linalg.det(op)) / 1j)
+
+            op[1][0] = -np.exp(1j * ph) * np.conj(op[0][1])
+            op[1][1] = np.exp(1j * ph) * np.conj(op[0][0])
+
+            if np.abs(op[1][0] - row[0]) > 1e-5:
+                print("Warning: gate ", str(g), " might not be unitary!")
+            if np.abs(op[1][1] - row[1]) > 1e-5:
+                print("Warning: gate ", str(g), " might not be unitary!")
+
+            non_clifford_gates.append(op)
+            g = g + 1
+
+        clifford = Clifford(tableau)
+
+        circ = clifford.to_circuit()
+        for i in range(len(non_clifford_gates)):
+            circ.unitary(non_clifford_gates[i], [i])
+
+        ident = np.eye(2)
+        second_ancilla = non_clifford_gates[logical_qubits + 1]
+        if np.all(np.equal(ident, second_ancilla)):
+            # We're "hardware-encoded"
+            for i in range(logical_qubits, stabilizer_qubits, 2):
+                circ.h(i + 1)
+                circ.cz(i, i + 1)
+                circ.h(i + 1)
+
+        return circ
 
     def _apply_pyzx_op(self, gate):
         if gate.name == "XPhase":
