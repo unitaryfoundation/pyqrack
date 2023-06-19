@@ -2508,9 +2508,7 @@ class QrackSimulator:
         for i in range(len(non_clifford_gates)):
             circ.unitary(non_clifford_gates[i], [i])
 
-        ident = np.eye(2)
-        second_ancilla = non_clifford_gates[logical_qubits + 1]
-        if np.all(np.equal(ident, second_ancilla)):
+        if (len(non_clifford_gates) > (logical_qubits + 1)) and np.all(np.equal(np.eye(2), non_clifford_gates[logical_qubits + 1])):
             # We're "hardware-encoded"
             for i in range(logical_qubits, stabilizer_qubits, 2):
                 circ.h(i + 1)
@@ -2610,6 +2608,8 @@ class QrackSimulator:
                 float(operation.params[1]),
                 float(operation.params[2]),
             )
+        elif (name == 'unitary') and (len(operation.qubits) == 1):
+            self._sim.mtrx(operation.params[0].flatten(), operation.qubits[0])
         elif name == 'r':
             self._sim.u(
                 operation.qubits[0],
