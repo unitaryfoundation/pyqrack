@@ -11,6 +11,7 @@ from .pauli import Pauli
 _IS_QISKIT_AVAILABLE = True
 try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
+    from qiskit.compiler import transpile
     from qiskit.qobj.qasm_qobj import QasmQobjExperiment
     from qiskit.quantum_info.operators.symplectic.clifford import Clifford
     from .util import convert_qiskit_circuit_to_qasm_experiment
@@ -2506,8 +2507,11 @@ class QrackSimulator:
             g = g + 1
 
         clifford = Clifford(tableau)
-
         circ = clifford.to_circuit()
+
+        basis_gates = ["h", "x", "y", "z", "sqrtx", "sqrty", "s", "sdg", "cx", "cy", "cz", "swap", "iswap"]
+        circ = transpile(circ, basis_gates=basis_gates, optimization_level=3)
+
         for i in range(len(non_clifford_gates)):
             circ.unitary(non_clifford_gates[i], [i])
 
