@@ -2408,8 +2408,11 @@ class QrackSimulator:
         Args:
             filename: Name of file
         """
+        qb_count = 1
+        with open(filename) as f:
+            qb_count = int(f.readline()[:-1])
         out = QrackSimulator(
-            qubitCount=1,
+            qubitCount=qb_count,
             isSchmidtDecomposeMulti=False,
             isSchmidtDecompose=False,
             isStabilizerHybrid=True,
