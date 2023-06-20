@@ -2424,7 +2424,7 @@ class QrackSimulator:
 
         return out
 
-    def file_to_qiskit_circuit(filename):
+    def file_to_qiskit_circuit(filename, is_hardware_encoded=False):
         """Convert an output state file to a Qiskit circuit
 
         Reads in an (optimized) circuit from a file named
@@ -2508,8 +2508,7 @@ class QrackSimulator:
         for i in range(len(non_clifford_gates)):
             circ.unitary(non_clifford_gates[i], [i])
 
-        if (len(non_clifford_gates) > (logical_qubits + 1)) and np.all(np.equal(np.eye(2), non_clifford_gates[logical_qubits + 1])):
-            # We're "hardware-encoded"
+        if is_hardware_encoded:
             for i in range(logical_qubits, stabilizer_qubits, 2):
                 circ.h(i + 1)
                 circ.cz(i, i + 1)
