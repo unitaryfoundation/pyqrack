@@ -2509,7 +2509,7 @@ class QrackSimulator:
         clifford = Clifford(tableau)
         circ = clifford.to_circuit()
 
-        basis_gates = ["h", "x", "y", "z", "sqrtx", "sqrty", "s", "sdg", "cx", "cy", "cz", "swap", "iswap"]
+        basis_gates = ["h", "x", "y", "z", "sx", "sy", "s", "sdg", "cx", "cy", "cz", "swap", "iswap"]
         circ = transpile(circ, basis_gates=basis_gates, optimization_level=3)
 
         for i in range(len(non_clifford_gates)):
