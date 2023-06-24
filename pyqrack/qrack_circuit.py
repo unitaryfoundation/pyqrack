@@ -194,7 +194,7 @@ class QrackCircuit:
         i = 0
         num_qubits = int(tokens[i])
         i = i + 1
-        circ = QuantumCircuit(num_qubits, num_qubits)
+        circ = QuantumCircuit(num_qubits)
 
         num_gates = int(tokens[i])
         i = i + 1
