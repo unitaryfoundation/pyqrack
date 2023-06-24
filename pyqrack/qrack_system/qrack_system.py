@@ -67,10 +67,10 @@ class QrackSystem:
         self.qrack_lib.InKet.restype = None
         self.qrack_lib.OutKet.restype = None
 
-        if self.fppow == 5:
+        if self.fppow < 6:
             self.qrack_lib.InKet.argtypes = [c_ulonglong, POINTER(c_float)]
             self.qrack_lib.OutKet.argtypes = [c_ulonglong, POINTER(c_float)]
-        if self.fppow == 6:
+        else:
             self.qrack_lib.InKet.argtypes = [c_ulonglong, POINTER(c_double)]
             self.qrack_lib.OutKet.argtypes = [c_ulonglong, POINTER(c_double)]
 
