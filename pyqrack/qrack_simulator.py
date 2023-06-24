@@ -2085,16 +2085,10 @@ class QrackSimulator:
             ket: the state vector to which simulator will be set
 
         Raises:
-            RuntimeError: Not implemented for the given builds.
+            RuntimeError: QrackSimulator raised an exception.
         """
-        if Qrack.fppow == 5 or Qrack.fppow == 6:
-            Qrack.qrack_lib.InKet(self.sid, self._qrack_complex_byref(ket))
-            if self._get_error() != 0:
-                raise RuntimeError("QrackSimulator C++ library raised exception.")
-        else:
-            raise NotImplementedError(
-                "QrackSimulator.in_ket() not implemented for builds beside float/fp32 and double/fp64, but it can be overloaded."
-            )
+        Qrack.qrack_lib.InKet(self.sid, self._qrack_complex_byref(ket))
+        self._throw_if_error()
 
     def out_ket(self):
         """Set state vector
@@ -2104,21 +2098,16 @@ class QrackSimulator:
         to sub-optimal performance of the method.
 
         Raises:
-            RuntimeError: Not implemented for the given builds.
+            RuntimeError: QrackSimulator raised an exception.
 
         Returns:
             list representing the state vector.
         """
-        if Qrack.fppow == 5 or Qrack.fppow == 6:
-            amp_count = 1 << self.num_qubits()
-            ket = self._qrack_complex_byref([complex(0, 0)] * amp_count)
-            Qrack.qrack_lib.OutKet(self.sid, ket)
-            if self._get_error() != 0:
-                raise RuntimeError("QrackSimulator C++ library raised exception.")
-            return [complex(r, i) for r, i in self._pairwise(ket)]
-        raise NotImplementedError(
-            "QrackSimulator.out_ket() not implemented for builds beside float/fp32 and double/fp64, but it can be overloaded."
-        )
+        amp_count = 1 << self.num_qubits()
+        ket = self._qrack_complex_byref([complex(0, 0)] * amp_count)
+        Qrack.qrack_lib.OutKet(self.sid, ket)
+        self._throw_if_error()
+        return [complex(r, i) for r, i in self._pairwise(ket)]
 
     def prob(self, q):
         """Probability of `|1>`
