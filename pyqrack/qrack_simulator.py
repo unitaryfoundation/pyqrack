@@ -2728,6 +2728,8 @@ class QrackSimulator:
             self._sim.swap(operation.qubits[0], operation.qubits[1])
         elif name == 'iswap':
             self._sim.iswap(operation.qubits[0], operation.qubits[1])
+        elif name == 'iswap_dg':
+            self._sim.adjiswap(operation.qubits[0], operation.qubits[1])
         elif name == 'cswap':
             self._sim.cswap(
                 operation.qubits[0:1], operation.qubits[1], operation.qubits[2]
