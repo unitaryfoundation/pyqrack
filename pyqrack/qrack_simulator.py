@@ -2602,6 +2602,7 @@ class QrackSimulator:
         sqrt1_2 = 1 / math.sqrt(2)
         ident = np.eye(2, dtype=np.complex128)
         passable_gates = ["unitary", "h", "x", "y", "z", "s", "sdg"]
+        passed_swaps = []
 
         for i in range(width, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
@@ -2644,12 +2645,17 @@ class QrackSimulator:
                         i = q2
                     elif i == q2:
                         i = q1
+                    if ((i == q1) or (i == q2)) and (q1 > width) and (q2 > width):
+                        if circ.data[j] in passed_swaps:
+                            del circ.data[j]
+                        else:
+                            passed_swaps.append(circ.data[j])
 
                     j -= 1
                     continue
 
                 # The overall algorithm might be very sensitive to floating-point error, so check exact equality:
-                is_buffer_identity = np.array_equal(non_clifford, ident)
+                is_buffer_identity = np.allclose(non_clifford, ident)
 
                 if (q1 == i) and (op.name == "cx" or op.name == "cy" or op.name == "cz"):
                     # Either way, we're cutting this gate.
@@ -2696,7 +2702,7 @@ class QrackSimulator:
                 if circ.find_bit(qubits[1])[0] == i:
                     to_inject = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]]))
 
-                    if np.array_equal(to_inject, ident):
+                    if np.allclose(to_inject, ident):
                         # No buffer content to write to circuit definition
                         del circ.data[j]
                         j -= 1
