@@ -2564,7 +2564,8 @@ class QrackSimulator:
         Reads in a circuit from a file named according to the "filename"
         parameter and outputs a 'hyper-optimized' Qiskit circuit that
         favors maximum reduction in gate count and depth at the potential
-        expense of additional non-Clifford gates.
+        expense of additional non-Clifford gates. (Ancilla qubits are
+        left included in the output, though they probably have no gates.)
 
         Args:
             filename: Name of file
