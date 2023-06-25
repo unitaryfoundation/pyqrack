@@ -2713,6 +2713,17 @@ class QrackSimulator:
         basis_gates=["u", "x", "cx", "cy", "cz", "swap", "iswap", "iswap_dg"]
         circ = transpile(circ, basis_gates=basis_gates, optimization_level=3)
 
+        #Eliminate unused ancillae
+        qasm = circ.qasm()
+        qasm = qasm.replace("qreg q[" + str(circ.width()) + "];", "qreg q[" + str(width) + "];")
+
+        # Sanity check, that we've eliminated all ancillae (but it's guaranteed)
+        after_alloc = qasm.split("qreg q[" + str(width) + "];")
+        if (len(after_alloc) < 2) or (("q[" + str(width) + "]") in after_alloc[1]):
+            return circ
+
+        circ = QuantumCircuit.from_qasm_str(qasm)
+
         return circ
 
     def _apply_pyzx_op(self, gate):
