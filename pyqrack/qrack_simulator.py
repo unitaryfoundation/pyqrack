@@ -2516,27 +2516,6 @@ class QrackSimulator:
 
         return circ
 
-    def _single_qubit_optimize(non_clifford, op):
-        if op.name == "unitary":
-            non_clifford = np.matmul(non_clifford, op.params[0])
-        elif op.name == "h":
-            sqrt1_2 = 1 / math.sqrt(2)
-            non_clifford = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128))
-        elif op.name == "x":
-            non_clifford = np.matmul(non_clifford, np.array([[0, 1], [1, 0]], np.complex128))
-        elif op.name == "y":
-            non_clifford = np.matmul(non_clifford, np.array([[0, -1j], [1j, 0]], np.complex128))
-        elif op.name == "z":
-            non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1]], np.complex128))
-        elif op.name == "s":
-            non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, 1j]], np.complex128))
-        elif op.name == "sdg":
-            non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1j]], np.complex128))
-        else:
-            print("Warning: Something went wrong! (Dropped a single-qubit gate.")
-
-        return non_clifford
-
     def file_to_optimized_qiskit_circuit(filename):
         """Convert an output state file to a Qiskit circuit
 
@@ -2573,7 +2552,23 @@ class QrackSimulator:
                 qubits = circ.data[j].qubits
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
-                    non_clifford = QrackSimulator._single_qubit_optimize(non_clifford, op)
+                    if op.name == "unitary":
+                        non_clifford = np.matmul(op.params[0], non_clifford)
+                    elif op.name == "h":
+                        non_clifford = np.matmul(np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128), non_clifford)
+                    elif op.name == "x":
+                        non_clifford = np.matmul(np.array([[0, 1], [1, 0]], np.complex128), non_clifford)
+                    elif op.name == "y":
+                        non_clifford = np.matmul(np.array([[0, -1j], [1j, 0]], np.complex128), non_clifford)
+                    elif op.name == "z":
+                        non_clifford = np.matmul(np.array([[1, 0], [0, -1]], np.complex128), non_clifford)
+                    elif op.name == "s":
+                        non_clifford = np.matmul(np.array([[1, 0], [0, 1j]], np.complex128), non_clifford)
+                    elif op.name == "sdg":
+                        non_clifford = np.matmul(np.array([[1, 0], [0, -1j]], np.complex128), non_clifford)
+                    else:
+                        print("Warning: Something went wrong! (Dropped a single-qubit gate.")
+
                     del circ.data[j]
                     continue
 
@@ -2619,12 +2614,13 @@ class QrackSimulator:
                         instr.qubits = (qubits[1],)
                         circ.data[j] = copy.deepcopy(instr)
 
-                    j += 1
-                    continue
+                        j += 1
+                        continue
 
                 if (q1 == i) or (q2 == i) or (op.name != "cx"):
                     if np.allclose(non_clifford, ident):
                         # No buffer content to write to circuit definition
+                        non_clifford = ident
                         break
 
                     # We're blocked, so we insert our buffer at this place in the circuit definition.
@@ -2633,6 +2629,7 @@ class QrackSimulator:
                     instr = c.data[0]
                     instr.qubits = (qubits[0],)
                     circ.data.insert(j, copy.deepcopy(instr))
+                    non_clifford = ident
                     break
 
                 j += 1
@@ -2641,7 +2638,6 @@ class QrackSimulator:
                 # We're at the end of the wire, so add the buffer gate.
                 circ.unitary(non_clifford, i)
 
-        passed_swaps = []
         for i in range(width, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
             non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
@@ -2651,7 +2647,23 @@ class QrackSimulator:
                 qubits = circ.data[j].qubits
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
-                    non_clifford = QrackSimulator._single_qubit_optimize(non_clifford, op)
+                    if op.name == "unitary":
+                        non_clifford = np.matmul(non_clifford, op.params[0])
+                    elif op.name == "h":
+                        non_clifford = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128))
+                    elif op.name == "x":
+                        non_clifford = np.matmul(non_clifford, np.array([[0, 1], [1, 0]], np.complex128))
+                    elif op.name == "y":
+                        non_clifford = np.matmul(non_clifford, np.array([[0, -1j], [1j, 0]], np.complex128))
+                    elif op.name == "z":
+                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1]], np.complex128))
+                    elif op.name == "s":
+                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, 1j]], np.complex128))
+                    elif op.name == "sdg":
+                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1j]], np.complex128))
+                    else:
+                        print("Warning: Something went wrong! (Dropped a single-qubit gate.")
+
                     del circ.data[j]
                     j -= 1
                     continue
