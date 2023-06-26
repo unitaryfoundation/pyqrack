@@ -2516,47 +2516,26 @@ class QrackSimulator:
 
         return circ
 
-    def _qunit_step(i, circ, to_cut, state, basis, has_depth):
-        op = circ.data[i].operation
-        qubits = circ.data[i].qubits
-        first_qubit = circ.find_bit(qubits[0])[0]
-        if has_depth[first_qubit]:
-            for q in qubits[1:]:
-                has_depth[circ.find_bit(q)[0]] = True
-            return
-        if len(qubits) == 1:
-            # The overall algorithm might be very sensitive to floating-point error, so check exact equality:
-            is_unitary_phase = ((op.name == "unitary") and (op.params[0][0][1] == 0) and (op.params[0][1][0] == 0))
-            if op.name == "h":
-                basis[first_qubit] = not basis[first_qubit]
-            elif ((not basis[first_qubit]) and (is_unitary_phase or (op.name == "z") or (op.name == "s") or (op.name == "sdg"))) or (basis[first_qubit] and (op.name == "x")):
-                to_cut.append(i)
-            elif ((not basis[first_qubit]) and ((op.name == "x") or (op.name == "y"))) or (basis[first_qubit] and ((op.name == "y") or (op.name == "z"))):
-                state[first_qubit] = not state[first_qubit]
-            else:
-                has_depth[first_qubit] = True
-        elif op.name == "swap":
-            second_qubit = circ.find_bit(qubits[1])[0]
-            has_depth[first_qubit], has_depth[second_qubit] = has_depth[second_qubit], has_depth[first_qubit]
-            state[first_qubit], state[second_qubit] = state[second_qubit], state[first_qubit]
-            basis[first_qubit], basis[second_qubit] = basis[second_qubit], basis[first_qubit]
-            if (not has_depth[first_qubit]) and (not has_depth[second_qubit]) and (state[first_qubit] == state[second_qubit]) and (basis[first_qubit] == basis[second_qubit]):
-                to_cut.append(i)
-        elif not basis[first_qubit] and op.name == "cx":
-            if state[first_qubit]:
-                c = QuantumCircuit(1)
-                c.x(0)
-                instr = c.data[0]
-                instr.qubits = (qubits[1],)
-                circ.data[i] = copy.deepcopy(instr)
-                i -= 1
-            else:
-                to_cut.append(i)
+    def _single_qubit_optimize(non_clifford, op):
+        if op.name == "unitary":
+            non_clifford = np.matmul(non_clifford, op.params[0])
+        elif op.name == "h":
+            sqrt1_2 = 1 / math.sqrt(2)
+            non_clifford = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128))
+        elif op.name == "x":
+            non_clifford = np.matmul(non_clifford, np.array([[0, 1], [1, 0]], np.complex128))
+        elif op.name == "y":
+            non_clifford = np.matmul(non_clifford, np.array([[0, -1j], [1j, 0]], np.complex128))
+        elif op.name == "z":
+            non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1]], np.complex128))
+        elif op.name == "s":
+            non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, 1j]], np.complex128))
+        elif op.name == "sdg":
+            non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1j]], np.complex128))
         else:
-            qc = circ.find_bit(qubits[0])[0]
-            qt = circ.find_bit(qubits[1])[0]
-            has_depth[qc] = True
-            has_depth[qt] = True
+            print("Warning: Something went wrong! (Dropped a single-qubit gate.")
+
+        return non_clifford
 
     def file_to_optimized_qiskit_circuit(filename):
         """Convert an output state file to a Qiskit circuit
@@ -2580,25 +2559,6 @@ class QrackSimulator:
         with open(filename, "r", encoding="utf-8") as file:
             width = int(file.readline())
 
-        to_cut = []
-        state = circ.width() * [False]
-        basis = circ.width() * [False]
-        has_depth = circ.width() * [False]
-        for i in range(len(circ.data)):
-            QrackSimulator._qunit_step(i, circ, to_cut, state, basis, has_depth)
-        to_cut.reverse()
-        for i in to_cut:
-            del circ.data[i]
-
-        to_cut = []
-        state = circ.width() * [False]
-        basis = circ.width() * [False]
-        has_depth = (width * [True]) + ((circ.width() - width) * [False])
-        for i in reversed(range(len(circ.data))):
-            QrackSimulator._qunit_step(i, circ, to_cut, state, basis, has_depth)
-        for i in to_cut:
-            del circ.data[i]
-
         sqrt1_2 = 1 / math.sqrt(2)
         ident = np.eye(2, dtype=np.complex128)
         passable_gates = ["unitary", "h", "x", "y", "z", "s", "sdg"]
@@ -2613,23 +2573,7 @@ class QrackSimulator:
                 qubits = circ.data[j].qubits
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
-                    if op.name == "unitary":
-                        non_clifford = np.matmul(non_clifford, op.params[0])
-                    elif op.name == "h":
-                        non_clifford = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128))
-                    elif op.name == "x":
-                        non_clifford = np.matmul(non_clifford, np.array([[0, 1], [1, 0]], np.complex128))
-                    elif op.name == "y":
-                        non_clifford = np.matmul(non_clifford, np.array([[0, -1j], [1j, 0]], np.complex128))
-                    elif op.name == "z":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1]], np.complex128))
-                    elif op.name == "s":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, 1j]], np.complex128))
-                    elif op.name == "sdg":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1j]], np.complex128))
-                    else:
-                        print("Warning: Something went wrong! (Dropped a single-qubit gate.")
-
+                    non_clifford = QrackSimulator._single_qubit_optimize(non_clifford, op)
                     del circ.data[j]
                     continue
 
@@ -2693,6 +2637,10 @@ class QrackSimulator:
 
                 j += 1
 
+            if (j == len(circ.data)) and not np.allclose(non_clifford, ident):
+                # We're at the end of the wire, so add the buffer gate.
+                circ.unitary(non_clifford, i)
+
         for i in range(width, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
             non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
@@ -2702,23 +2650,7 @@ class QrackSimulator:
                 qubits = circ.data[j].qubits
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
-                    if op.name == "unitary":
-                        non_clifford = np.matmul(non_clifford, op.params[0])
-                    elif op.name == "h":
-                        non_clifford = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128))
-                    elif op.name == "x":
-                        non_clifford = np.matmul(non_clifford, np.array([[0, 1], [1, 0]], np.complex128))
-                    elif op.name == "y":
-                        non_clifford = np.matmul(non_clifford, np.array([[0, -1j], [1j, 0]], np.complex128))
-                    elif op.name == "z":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1]], np.complex128))
-                    elif op.name == "s":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, 1j]], np.complex128))
-                    elif op.name == "sdg":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1j]], np.complex128))
-                    else:
-                        print("Warning: Something went wrong! (Dropped a single-qubit gate.")
-
+                    non_clifford = QrackSimulator._single_qubit_optimize(non_clifford, op)
                     del circ.data[j]
                     j -= 1
                     continue
