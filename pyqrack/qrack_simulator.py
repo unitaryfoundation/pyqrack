@@ -2541,8 +2541,8 @@ class QrackSimulator:
         sqrt1_2 = 1 / math.sqrt(2)
         ident = np.eye(2, dtype=np.complex128)
         passable_gates = ["unitary", "h", "x", "y", "z", "s", "sdg"]
-        passed_swaps = []
 
+        passed_swaps = []
         for i in range(0, width):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
             non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
@@ -2638,6 +2638,7 @@ class QrackSimulator:
                 # We're at the end of the wire, so add the buffer gate.
                 circ.unitary(non_clifford, i)
 
+        passed_swaps = []
         for i in range(width, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
             non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
@@ -2696,7 +2697,7 @@ class QrackSimulator:
 
                     if (np.isclose(np.abs(non_clifford[0][0]), 1) and np.isclose(np.abs(non_clifford[1][1]), 1) and
                         np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
-                        # If we're not buffering anything but post selection, the blocking gate has no effect, and we're safe to continue.
+                        # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
                         j -= 1
                         continue
 
