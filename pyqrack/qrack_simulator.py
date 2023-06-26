@@ -2681,7 +2681,7 @@ class QrackSimulator:
                     elif i == q2:
                         i = q1
 
-                    if ((i == q1) or (i == q2)) and (q1 > width) and (q2 > width):
+                    if ((i == q1) or (i == q2)) and (q1 >= width) and (q2 >= width):
                         if circ.data[j] in passed_swaps:
                             del circ.data[j]
                         else:
