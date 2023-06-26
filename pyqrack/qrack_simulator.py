@@ -2641,6 +2641,7 @@ class QrackSimulator:
                 # We're at the end of the wire, so add the buffer gate.
                 circ.unitary(non_clifford, i)
 
+        passed_swaps = []
         for i in range(width, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
             non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
