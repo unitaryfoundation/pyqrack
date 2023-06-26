@@ -2595,14 +2595,14 @@ class QrackSimulator:
                     continue 
 
                 if (q1 == i) and (op.name == "cx" or op.name == "cy" or op.name == "cz"):
-                    if (np.isclose(np.abs(non_clifford[0][0]) ** 2, 1) and np.isclose(np.abs(non_clifford[1][1]) ** 2, 1) and
-                        np.isclose(np.abs(non_clifford[0][1]) ** 2, 0) and np.isclose(np.abs(non_clifford[1][0]) ** 2, 0)):
+                    if (np.isclose(np.abs(non_clifford[0][0]), 1) and np.isclose(np.abs(non_clifford[1][1]), 1) and
+                        np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
                         # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
                         del circ.data[j]
                         continue
 
-                    if (np.isclose(np.abs(non_clifford[0][0]) ** 2, 0) and np.isclose(np.abs(non_clifford[1][1]) ** 2, 0) and
-                        np.isclose(np.abs(non_clifford[0][1]) ** 2, 1) and np.isclose(np.abs(non_clifford[1][0]) ** 2, 1)):
+                    if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0) and
+                        np.isclose(np.abs(non_clifford[0][1]), 1) and np.isclose(np.abs(non_clifford[1][0]), 1)):
                         c = QuantumCircuit(1)
                         if op.name == "cx":
                             c.x(0)
@@ -2694,8 +2694,8 @@ class QrackSimulator:
                     orig_instr = circ.data[j]
                     del circ.data[j]
 
-                    if (np.isclose(np.abs(non_clifford[0][0]) ** 2, 1) and np.isclose(np.abs(non_clifford[1][1]) ** 2, 1) and
-                        np.isclose(np.abs(non_clifford[0][1]) ** 2, 0) and np.isclose(np.abs(non_clifford[1][0]) ** 2, 0)):
+                    if (np.isclose(np.abs(non_clifford[0][0]), 1) and np.isclose(np.abs(non_clifford[1][1]), 1) and
+                        np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
                         # If we're not buffering anything but post selection, the blocking gate has no effect, and we're safe to continue.
                         j -= 1
                         continue
