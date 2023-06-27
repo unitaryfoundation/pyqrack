@@ -3,11 +3,9 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
+import math
 import copy
 import ctypes
-import math
-import multiprocessing
-from itertools import repeat
 from .qrack_system import Qrack
 from .pauli import Pauli
 
@@ -27,11 +25,6 @@ try:
 except:
     _IS_NUMPY_AVAILABLE = False
 
-def init_pool_processes(the_lock):
-    '''Initialize each process with a global variable lock.
-    '''
-    global lock
-    lock = the_lock
 
 class QrackSimulator:
     """Interface for all the QRack functionality.
@@ -40,8 +33,6 @@ class QrackSimulator:
         qubitCount(int): Number of qubits that are to be simulated.
         sid(int): Corresponding simulator id.
     """
-    SQRT1_2 = 1 / math.sqrt(2)
-    IDENT = np.eye(2, dtype=np.complex128)
 
     def _get_error(self):
         return Qrack.qrack_lib.get_error(self.sid)
@@ -2525,107 +2516,6 @@ class QrackSimulator:
 
         return circ
 
-    def _forward_circuit_elimination(passed_swaps, circ, i):
-        # We might trace out swap, but we want to maintain the iteration order of qubit channels.
-        non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
-        j = 0
-        while j < len(circ.data):
-            op = circ.data[j].operation
-            qubits = circ.data[j].qubits
-            q1 = circ.find_bit(qubits[0])[0]
-            if (len(qubits) < 2) and (q1 == i):
-                if op.name == "unitary":
-                    non_clifford = np.matmul(op.params[0], non_clifford)
-                elif op.name == "h":
-                    non_clifford = np.matmul(np.array([[QrackSimulator.SQRT1_2, QrackSimulator.SQRT1_2], [QrackSimulator.SQRT1_2, -QrackSimulator.SQRT1_2]], np.complex128), non_clifford)
-                elif op.name == "x":
-                    non_clifford = np.matmul(np.array([[0, 1], [1, 0]], np.complex128), non_clifford)
-                elif op.name == "y":
-                    non_clifford = np.matmul(np.array([[0, -1j], [1j, 0]], np.complex128), non_clifford)
-                elif op.name == "z":
-                    non_clifford = np.matmul(np.array([[1, 0], [0, -1]], np.complex128), non_clifford)
-                elif op.name == "s":
-                    non_clifford = np.matmul(np.array([[1, 0], [0, 1j]], np.complex128), non_clifford)
-                elif op.name == "sdg":
-                    non_clifford = np.matmul(np.array([[1, 0], [0, -1j]], np.complex128), non_clifford)
-                else:
-                    print("Warning: Something went wrong! (Dropped a single-qubit gate.")
-
-                with lock:
-                    del circ.data[j]
-                continue
-
-            if len(qubits) < 2:
-                j += 1
-                continue
-
-            q2 = circ.find_bit(qubits[1])[0]
-
-            if op.name == "swap":
-                if i == q1:
-                    i = q2
-                elif i == q2:
-                    i = q1
-
-                if (i == q1) or (i == q2):
-                    if circ.data[j] in passed_swaps:
-                        with lock:
-                            del circ.data[j]
-                        continue
-
-                    with lock:
-                        passed_swaps.append(circ.data[j])
-
-                j += 1
-                continue
-
-            if (q1 == i) and (op.name == "cx" or op.name == "cy" or op.name == "cz"):
-                if (np.isclose(np.abs(non_clifford[0][0]), 1) and np.isclose(np.abs(non_clifford[1][1]), 1) and
-                    np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
-                    # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
-                    with lock:
-                        del circ.data[j]
-                    continue
-
-                if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0) and
-                    np.isclose(np.abs(non_clifford[0][1]), 1) and np.isclose(np.abs(non_clifford[1][0]), 1)):
-                    c = QuantumCircuit(1)
-                    if op.name == "cx":
-                        c.x(0)
-                    elif op.name == "cy":
-                        c.y(0)
-                    else:
-                        c.z(0)
-                    instr = c.data[0]
-                    instr.qubits = (qubits[1],)
-                    with lock:
-                        circ.data[j] = copy.deepcopy(instr)
-
-                    j += 1
-                    continue
-
-            if (q1 == i) or (q2 == i) or (op.name != "cx"):
-                if np.allclose(non_clifford, QrackSimulator.IDENT):
-                    # No buffer content to write to circuit definition
-                    non_clifford = QrackSimulator.IDENT
-                    break
-
-                # We're blocked, so we insert our buffer at this place in the circuit definition.
-                c = QuantumCircuit(1)
-                c.unitary(non_clifford, 0)
-                instr = c.data[0]
-                instr.qubits = (qubits[0],)
-                circ.data.insert(j, copy.deepcopy(instr))
-                non_clifford = QrackSimulator.IDENT
-                break
-
-            j += 1
-
-        if (j == len(circ.data)) and (i < width) and not np.allclose(non_clifford, QrackSimulator.IDENT):
-            with lock:
-                # We're at the end of the wire, so add the buffer gate.
-                circ.unitary(non_clifford, i)
-
     def file_to_optimized_qiskit_circuit(filename):
         """Convert an output state file to a Qiskit circuit
 
@@ -2648,10 +2538,105 @@ class QrackSimulator:
         with open(filename, "r", encoding="utf-8") as file:
             width = int(file.readline())
 
-        lock = multiprocessing.Lock()
+        sqrt1_2 = 1 / math.sqrt(2)
+        ident = np.eye(2, dtype=np.complex128)
+        passable_gates = ["unitary", "h", "x", "y", "z", "s", "sdg"]
+
         passed_swaps = []
-        with multiprocessing.Pool(multiprocessing.cpu_count(), initializer=init_pool_processes, initargs=(lock,)) as p:
-            p.starmap(QrackSimulator._forward_circuit_elimination, zip(repeat(passed_swaps), repeat(circ), range(circ.width())))
+        for i in range(0, circ.width()):
+            # We might trace out swap, but we want to maintain the iteration order of qubit channels.
+            non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
+            j = 0
+            while j < len(circ.data):
+                op = circ.data[j].operation
+                qubits = circ.data[j].qubits
+                q1 = circ.find_bit(qubits[0])[0]
+                if (len(qubits) < 2) and (q1 == i):
+                    if op.name == "unitary":
+                        non_clifford = np.matmul(op.params[0], non_clifford)
+                    elif op.name == "h":
+                        non_clifford = np.matmul(np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128), non_clifford)
+                    elif op.name == "x":
+                        non_clifford = np.matmul(np.array([[0, 1], [1, 0]], np.complex128), non_clifford)
+                    elif op.name == "y":
+                        non_clifford = np.matmul(np.array([[0, -1j], [1j, 0]], np.complex128), non_clifford)
+                    elif op.name == "z":
+                        non_clifford = np.matmul(np.array([[1, 0], [0, -1]], np.complex128), non_clifford)
+                    elif op.name == "s":
+                        non_clifford = np.matmul(np.array([[1, 0], [0, 1j]], np.complex128), non_clifford)
+                    elif op.name == "sdg":
+                        non_clifford = np.matmul(np.array([[1, 0], [0, -1j]], np.complex128), non_clifford)
+                    else:
+                        print("Warning: Something went wrong! (Dropped a single-qubit gate.")
+
+                    del circ.data[j]
+                    continue
+
+                if len(qubits) < 2:
+                    j += 1
+                    continue
+
+                q2 = circ.find_bit(qubits[1])[0]
+
+                if op.name == "swap":
+                    if i == q1:
+                        i = q2
+                    elif i == q2:
+                        i = q1
+
+                    if (i == q1) or (i == q2):
+                        if circ.data[j] in passed_swaps:
+                            del circ.data[j]
+                            continue
+
+                        passed_swaps.append(circ.data[j])
+
+                    j += 1
+                    continue 
+
+                if (q1 == i) and (op.name == "cx" or op.name == "cy" or op.name == "cz"):
+                    if (np.isclose(np.abs(non_clifford[0][0]), 1) and np.isclose(np.abs(non_clifford[1][1]), 1) and
+                        np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
+                        # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
+                        del circ.data[j]
+                        continue
+
+                    if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0) and
+                        np.isclose(np.abs(non_clifford[0][1]), 1) and np.isclose(np.abs(non_clifford[1][0]), 1)):
+                        c = QuantumCircuit(1)
+                        if op.name == "cx":
+                            c.x(0)
+                        elif op.name == "cy":
+                            c.y(0)
+                        else:
+                            c.z(0)
+                        instr = c.data[0]
+                        instr.qubits = (qubits[1],)
+                        circ.data[j] = copy.deepcopy(instr)
+
+                        j += 1
+                        continue
+
+                if (q1 == i) or (q2 == i) or (op.name != "cx"):
+                    if np.allclose(non_clifford, ident):
+                        # No buffer content to write to circuit definition
+                        non_clifford = ident
+                        break
+
+                    # We're blocked, so we insert our buffer at this place in the circuit definition.
+                    c = QuantumCircuit(1)
+                    c.unitary(non_clifford, 0)
+                    instr = c.data[0]
+                    instr.qubits = (qubits[0],)
+                    circ.data.insert(j, copy.deepcopy(instr))
+                    non_clifford = ident
+                    break
+
+                j += 1
+
+            if (j == len(circ.data)) and (i < width) and not np.allclose(non_clifford, ident):
+                # We're at the end of the wire, so add the buffer gate.
+                circ.unitary(non_clifford, i)
 
         passed_swaps = []
         for i in range(width, circ.width()):
@@ -2666,7 +2651,7 @@ class QrackSimulator:
                     if op.name == "unitary":
                         non_clifford = np.matmul(non_clifford, op.params[0])
                     elif op.name == "h":
-                        non_clifford = np.matmul(non_clifford, np.array([[QrackSimulator.SQRT1_2, QrackSimulator.SQRT1_2], [QrackSimulator.SQRT1_2, -QrackSimulator.SQRT1_2]], np.complex128))
+                        non_clifford = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128))
                     elif op.name == "x":
                         non_clifford = np.matmul(non_clifford, np.array([[0, 1], [1, 0]], np.complex128))
                     elif op.name == "y":
@@ -2736,7 +2721,7 @@ class QrackSimulator:
                     continue
 
                 if (q1 == i) or (op.name != "cx"):
-                    if np.allclose(non_clifford, QrackSimulator.IDENT):
+                    if np.allclose(non_clifford, ident):
                         # No buffer content to write to circuit definition
                         break
 
@@ -2749,9 +2734,9 @@ class QrackSimulator:
                     break
 
                 if q2 == i:
-                    to_inject = np.matmul(non_clifford, np.array([[QrackSimulator.SQRT1_2, QrackSimulator.SQRT1_2], [QrackSimulator.SQRT1_2, -QrackSimulator.SQRT1_2]]))
+                    to_inject = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]]))
 
-                    if np.allclose(to_inject, QrackSimulator.IDENT):
+                    if np.allclose(to_inject, ident):
                         # No buffer content to write to circuit definition
                         del circ.data[j]
                         j -= 1
