@@ -3,9 +3,10 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
-import math
 import copy
 import ctypes
+import math
+import re
 from .qrack_system import Qrack
 from .pauli import Pauli
 
@@ -2447,7 +2448,7 @@ class QrackSimulator:
 
         stabilizer_count = int(lines[2])
 
-        reg = QuantumRegister(stabilizer_qubits)
+        reg = QuantumRegister(stabilizer_qubits, name="q")
         circ_qubits = [Qubit(reg, i) for i in range(stabilizer_qubits)]
         clifford_circ = QuantumCircuit(reg)
         line_number = 3
@@ -2484,7 +2485,6 @@ class QrackSimulator:
             circ = clifford.to_circuit()
 
             for instr in circ.data:
-                op = instr.operation
                 qubits = instr.qubits
                 n_qubits = []
                 for qubit in qubits:
@@ -2792,6 +2792,9 @@ class QrackSimulator:
         #Eliminate unused ancillae
         qasm = circ.qasm()
         qasm = qasm.replace("qreg q[" + str(circ.width()) + "];", "qreg q[" + str(width) + "];")
+        highest_index = max([int(x) for x in re.findall(r"\[(.*?)\]", qasm) if x.isdigit()])
+        if highest_index != width:
+            qasm = qasm.replace("qreg q[" + str(width) + "];", "qreg q[" + str(highest_index) + "];")
 
         orig_circ = circ
         try:
