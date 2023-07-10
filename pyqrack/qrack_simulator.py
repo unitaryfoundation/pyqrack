@@ -2467,16 +2467,19 @@ class QrackSimulator:
 
             line_number += 1
             tableau = []
-            for line in lines[line_number:(line_number + (shard_map_size << 1))]:
+            row_count = shard_map_size << 1
+            for line in lines[line_number:(line_number + row_count)]:
                 bits = line.split()
+                if len(bits) != (row_count + 1):
+                    raise QrackException("Invalid Qrack hybrid stabilizer file!")
                 row = []
-                for bit in bits:
-                    row.append(bool(int(bit)))
-                row[-1] = (int(bits[-1]) >> 1) & 1
+                for b in range(row_count):
+                    row.append(bool(int(bits[b])))
+                row.append(bool((int(bits[-1]) >> 1) & 1))
                 tableau.append(row)
             line_number += (shard_map_size << 1)
 
-            clifford = Clifford(tableau)
+            clifford = Clifford(tableau, validate=False, copy=False)
             circ = clifford.to_circuit()
 
             for instr in circ.data:
