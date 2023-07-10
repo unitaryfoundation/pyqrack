@@ -11,6 +11,7 @@ from .pauli import Pauli
 
 _IS_QISKIT_AVAILABLE = True
 try:
+    from qiskit.circuit import QuantumRegister, Qubit
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.compiler import transpile
     from qiskit.qobj.qasm_qobj import QasmQobjExperiment
@@ -2401,7 +2402,7 @@ class QrackSimulator:
         """
         qb_count = 1
         with open(filename) as f:
-            qb_count = int(f.readline()[:-1])
+            qb_count = int(f.readline())
         out = QrackSimulator(
             qubitCount=qb_count,
             isSchmidtDecomposeMulti=False,
@@ -2443,20 +2444,54 @@ class QrackSimulator:
 
         logical_qubits = int(lines[0])
         stabilizer_qubits = int(lines[1])
-        rows = stabilizer_qubits << 1
 
-        tableau = []
-        for line in lines[2:(rows + 2)]:
-            bits = line.split()
-            row = []
-            for bit in bits:
-                row.append(bool(int(bit)))
-            row[-1] = (int(bits[-1]) >> 1) & 1
-            tableau.append(row)
+        stabilizer_count = int(lines[2])
+
+        reg = QuantumRegister(stabilizer_qubits)
+        circ_qubits = [Qubit(reg, i) for i in range(stabilizer_qubits)]
+        clifford_circ = QuantumCircuit(reg)
+        line_number = 3
+        for i in range(stabilizer_count):
+            shard_map_size = int(lines[line_number])
+            line_number += 1
+
+            shard_map = {}
+            for j in range(shard_map_size):
+                line = lines[line_number].split()
+                line_number += 1
+                shard_map[int(line[0])] = int(line[1])
+
+            sub_reg = []
+            for index, _ in sorted(shard_map.items(), key=lambda x: x[1]):
+                sub_reg.append(circ_qubits[index])
+
+            line_number += 1
+            tableau = []
+            for line in lines[line_number:(line_number + (shard_map_size << 1))]:
+                bits = line.split()
+                row = []
+                for bit in bits:
+                    row.append(bool(int(bit)))
+                row[-1] = (int(bits[-1]) >> 1) & 1
+                tableau.append(row)
+            line_number += (shard_map_size << 1)
+
+            clifford = Clifford(tableau)
+            circ = clifford.to_circuit()
+
+            for instr in circ.data:
+                op = instr.operation
+                qubits = instr.qubits
+                n_qubits = []
+                for qubit in qubits:
+                    n_qubits.append(sub_reg[circ.find_bit(qubit)[0]])
+                instr.qubits = tuple(n_qubits)
+                clifford_circ.data.append(instr)
+            del circ
 
         non_clifford_gates = []
         g = 0
-        for line in lines[(rows + 2):]:
+        for line in lines[line_number:]:
             i = 0
             tokens = line.split()
             op = np.zeros((2,2), dtype=complex)
@@ -2496,14 +2531,11 @@ class QrackSimulator:
             non_clifford_gates.append(op)
             g = g + 1
 
-        clifford = Clifford(tableau)
-        circ = clifford.to_circuit()
-
         basis_gates = ["h", "x", "y", "z", "sx", "sy", "s", "sdg", "cx", "cy", "cz", "swap", "iswap", "iswap_dg"]
         try:
-            circ = transpile(circ, basis_gates=basis_gates, optimization_level=3)
+            circ = transpile(clifford_circ, basis_gates=basis_gates, optimization_level=3)
         except:
-            circ = clifford.to_circuit()
+            circ = clifford_circ
 
         for i in range(len(non_clifford_gates)):
             circ.unitary(non_clifford_gates[i], [i])
