@@ -2478,6 +2478,7 @@ class QrackSimulator:
                 row.append(bool((int(bits[-1]) >> 1) & 1))
                 tableau.append(row)
             line_number += (shard_map_size << 1)
+            tableau = np.array(tableau, bool)
 
             clifford = Clifford(tableau, validate=False, copy=False)
             circ = clifford.to_circuit()
