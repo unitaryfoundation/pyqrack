@@ -2364,10 +2364,10 @@ class QrackSimulator:
         Qrack.qrack_lib.SetTInjection(self.sid, iti)
         self._throw_if_error()
 
-    def set_approx_sampling(self, sas):
-        """Set option to allow QStabilizerHybrid to sample approximately.
+    def set_weak_sampling(self, sws):
+        """Set option to allow QStabilizerHybrid to sample weakly.
 
-        If approximate sampling is enabled during use of special gate set
+        If weak sampling is enabled during use of special gate set
         Clifford+RZ with QStabilizerHybrid, then terminal measurement and
         sampling approximate the effect of buffered RZ gates with the
         closest Clifford phase gate, plus a probabilistic 'correction'
@@ -2375,12 +2375,12 @@ class QrackSimulator:
         Clifford phase transformation.
 
         Args:
-            sas: use "stabilizer approximate sampling"
+            sws: use "stabilizer weak sampling"
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
-        Qrack.qrack_lib.SetStabilizerApproxSampling(self.sid, she)
+        Qrack.qrack_lib.SetStabilizerWeakSampling(self.sid, she)
         self._throw_if_error()
 
     def out_to_file(self, filename):

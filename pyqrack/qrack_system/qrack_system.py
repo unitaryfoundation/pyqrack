@@ -867,8 +867,8 @@ class QrackSystem:
         self.qrack_lib.SetTInjection.restype = c_bool
         self.qrack_lib.SetTInjection.argtypes = [c_ulonglong, c_bool]
 
-        self.qrack_lib.SetStabilizerApproxSampling.restype = c_bool
-        self.qrack_lib.SetStabilizerApproxSampling.argtypes = [c_ulonglong, c_bool]
+        self.qrack_lib.SetStabilizerWeakSampling.restype = c_bool
+        self.qrack_lib.SetStabilizerWeakSampling.argtypes = [c_ulonglong, c_bool]
 
         self.qrack_lib.qstabilizer_out_to_file.restype = None
         self.qrack_lib.qstabilizer_out_to_file.argtypes = [c_ulonglong, c_char_p]
