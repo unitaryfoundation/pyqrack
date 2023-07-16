@@ -2380,7 +2380,7 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
-        Qrack.qrack_lib.SetStabilizerWeakSampling(self.sid, she)
+        Qrack.qrack_lib.SetStabilizerWeakSampling(self.sid, sws)
         self._throw_if_error()
 
     def out_to_file(self, filename):
