@@ -6,7 +6,7 @@ from setuptools import setup
 
 requirements = []
 
-VERSION = "1.18.3"
+VERSION = "1.18.4"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
