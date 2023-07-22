@@ -42,9 +42,11 @@ class QrackCircuit:
         cid(int): Qrack ID of this circuit
     """
 
-    def __init__(self, clone_cid = -1):
+    def __init__(self, is_collapse = True, clone_cid = -1, is_inverse=False):
         if clone_cid < 0:
-            self.cid = Qrack.qrack_lib.init_qcircuit()
+            self.cid = Qrack.qrack_lib.init_qcircuit(is_collapse)
+        elif is_inverse:
+            self.cid = Qrack.qrack_lib.qcircuit_inverse(clone_cid)
         else:
             self.cid = Qrack.qrack_lib.init_qcircuit_clone(clone_cid)
 
@@ -62,6 +64,9 @@ class QrackCircuit:
     def _complex_byref(self, a):
         t = [(c.real, c.imag) for c in a]
         return self._double_byref([float(item) for sublist in t for item in sublist])
+
+    def inverse(self):
+        return QrackCircuit(clone_cid = self.cid, is_inverse = True)
 
     def get_qubit_count(self):
         """Get count of qubits in circuit

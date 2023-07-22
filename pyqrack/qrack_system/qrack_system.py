@@ -928,6 +928,9 @@ class QrackSystem:
         self.qrack_lib.init_qcircuit_clone.restype = c_ulonglong
         self.qrack_lib.init_qcircuit_clone.argtypes = [c_ulonglong]
 
+        self.qrack_lib.qcircuit_inverse.restype = c_ulonglong
+        self.qrack_lib.qcircuit_inverse.argtypes = [c_ulonglong]
+
         self.qrack_lib.destroy_qcircuit.restype = None
         self.qrack_lib.destroy_qcircuit.argtypes = [c_ulonglong]
 
