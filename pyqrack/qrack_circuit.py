@@ -65,6 +65,9 @@ class QrackCircuit:
         t = [(c.real, c.imag) for c in a]
         return self._double_byref([float(item) for sublist in t for item in sublist])
 
+    def clone(self):
+        return QrackCircuit(clone_cid = self.cid, is_inverse = False)
+
     def inverse(self):
         return QrackCircuit(clone_cid = self.cid, is_inverse = True)
 
