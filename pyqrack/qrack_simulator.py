@@ -2130,6 +2130,25 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
+    def prob_rdm(self, q):
+        """Probability of `|1>`, (treating all ancillary qubits
+        as post-selected T gate)
+
+        Get the probability that a qubit is in the `|1>` state.
+
+        Args:
+            q: qubit id
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            probability of qubit being in `|1>`
+        """
+        result = Qrack.qrack_lib.ProbRdm(self.sid, q)
+        self._throw_if_error()
+        return result
+
     def prob_perm(self, q, c):
         """Probability of permutation
 
@@ -2154,6 +2173,31 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
+    def prob_perm_rdm(self, q, c):
+        """Probability of permutation, (treating all ancillary qubits as
+        post-selected T gate)
+
+        Get the probability that the qubit IDs in "q" have the truth values
+        in "c", directly corresponding by list index.
+
+        Args:
+            q: list of qubit ids
+            c: list of qubit truth values bools
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            probability that each qubit in "q[i]" has corresponding truth
+            value in "c[i]", at once
+        """
+
+        if len(q) != len(c):
+            raise RuntimeError("prob_perm argument lengths do not match.")
+        result = Qrack.qrack_lib.PermutationProbRdm(self.sid, len(q), self._ulonglong_byref(q), self._bool_byref(c));
+        self._throw_if_error()
+        return result
+
     def permutation_expectation(self, c):
         """Permutation expectation value
 
@@ -2170,6 +2214,28 @@ class QrackSimulator:
             Expectation value
         """
         result = Qrack.qrack_lib.PermutationExpectation(
+            self.sid, len(c), self._ulonglong_byref(c)
+        )
+        self._throw_if_error()
+        return result
+
+    def permutation_expectation_rdm(self, c):
+        """Permutation expectation value, (treating all ancillary
+        qubits as post-selected T gate)
+
+        Get the permutation expectation value, based upon the order of
+        input qubits.
+
+        Args:
+            c: permutation
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        result = Qrack.qrack_lib.PermutationExpectationRdm(
             self.sid, len(c), self._ulonglong_byref(c)
         )
         self._throw_if_error()
