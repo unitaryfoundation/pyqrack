@@ -2131,8 +2131,8 @@ class QrackSimulator:
         return result
 
     def prob_rdm(self, q):
-        """Probability of `|1>`, (treating all ancillary qubits
-        as post-selected T gate)
+        """Probability of `|1>`, (tracing out the reduced
+        density matrix without stabilizer ancillary qubits)
 
         Get the probability that a qubit is in the `|1>` state.
 
@@ -2174,11 +2174,11 @@ class QrackSimulator:
         return result
 
     def prob_perm_rdm(self, q, c):
-        """Probability of permutation, (treating all ancillary qubits as
-        post-selected T gate)
+        """Probability of permutation, (tracing out the reduced
+        density matrix without stabilizer ancillary qubits)
 
-        Get the probability that the qubit IDs in "q" have the truth values
-        in "c", directly corresponding by list index.
+        Get the probability that the qubit IDs in "q" have the truth
+        values in "c", directly corresponding by list index.
 
         Args:
             q: list of qubit ids
@@ -2220,8 +2220,8 @@ class QrackSimulator:
         return result
 
     def permutation_expectation_rdm(self, c):
-        """Permutation expectation value, (treating all ancillary
-        qubits as post-selected T gate)
+        """Permutation expectation value, (tracing out the reduced
+        density matrix without stabilizer ancillary qubits)
 
         Get the permutation expectation value, based upon the order of
         input qubits.
