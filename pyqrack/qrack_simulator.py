@@ -2219,7 +2219,7 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def permutation_expectation_rdm(self, c):
+    def permutation_expectation_rdm(self, c, r = True):
         """Permutation expectation value, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2228,6 +2228,7 @@ class QrackSimulator:
 
         Args:
             c: permutation
+            r: round Rz gates down from T^(1/2)
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
@@ -2236,7 +2237,7 @@ class QrackSimulator:
             Expectation value
         """
         result = Qrack.qrack_lib.PermutationExpectationRdm(
-            self.sid, len(c), self._ulonglong_byref(c)
+            self.sid, len(c), self._ulonglong_byref(c), r
         )
         self._throw_if_error()
         return result

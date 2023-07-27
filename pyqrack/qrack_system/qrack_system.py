@@ -162,6 +162,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
+            c_bool
         ]
 
         self.qrack_lib.JointEnsembleProbability.restype = c_double
