@@ -2173,7 +2173,7 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def prob_perm_rdm(self, q, c):
+    def prob_perm_rdm(self, q, c, r = True):
         """Probability of permutation, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2183,6 +2183,7 @@ class QrackSimulator:
         Args:
             q: list of qubit ids
             c: list of qubit truth values bools
+            r: round Rz gates down from T^(1/2)
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
@@ -2194,7 +2195,7 @@ class QrackSimulator:
 
         if len(q) != len(c):
             raise RuntimeError("prob_perm argument lengths do not match.")
-        result = Qrack.qrack_lib.PermutationProbRdm(self.sid, len(q), self._ulonglong_byref(q), self._bool_byref(c));
+        result = Qrack.qrack_lib.PermutationProbRdm(self.sid, len(q), self._ulonglong_byref(q), self._bool_byref(c), r);
         self._throw_if_error()
         return result
 

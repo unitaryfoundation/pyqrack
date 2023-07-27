@@ -147,7 +147,8 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_bool)
+            POINTER(c_bool),
+            c_bool
         ]
 
         self.qrack_lib.PermutationExpectation.restype = c_double
