@@ -60,7 +60,7 @@ class QrackSystem:
         self.qrack_lib.Dump.restype = None
         self.qrack_lib.Dump.argtypes = [
             c_ulonglong,
-            CFUNCTYPE(c_ulonglong, c_double, c_double),
+            CFUNCTYPE(c_ulonglong, c_double, c_double)
         ]
 
         # These next two methods need to have c_double pointers, if PyQrack is built with fp64.
@@ -97,7 +97,7 @@ class QrackSystem:
             c_bool,
             c_bool,
             c_bool,
-            c_bool,
+            c_bool
         ]
 
         self.qrack_lib.init_count_type.restype = c_ulonglong
@@ -111,7 +111,7 @@ class QrackSystem:
             c_bool,
             c_bool,
             c_bool,
-            c_bool,
+            c_bool
         ]
 
         self.qrack_lib.init_clone.restype = c_ulonglong
@@ -155,7 +155,7 @@ class QrackSystem:
         self.qrack_lib.PermutationExpectation.argtypes = [
             c_ulonglong,
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.PermutationExpectationRdm.restype = c_double
@@ -166,12 +166,31 @@ class QrackSystem:
             c_bool
         ]
 
+        self.qrack_lib.FactorizedExpectation.restype = c_double
+        self.qrack_lib.FactorizedExpectation.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong),
+            c_ulonglong,
+            POINTER(c_ulonglong)
+        ]
+
+        self.qrack_lib.FactorizedExpectationRdm.restype = c_double
+        self.qrack_lib.FactorizedExpectationRdm.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong),
+            c_ulonglong,
+            POINTER(c_ulonglong),
+            c_bool
+        ]
+
         self.qrack_lib.JointEnsembleProbability.restype = c_double
         self.qrack_lib.JointEnsembleProbability.argtypes = [
             c_ulonglong,
             c_ulonglong,
             POINTER(c_int),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.PhaseParity.restype = None
@@ -179,7 +198,7 @@ class QrackSystem:
             c_ulonglong,
             c_double,
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.ResetAll.restype = None
@@ -228,7 +247,7 @@ class QrackSystem:
             c_ulonglong,
             c_double,
             c_double,
-            c_double,
+            c_double
         ]
 
         self.qrack_lib.Mtrx.restype = None
@@ -241,7 +260,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MCY.restype = None
@@ -249,7 +268,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MCZ.restype = None
@@ -257,7 +276,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MCH.restype = None
@@ -265,7 +284,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MCS.restype = None
@@ -273,7 +292,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MCT.restype = None
@@ -281,7 +300,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MCAdjS.restype = None
@@ -289,7 +308,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MCAdjT.restype = None
@@ -297,7 +316,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MCU.restype = None
@@ -308,7 +327,7 @@ class QrackSystem:
             c_ulonglong,
             c_double,
             c_double,
-            c_double,
+            c_double
         ]
 
         self.qrack_lib.MCMtrx.restype = None
@@ -317,7 +336,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             POINTER(c_double),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         # multi-anti-controlled single-qubit gates
@@ -327,7 +346,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MACY.restype = None
@@ -335,7 +354,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MACZ.restype = None
@@ -343,7 +362,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MACH.restype = None
@@ -351,7 +370,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MACS.restype = None
@@ -359,7 +378,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MACT.restype = None
@@ -367,7 +386,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MACAdjS.restype = None
@@ -375,7 +394,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MACAdjT.restype = None
@@ -383,7 +402,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.MACU.restype = None
@@ -394,7 +413,7 @@ class QrackSystem:
             c_ulonglong,
             c_double,
             c_double,
-            c_double,
+            c_double
         ]
 
         self.qrack_lib.MACMtrx.restype = None
@@ -403,7 +422,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             POINTER(c_double),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.UCMtrx.restype = None
@@ -413,7 +432,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             POINTER(c_double),
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.Multiplex1Mtrx.restype = None
@@ -422,7 +441,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            POINTER(c_double),
+            POINTER(c_double)
         ]
 
         # coalesced single qubit gates
@@ -448,7 +467,7 @@ class QrackSystem:
             c_double,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_ulonglong,
+            c_ulonglong
         ]
 
         # exponential of Pauli operators
@@ -459,7 +478,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_int),
             c_double,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MCExp.restype = None
@@ -470,7 +489,7 @@ class QrackSystem:
             c_double,
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         # measurements
@@ -489,7 +508,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_int),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MeasureShots.restype = None
@@ -498,7 +517,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         # swap
@@ -518,7 +537,7 @@ class QrackSystem:
             c_double,
             c_double,
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.CSWAP.restype = None
@@ -527,7 +546,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.ACSWAP.restype = None
@@ -536,7 +555,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         # Schmidt decomposition
@@ -545,21 +564,21 @@ class QrackSystem:
         self.qrack_lib.Compose.argtypes = [
             c_ulonglong,
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.Decompose.restype = c_ulonglong
         self.qrack_lib.Decompose.argtypes = [
             c_ulonglong,
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.Dispose.restype = None
         self.qrack_lib.Dispose.argtypes = [
             c_ulonglong,
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         # (quasi-)Boolean gates
@@ -569,7 +588,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.OR.restype = None
@@ -577,7 +596,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.XOR.restype = None
@@ -585,7 +604,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.NAND.restype = None
@@ -593,7 +612,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.NOR.restype = None
@@ -601,7 +620,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         self.qrack_lib.XNOR.restype = None
@@ -609,7 +628,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             c_ulonglong,
-            c_ulonglong,
+            c_ulonglong
         ]
 
         # half classical (quasi-)Boolean gates
@@ -648,7 +667,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.SUB.restype = None
@@ -657,7 +676,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.ADDS.restype = None
@@ -667,7 +686,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.SUBS.restype = None
@@ -677,7 +696,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MUL.restype = None
@@ -687,7 +706,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.DIV.restype = None
@@ -697,7 +716,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MULN.restype = None
@@ -708,7 +727,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.DIVN.restype = None
@@ -719,7 +738,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.POWN.restype = None
@@ -730,7 +749,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MCADD.restype = None
@@ -741,7 +760,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MCSUB.restype = None
@@ -752,7 +771,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MCMUL.restype = None
@@ -763,7 +782,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MCDIV.restype = None
@@ -774,7 +793,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MCMULN.restype = None
@@ -787,7 +806,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MCDIVN.restype = None
@@ -800,7 +819,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.MCPOWN.restype = None
@@ -813,7 +832,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
         ]
 
         self.qrack_lib.LDA.restype = None
@@ -823,7 +842,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ubyte),
+            POINTER(c_ubyte)
         ]
 
         self.qrack_lib.ADC.restype = None
@@ -834,7 +853,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ubyte),
+            POINTER(c_ubyte)
         ]
 
         self.qrack_lib.SBC.restype = None
@@ -845,7 +864,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ubyte),
+            POINTER(c_ubyte)
         ]
 
         self.qrack_lib.Hash.restype = None
@@ -853,7 +872,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            POINTER(c_ubyte),
+            POINTER(c_ubyte)
         ]
 
         # miscellaneous
@@ -869,7 +888,7 @@ class QrackSystem:
             c_ulonglong,
             c_ulonglong,
             POINTER(c_ulonglong),
-            c_double,
+            c_double
         ]
 
         self.qrack_lib.GetUnitaryFidelity.restype = c_double

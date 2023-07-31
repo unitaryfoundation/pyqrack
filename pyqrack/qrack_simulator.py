@@ -153,7 +153,18 @@ class QrackSimulator:
                 u >>= 8
                 n += 1
 
-        return ctypes.byref(b)
+        return b
+
+    def _to_ulonglong(self, m, v):
+        b = (ctypes.c_ulonglong * (m * len(v)))()
+        n = 0
+        for u in v:
+            for _ in range(m):
+                b[n] = u & 0xFFFFFFFFFFFFFFFF
+                u >>= 64
+                n += 1
+
+        return b
 
     # See https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list#answer-30426000
     def _pairwise(self, it):
@@ -2199,14 +2210,14 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def permutation_expectation(self, c):
+    def permutation_expectation(self, q):
         """Permutation expectation value
 
         Get the permutation expectation value, based upon the order of
         input qubits.
 
         Args:
-            c: permutation
+            q: qubits, from low to high
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
@@ -2215,12 +2226,12 @@ class QrackSimulator:
             Expectation value
         """
         result = Qrack.qrack_lib.PermutationExpectation(
-            self.sid, len(c), self._ulonglong_byref(c)
+            self.sid, len(q), self._ulonglong_byref(q)
         )
         self._throw_if_error()
         return result
 
-    def permutation_expectation_rdm(self, c, r = True):
+    def permutation_expectation_rdm(self, q, r = True):
         """Permutation expectation value, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2228,7 +2239,7 @@ class QrackSimulator:
         input qubits.
 
         Args:
-            c: permutation
+            q: qubits, from low to high
             r: round Rz gates down from T^(1/2)
 
         Raises:
@@ -2238,7 +2249,57 @@ class QrackSimulator:
             Expectation value
         """
         result = Qrack.qrack_lib.PermutationExpectationRdm(
-            self.sid, len(c), self._ulonglong_byref(c), r
+            self.sid, len(q), self._ulonglong_byref(q), r
+        )
+        self._throw_if_error()
+        return result
+
+    def factorized_expectation(self, q, c):
+        """Factorized expectation value
+
+        Get the factorized expectation value, where each entry
+        in "c" is an expectation value for corresponding "q"
+        being true.
+
+        Args:
+            q: qubits, from low to high
+            c: qubit truth values, from low to high
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        m = max([(x.bit_length() + 63) // 64 for x in c])
+        result = Qrack.qrack_lib.FactorizedExpectation(
+            self.sid, len(q), self._ulonglong_byref(q), m, self._to_ulonglong(m, c)
+        )
+        self._throw_if_error()
+        return result
+
+    def factorized_expectation_rdm(self, q, c, r = True):
+        """Factorized expectation value, (tracing out the reduced
+        density matrix without stabilizer ancillary qubits)
+
+        Get the factorized expectation value, where each entry
+        in "c" is an expectation value for corresponding "q"
+        being true.
+
+        Args:
+            q: qubits, from low to high
+            c: qubit truth values, from low to high
+            r: round Rz gates down from T^(1/2)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        m = max([(x.bit_length() + 63) // 64 for x in c])
+        result = Qrack.qrack_lib.FactorizedExpectationRdm(
+            self.sid, len(q), self._ulonglong_byref(q), m, self._to_ulonglong(m, c), r
         )
         self._throw_if_error()
         return result
