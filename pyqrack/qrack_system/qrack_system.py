@@ -185,6 +185,41 @@ class QrackSystem:
             c_bool
         ]
 
+        if self.fppow == 5:
+            self.qrack_lib.FactorizedExpectationFp.restype = c_double
+            self.qrack_lib.FactorizedExpectationFp.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_float)
+            ]
+
+            self.qrack_lib.FactorizedExpectationFpRdm.restype = c_double
+            self.qrack_lib.FactorizedExpectationFpRdm.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_float),
+                c_bool
+            ]
+        elif self.fppow == 6:
+            self.qrack_lib.FactorizedExpectationFp.restype = c_double
+            self.qrack_lib.FactorizedExpectationFp.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_double)
+            ]
+
+            self.qrack_lib.FactorizedExpectationFpRdm.restype = c_double
+            self.qrack_lib.FactorizedExpectationFpRdm.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_double),
+                c_bool
+            ]
+
         self.qrack_lib.JointEnsembleProbability.restype = c_double
         self.qrack_lib.JointEnsembleProbability.argtypes = [
             c_ulonglong,
@@ -927,7 +962,7 @@ class QrackSystem:
         if self.fppow == 5:
             self.qrack_lib.set_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_float)]
             self.qrack_lib.get_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_float)]
-        if self.fppow == 6:
+        elif self.fppow == 6:
             self.qrack_lib.set_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_double)]
             self.qrack_lib.get_qneuron_angles.argtypes = [c_ulonglong, POINTER(c_double)]
 

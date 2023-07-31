@@ -2259,11 +2259,11 @@ class QrackSimulator:
 
         Get the factorized expectation value, where each entry
         in "c" is an expectation value for corresponding "q"
-        being true.
+        being false, then true, repeated for each in "q".
 
         Args:
             q: qubits, from low to high
-            c: qubit truth values, from low to high
+            c: qubit falsey/truthy values, from low to high
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
@@ -2284,11 +2284,11 @@ class QrackSimulator:
 
         Get the factorized expectation value, where each entry
         in "c" is an expectation value for corresponding "q"
-        being true.
+        being false, then true, repeated for each in "q".
 
         Args:
             q: qubits, from low to high
-            c: qubit truth values, from low to high
+            c: qubit falsey/truthy values, from low to high
             r: round Rz gates down from T^(1/2)
 
         Raises:
@@ -2300,6 +2300,54 @@ class QrackSimulator:
         m = max([(x.bit_length() + 63) // 64 for x in c])
         result = Qrack.qrack_lib.FactorizedExpectationRdm(
             self.sid, len(q), self._ulonglong_byref(q), m, self._to_ulonglong(m, c), r
+        )
+        self._throw_if_error()
+        return result
+
+    def factorized_expectation_fp(self, q, c):
+        """Factorized expectation value (floating-point)
+
+        Get the factorized expectation value, where each entry
+        in "c" is an expectation value for corresponding "q"
+        being false, then true, repeated for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            c: qubit falsey/truthy values, from low to high
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        result = Qrack.qrack_lib.FactorizedExpectationFp(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c)
+        )
+        self._throw_if_error()
+        return result
+
+    def factorized_expectation_fp_rdm(self, q, c, r = True):
+        """Factorized expectation value, (tracing out the reduced
+        density matrix without stabilizer ancillary qubits)
+
+        Get the factorized expectation value, where each entry
+        in "c" is an expectation value for corresponding "q"
+        being false, then true, repeated for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            c: qubit falsey/truthy values, from low to high
+            r: round Rz gates down from T^(1/2)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        result = Qrack.qrack_lib.FactorizedExpectationFpRdm(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c), r
         )
         self._throw_if_error()
         return result
