@@ -47,6 +47,7 @@ class QrackSimulator:
         self,
         qubitCount=-1,
         cloneSid=-1,
+        isTensorNetwork=True,
         isSchmidtDecomposeMulti=True,
         isSchmidtDecompose=True,
         isStabilizerHybrid=True,
@@ -84,7 +85,8 @@ class QrackSimulator:
                 qubitCount = 0
 
             if (
-                isSchmidtDecompose
+                isTensorNetwork
+                and isSchmidtDecompose
                 and isStabilizerHybrid
                 and not isBinaryDecisionTree
                 and isPaged
@@ -100,6 +102,7 @@ class QrackSimulator:
             else:
                 self.sid = Qrack.qrack_lib.init_count_type(
                     qubitCount,
+                    isTensorNetwork,
                     isSchmidtDecomposeMulti,
                     isSchmidtDecompose,
                     isStabilizerHybrid,
