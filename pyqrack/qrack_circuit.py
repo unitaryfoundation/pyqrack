@@ -42,11 +42,13 @@ class QrackCircuit:
         cid(int): Qrack ID of this circuit
     """
 
-    def __init__(self, is_collapse = True, clone_cid = -1, is_inverse=False):
+    def __init__(self, is_collapse = True, clone_cid = -1, is_inverse=False, past_light_cone = []):
         if clone_cid < 0:
             self.cid = Qrack.qrack_lib.init_qcircuit(is_collapse)
         elif is_inverse:
             self.cid = Qrack.qrack_lib.qcircuit_inverse(clone_cid)
+        elif len(past_light_cone) > 0:
+            self.cid = Qrack.qrack_lib.qcircuit_past_light_cone(clone_cid, len(past_light_cone), self._ulonglong_byref(past_light_cone))
         else:
             self.cid = Qrack.qrack_lib.init_qcircuit_clone(clone_cid)
 
@@ -66,16 +68,37 @@ class QrackCircuit:
         return self._double_byref([float(item) for sublist in t for item in sublist])
 
     def clone(self):
+        """Make a new circuit that is an exact clone of this circuit
+
+        Raises:
+            RuntimeError: QrackCircuit C++ library raised an exception.
+        """
         return QrackCircuit(clone_cid = self.cid, is_inverse = False)
 
     def inverse(self):
+        """Make a new circuit that is the exact inverse of this circuit
+
+        Raises:
+            RuntimeError: QrackCircuit C++ library raised an exception.
+        """
         return QrackCircuit(clone_cid = self.cid, is_inverse = True)
+
+    def past_light_cone(self, q):
+        """Make a new circuit with just this circuits' past light cone for certain qubits.
+
+        Args:
+            q: list of qubit indices to include at beginning of past light cone
+
+        Raises:
+            RuntimeError: QrackCircuit C++ library raised an exception.
+        """
+        return QrackCircuit(clone_cid = self.cid, is_inverse = False, past_light_cone = q)
 
     def get_qubit_count(self):
         """Get count of qubits in circuit
 
         Raises:
-            RuntimeError: QracQrackCircuitNeuron C++ library raised an exception.
+            RuntimeError: QrackCircuit C++ library raised an exception.
         """
         return Qrack.qrack_lib.get_qcircuit_qubit_count(self.cid)
 

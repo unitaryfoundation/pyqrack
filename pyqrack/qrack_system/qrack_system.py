@@ -1002,6 +1002,9 @@ class QrackSystem:
         self.qrack_lib.qcircuit_inverse.restype = c_ulonglong
         self.qrack_lib.qcircuit_inverse.argtypes = [c_ulonglong]
 
+        self.qrack_lib.qcircuit_past_light_cone.restype = c_ulonglong
+        self.qrack_lib.qcircuit_past_light_cone.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
+
         self.qrack_lib.destroy_qcircuit.restype = None
         self.qrack_lib.destroy_qcircuit.argtypes = [c_ulonglong]
 
