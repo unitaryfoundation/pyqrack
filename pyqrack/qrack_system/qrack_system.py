@@ -97,19 +97,6 @@ class QrackSystem:
             c_bool,
             c_bool,
             c_bool,
-            c_bool
-        ]
-
-        self.qrack_lib.init_count_type.restype = c_ulonglong
-        self.qrack_lib.init_count_type.argtypes = [
-            c_ulonglong,
-            c_bool,
-            c_bool,
-            c_bool,
-            c_bool,
-            c_bool,
-            c_bool,
-            c_bool,
             c_bool,
             c_bool
         ]

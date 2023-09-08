@@ -78,6 +78,8 @@ class QrackSimulator:
                 "isBinaryDecisionTree and isStabilizerHybrid are currently incompatible constructor options to QrackSimulator! (Please set one or both options to False.)"
             )
 
+        self.is_schmidt_decompose = not isTensorNetwork
+
         if cloneSid > -1:
             self.sid = Qrack.qrack_lib.init_clone(cloneSid)
         else:
@@ -1995,7 +1997,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
+            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot compose()! (Turn off just this option, in the constructor)
         """
+        if not self.is_schmidt_decompose:
+            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot compose()! (Turn off just this option, in the constructor)")
+
         Qrack.qrack_lib.Compose(self.sid, other.sid, self._ulonglong_byref(q))
         self._throw_if_error()
 
@@ -2011,10 +2017,14 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
+            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot decompose()! (Turn off just this option, in the constructor)
 
         Returns:
             State of the systems.
         """
+        if not self.is_schmidt_decompose:
+            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot decompose()! (Turn off just this option, in the constructor)")
+
         other = QrackSimulator()
         Qrack.qrack_lib.destroy(other.sid)
         l = len(q)
@@ -2035,10 +2045,14 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
+            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot dispose()! (Turn off just this option, in the constructor)
 
         Returns:
             State of the systems.
         """
+        if not self.is_schmidt_decompose:
+            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot dispose()! (Turn off just this option, in the constructor)")
+
         l = len(q)
         Qrack.qrack_lib.Dispose(self.sid, l, self._ulonglong_byref(q))
         self._throw_if_error()
