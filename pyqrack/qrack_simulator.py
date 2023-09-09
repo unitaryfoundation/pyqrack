@@ -1160,11 +1160,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot add()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot add()! (Turn off just this option, in the constructor.)")
-
         aParts = self._split_longs(a)
         Qrack.qrack_lib.ADD(
             self.sid,
@@ -1186,11 +1182,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot sub()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot sub()! (Turn off just this option, in the constructor.)")
-
         aParts = self._split_longs(a)
         Qrack.qrack_lib.SUB(
             self.sid,
@@ -1214,11 +1206,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot adds()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot adds()! (Turn off just this option, in the constructor.)")
-
         aParts = self._split_longs(a)
         Qrack.qrack_lib.ADDS(
             self.sid,
@@ -1243,11 +1231,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot subs()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot subs()! (Turn off just this option, in the constructor.)")
-
         aParts = self._split_longs(a)
         Qrack.qrack_lib.SUBS(
             self.sid,
@@ -1338,11 +1322,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot muln()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot muln()! (Turn off just this option, in the constructor.)")
-
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
@@ -1372,11 +1352,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot divn()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot divn()! (Turn off just this option, in the constructor.)")
-
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
@@ -1437,11 +1413,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcadd()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcadd()! (Turn off just this option, in the constructor.)")
-
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MCADD(
             self.sid,
@@ -1467,11 +1439,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcsub()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcsub()! (Turn off just this option, in the constructor.)")
-
         aParts = self._split_longs(a)
         Qrack.qrack_lib.MCSUB(
             self.sid,
@@ -1571,11 +1539,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcmuln()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcmuln()! (Turn off just this option, in the constructor.)")
-
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
@@ -1609,11 +1573,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcdivn()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcdivn()! (Turn off just this option, in the constructor.)")
-
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
         aParts, mParts = self._split_longs_2(a, m)
