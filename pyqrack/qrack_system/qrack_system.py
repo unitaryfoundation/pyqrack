@@ -981,7 +981,7 @@ class QrackSystem:
         self.qrack_lib.qneuron_learn_permutation.argtypes = [c_ulonglong, c_double, c_bool, c_bool]
 
         self.qrack_lib.init_qcircuit.restype = c_ulonglong
-        self.qrack_lib.init_qcircuit.argtypes = [c_bool]
+        self.qrack_lib.init_qcircuit.argtypes = [c_bool, c_bool]
 
         self.qrack_lib.init_qcircuit_clone.restype = c_ulonglong
         self.qrack_lib.init_qcircuit_clone.argtypes = [c_ulonglong]

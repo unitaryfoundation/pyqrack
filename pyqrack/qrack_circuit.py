@@ -42,9 +42,9 @@ class QrackCircuit:
         cid(int): Qrack ID of this circuit
     """
 
-    def __init__(self, is_collapse = True, clone_cid = -1, is_inverse=False, past_light_cone = []):
+    def __init__(self, is_collapse = True, is_near_clifford = False, clone_cid = -1, is_inverse=False, past_light_cone = []):
         if clone_cid < 0:
-            self.cid = Qrack.qrack_lib.init_qcircuit(is_collapse)
+            self.cid = Qrack.qrack_lib.init_qcircuit(is_collapse, is_near_clifford)
         elif is_inverse:
             self.cid = Qrack.qrack_lib.qcircuit_inverse(clone_cid)
         elif len(past_light_cone) > 0:
