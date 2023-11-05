@@ -73,11 +73,6 @@ class QrackSimulator:
                 "Cannot clone a QrackSimulator and specify its qubit length at the same time, in QrackSimulator constructor!"
             )
 
-        if isBinaryDecisionTree and isStabilizerHybrid:
-            raise RuntimeError(
-                "isBinaryDecisionTree and isStabilizerHybrid are currently incompatible constructor options to QrackSimulator! (Please set one or both options to False.)"
-            )
-
         self.is_tensor_network = isTensorNetwork
 
         if cloneSid > -1:
