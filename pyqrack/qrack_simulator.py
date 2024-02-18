@@ -50,7 +50,7 @@ class QrackSimulator:
         isTensorNetwork=True,
         isSchmidtDecomposeMulti=True,
         isSchmidtDecompose=True,
-        isStabilizerHybrid=True,
+        isStabilizerHybrid=False,
         isBinaryDecisionTree=False,
         isPaged=True,
         isCpuGpuHybrid=True,
@@ -81,35 +81,19 @@ class QrackSimulator:
             if qubitCount < 0:
                 qubitCount = 0
 
-            if (
-                isTensorNetwork
-                and isSchmidtDecompose
-                and isStabilizerHybrid
-                and not isBinaryDecisionTree
-                and isPaged
-                and isCpuGpuHybrid
-                and isOpenCL
-            ):
-                if isSchmidtDecomposeMulti:
-                    self.sid = Qrack.qrack_lib.init_count(qubitCount, isHostPointer)
-                else:
-                    self.sid = Qrack.qrack_lib.init_count_pager(
-                        qubitCount, isHostPointer
-                    )
-            else:
-                self.sid = Qrack.qrack_lib.init_count_type(
-                    qubitCount,
-                    isTensorNetwork,
-                    isSchmidtDecomposeMulti,
-                    isSchmidtDecompose,
-                    isStabilizerHybrid,
-                    isBinaryDecisionTree,
-                    isPaged,
-                    False,
-                    isCpuGpuHybrid,
-                    isOpenCL,
-                    isHostPointer,
-                )
+            self.sid = Qrack.qrack_lib.init_count_type(
+                qubitCount,
+                isTensorNetwork,
+                isSchmidtDecomposeMulti,
+                isSchmidtDecompose,
+                isStabilizerHybrid,
+                isBinaryDecisionTree,
+                isPaged,
+                False,
+                isCpuGpuHybrid,
+                isOpenCL,
+                isHostPointer,
+            )
 
         self._throw_if_error()
 
