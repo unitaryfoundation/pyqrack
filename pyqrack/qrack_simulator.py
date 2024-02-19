@@ -3060,7 +3060,7 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         for gate in gates:
-            _apply_pyzx_op(gate)
+            self._apply_pyzx_op(gate)
 
     def _apply_op(self, operation):
         name = operation.name
