@@ -2557,6 +2557,24 @@ class QrackSimulator:
         Qrack.qrack_lib.SetSdrp(self.sid, sdrp)
         self._throw_if_error()
 
+    def set_ncrp(self, ncrp):
+        """Set "Near-Clifford rounding parameter"
+
+        When using "near-Clifford rounding parameter" ("NCRP")
+        approximate simulation, QrackSimulator() can make an excellent
+        estimate of its overall fidelity after measurement, tested against
+        a nearest-neighbor variant of quantum volume circuits.
+
+        Resetting the fidelity calculation to 1.0 happens automatically
+        when calling `m_all` or can be done manually with
+        `reset_unitary_fidelity()`.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetNcrp(self.sid, ncrp)
+        self._throw_if_error()
+
     def set_reactive_separate(self, irs):
         """Set reactive separation option
 
