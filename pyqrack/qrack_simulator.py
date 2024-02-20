@@ -2800,7 +2800,7 @@ class QrackSimulator:
 
         sqrt1_2 = 1 / math.sqrt(2)
         ident = np.eye(2, dtype=np.complex128)
-        passable_gates = ["unitary", "h", "x", "y", "z", "s", "sdg"]
+        passable_gates = ["unitary", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg"]
 
         passed_swaps = []
         for i in range(0, circ.width()):
