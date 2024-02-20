@@ -2972,7 +2972,7 @@ class QrackSimulator:
                     j -= 1
                     continue
 
-                if op.name == "swap" and (q1 >= width) and (q2 >= width):
+                if (op.name == "swap") and (q1 >= width) and (q2 >= width):
                     i = (q2 if i == q1 else q1)
                     if circ.data[j] in passed_swaps:
                         passed_swaps.remove(circ.data[j])
@@ -2984,15 +2984,6 @@ class QrackSimulator:
                     continue
 
                 if (q1 == i) and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz")):
-                    # Either way, we're cutting this gate.
-                    orig_instr = circ.data[j]
-                    del circ.data[j]
-
-                    if (np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
-                        # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
-                        j -= 1
-                        continue
-
                     if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0)):
                         # If we're buffering full negation (plus phase), the control qubit can be dropped.
                         c = QuantumCircuit(1)
@@ -3006,6 +2997,15 @@ class QrackSimulator:
                         instr.qubits = (qubits[1],)
                         circ.data[j] = copy.deepcopy(instr)
 
+                        continue
+
+                    # Either way, we're cutting this gate.
+                    orig_instr = circ.data[j]
+                    del circ.data[j]
+
+                    if (np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
+                        # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
+                        j -= 1
                         continue
 
                     h = QuantumCircuit(1)
