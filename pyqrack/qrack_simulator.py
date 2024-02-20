@@ -2893,6 +2893,7 @@ class QrackSimulator:
                         instr.qubits = (qubits[1],)
                         circ.data[j] = copy.deepcopy(instr)
 
+                        j += 1
                         continue
 
                 if np.allclose(non_clifford, ident):
