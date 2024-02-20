@@ -2759,7 +2759,7 @@ class QrackSimulator:
             non_clifford_gates.append(op)
             g = g + 1
 
-        basis_gates = ["h", "x", "y", "z", "sx", "sy", "s", "sdg", "cx", "cy", "cz", "swap", "iswap", "iswap_dg"]
+        basis_gates = ["rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap", "iswap", "iswap_dg"]
         try:
             circ = transpile(clifford_circ, basis_gates=basis_gates, optimization_level=3)
         except:
@@ -2822,10 +2822,22 @@ class QrackSimulator:
                         non_clifford = np.matmul(np.array([[0, -1j], [1j, 0]], np.complex128), non_clifford)
                     elif op.name == "z":
                         non_clifford = np.matmul(np.array([[1, 0], [0, -1]], np.complex128), non_clifford)
+                    elif op.name == "sx":
+                        non_clifford = np.matmul(np.array([[(1+1j)/2, (1-1j)/2], [(1-1j)/2, (1+1j)/2]], np.complex128), non_clifford)
+                    elif op.name == "sxdg":
+                        non_clifford = np.matmul(np.array([[(1-1j)/2, (1+1j)/2], [(1+1j)/2, (1-1j)/2]], np.complex128), non_clifford)
+                    elif op.name == "sy":
+                        non_clifford = np.matmul(np.array([[(1+1j)/2, -(1+1j)/2], [(1+1j)/2, (1+1j)/2]], np.complex128), non_clifford)
+                    elif op.name == "sydg":
+                        non_clifford = np.matmul(np.array([[(1-1j)/2, (1-1j)/2], [(-1+1j)/2, (1-1j)/2]], np.complex128), non_clifford)
                     elif op.name == "s":
                         non_clifford = np.matmul(np.array([[1, 0], [0, 1j]], np.complex128), non_clifford)
                     elif op.name == "sdg":
                         non_clifford = np.matmul(np.array([[1, 0], [0, -1j]], np.complex128), non_clifford)
+                    elif op.name == "t":
+                        non_clifford = np.matmul(np.array([[1, 0], [0, np.sqrt(1j)]], np.complex128), non_clifford)
+                    elif op.name == "tdg":
+                        non_clifford = np.matmul(np.array([[1, 0], [0, np.sqrt(-1j)]], np.complex128), non_clifford)
                     else:
                         print("Warning: Something went wrong! (Dropped a single-qubit gate.")
 
