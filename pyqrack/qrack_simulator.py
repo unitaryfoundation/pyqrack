@@ -2974,6 +2974,10 @@ class QrackSimulator:
                     continue
 
                 if op.name == "swap":
+                    if (q1 < width) or (q2 < width):
+                        j -= 1
+                        continue
+
                     i = (q2 if i == q1 else q1)
                     if circ.data[j] in passed_swaps:
                         passed_swaps.remove(circ.data[j])
