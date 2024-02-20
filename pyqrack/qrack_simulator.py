@@ -2802,7 +2802,7 @@ class QrackSimulator:
         sqrt_ni = np.sqrt(-1j)
         sqrt1_2 = 1 / math.sqrt(2)
         ident = np.eye(2, dtype=np.complex128)
-        passable_gates = ["unitary", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg"]
+        # passable_gates = ["unitary", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg"]
 
         passed_swaps = []
         for i in range(0, circ.width()):
@@ -2985,7 +2985,7 @@ class QrackSimulator:
                     continue
 
                 if (q1 == i) and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz")) and (np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
-                    # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
+                    # If we're not buffering anything but phase, this commutes with control, and we're safe to continue.
                     j -= 1
                     continue
 
