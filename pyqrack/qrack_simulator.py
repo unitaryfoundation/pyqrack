@@ -2855,6 +2855,10 @@ class QrackSimulator:
 
                 q2 = circ.find_bit(qubits[1])[0]
 
+                if (i != q1) and (i != q2):
+                    j += 1
+                    continue
+
                 if op.name == "swap":
                     if i == q1:
                         i = q2
@@ -2967,6 +2971,10 @@ class QrackSimulator:
                     continue
 
                 q2 = circ.find_bit(qubits[1])[0]
+
+                if (i != q1) and (i != q2):
+                    j -= 1
+                    continue
 
                 if op.name == "swap":
                     if i == q1:
