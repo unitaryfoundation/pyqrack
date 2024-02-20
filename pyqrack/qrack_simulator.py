@@ -2812,6 +2812,8 @@ class QrackSimulator:
             while j < len(circ.data):
                 op = circ.data[j].operation
                 qubits = circ.data[j].qubits
+                if (len(qubits) > 2):
+                    raise RuntimeError("Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits)")
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
                     if op.name == "unitary":
@@ -2876,7 +2878,7 @@ class QrackSimulator:
                     j += 1
                     continue 
 
-                if (q1 == i) and (op.name == "cx" or op.name == "cy" or op.name == "cz"):
+                if (q1 == i) and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz")):
                     if (np.isclose(np.abs(non_clifford[0][0]), 1) and np.isclose(np.abs(non_clifford[1][1]), 1) and
                         np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
                         # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
@@ -2899,22 +2901,19 @@ class QrackSimulator:
                         j += 1
                         continue
 
-                if (q1 == i) or (q2 == i) or (op.name != "cx"):
-                    if np.allclose(non_clifford, ident):
-                        # No buffer content to write to circuit definition
-                        non_clifford = ident
-                        break
-
-                    # We're blocked, so we insert our buffer at this place in the circuit definition.
-                    c = QuantumCircuit(1)
-                    c.unitary(non_clifford, 0)
-                    instr = c.data[0]
-                    instr.qubits = (qubits[0],)
-                    circ.data.insert(j, copy.deepcopy(instr))
+                if np.allclose(non_clifford, ident):
+                    # No buffer content to write to circuit definition
                     non_clifford = ident
                     break
 
-                j += 1
+                # We're blocked, so we insert our buffer at this place in the circuit definition.
+                c = QuantumCircuit(1)
+                c.unitary(non_clifford, 0)
+                instr = c.data[0]
+                instr.qubits = (qubits[0],)
+                circ.data.insert(j, copy.deepcopy(instr))
+                non_clifford = ident
+                break
 
             if (j == len(circ.data)) and (i < width) and not np.allclose(non_clifford, ident):
                 # We're at the end of the wire, so add the buffer gate.
@@ -2928,6 +2927,8 @@ class QrackSimulator:
             while j >= 0:
                 op = circ.data[j].operation
                 qubits = circ.data[j].qubits
+                if (len(qubits) > 2):
+                    raise RuntimeError("Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits)")
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
                     if op.name == "unitary":
@@ -2992,7 +2993,7 @@ class QrackSimulator:
                     j -= 1
                     continue
 
-                if (q1 == i) and (op.name == "cx" or op.name == "cy" or op.name == "cz"):
+                if (q1 == i) and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz")):
                     # Either way, we're cutting this gate.
                     orig_instr = circ.data[j]
                     del circ.data[j]
@@ -3035,19 +3036,18 @@ class QrackSimulator:
                     circ.data.insert(j + 1, copy.deepcopy(instr))
                     break
 
-                if q2 == i:
-                    to_inject = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]]))
-                    if np.allclose(to_inject, ident):
-                        # No buffer content to write to circuit definition
-                        del circ.data[j]
-                        j -= 1
-                        continue
+                to_inject = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]]))
+                if np.allclose(to_inject, ident):
+                    # No buffer content to write to circuit definition
+                    del circ.data[j]
+                    j -= 1
+                    continue
 
-                    c = QuantumCircuit(1)
-                    c.unitary(to_inject, 0)
-                    instr = c.data[0]
-                    instr.qubits = (qubits[0],)
-                    circ.data[j] = copy.deepcopy(instr)
+                c = QuantumCircuit(1)
+                c.unitary(to_inject, 0)
+                instr = c.data[0]
+                instr.qubits = (qubits[0],)
+                circ.data[j] = copy.deepcopy(instr)
 
                 j -= 1
 
