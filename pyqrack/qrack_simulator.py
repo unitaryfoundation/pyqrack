@@ -2893,7 +2893,6 @@ class QrackSimulator:
                         instr.qubits = (qubits[1],)
                         circ.data[j] = copy.deepcopy(instr)
 
-                        j += 1
                         continue
 
                 if np.allclose(non_clifford, ident):
@@ -2996,6 +2995,21 @@ class QrackSimulator:
                     if (np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
                         # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
                         j -= 1
+                        continue
+
+                    if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0)):
+                        # If we're buffering full negation (plus phase), the control qubit can be dropped.
+                        c = QuantumCircuit(1)
+                        if op.name == "cx":
+                            c.x(0)
+                        elif op.name == "cy":
+                            c.y(0)
+                        else:
+                            c.z(0)
+                        instr = c.data[0]
+                        instr.qubits = (qubits[1],)
+                        circ.data[j] = copy.deepcopy(instr)
+
                         continue
 
                     h = QuantumCircuit(1)
