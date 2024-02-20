@@ -2798,6 +2798,8 @@ class QrackSimulator:
         with open(filename, "r", encoding="utf-8") as file:
             width = int(file.readline())
 
+        sqrt_pi = np.sqrt(1j)
+        sqrt_ni = np.sqrt(-1j)
         sqrt1_2 = 1 / math.sqrt(2)
         ident = np.eye(2, dtype=np.complex128)
         passable_gates = ["unitary", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg"]
@@ -2805,7 +2807,7 @@ class QrackSimulator:
         passed_swaps = []
         for i in range(0, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
-            non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
+            non_clifford = ident
             j = 0
             while j < len(circ.data):
                 op = circ.data[j].operation
@@ -2838,11 +2840,11 @@ class QrackSimulator:
                     elif op.name == "sdg":
                         non_clifford = np.matmul(np.array([[1, 0], [0, -1j]], np.complex128), non_clifford)
                     elif op.name == "t":
-                        non_clifford = np.matmul(np.array([[1, 0], [0, np.sqrt(1j)]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(np.array([[1, 0], [0, sqrt_pi]], np.complex128), non_clifford)
                     elif op.name == "tdg":
-                        non_clifford = np.matmul(np.array([[1, 0], [0, np.sqrt(-1j)]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(np.array([[1, 0], [0, sqrt_ni]], np.complex128), non_clifford)
                     else:
-                        print("Warning: Something went wrong! (Dropped a single-qubit gate.)")
+                        raise RuntimeError("Something went wrong while optimizing circuit! (Dropped a single-qubit gate.)")
 
                     del circ.data[j]
                     continue
@@ -2861,6 +2863,7 @@ class QrackSimulator:
 
                     if (i == q1) or (i == q2):
                         if circ.data[j] in passed_swaps:
+                            passed_swaps.remove(circ.data[j])
                             del circ.data[j]
                             continue
 
@@ -2916,7 +2919,7 @@ class QrackSimulator:
         passed_swaps = []
         for i in range(width, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
-            non_clifford = np.array([[1, 0], [0, 1]], np.complex128)
+            non_clifford = ident
             j = len(circ.data) - 1
             while j >= 0:
                 op = circ.data[j].operation
@@ -2949,11 +2952,11 @@ class QrackSimulator:
                     elif op.name == "sdg":
                         non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1j]], np.complex128))
                     elif op.name == "t":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, np.sqrt(1j)]], np.complex128))
+                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, sqrt_pi]], np.complex128))
                     elif op.name == "tdg":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, np.sqrt(-1j)]], np.complex128))
+                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, sqrt_ni]], np.complex128))
                     else:
-                        print("Warning: Something went wrong! (Dropped a single-qubit gate.)")
+                        raise RuntimeError("Something went wrong while optimizing circuit! (Dropped a single-qubit gate.)")
 
                     del circ.data[j]
                     j -= 1
@@ -2973,6 +2976,7 @@ class QrackSimulator:
 
                     if ((i == q1) or (i == q2)) and (q1 >= width) and (q2 >= width):
                         if circ.data[j] in passed_swaps:
+                            passed_swaps.remove(circ.data[j])
                             del circ.data[j]
                         else:
                             passed_swaps.append(circ.data[j])
@@ -3025,7 +3029,6 @@ class QrackSimulator:
 
                 if q2 == i:
                     to_inject = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]]))
-
                     if np.allclose(to_inject, ident):
                         # No buffer content to write to circuit definition
                         del circ.data[j]
@@ -3040,7 +3043,7 @@ class QrackSimulator:
 
                 j -= 1
 
-        basis_gates=["u", "x", "cx", "cy", "cz", "swap", "iswap", "iswap_dg"]
+        basis_gates=["u", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap", "iswap", "iswap_dg"]
         circ = transpile(circ, basis_gates=basis_gates, optimization_level=3)
 
         #Eliminate unused ancillae
