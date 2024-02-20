@@ -2812,7 +2812,7 @@ class QrackSimulator:
             while j < len(circ.data):
                 op = circ.data[j].operation
                 qubits = circ.data[j].qubits
-                if (len(qubits) > 2):
+                if len(qubits) > 2:
                     raise RuntimeError("Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits)")
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
@@ -2879,14 +2879,13 @@ class QrackSimulator:
                     continue 
 
                 if (q1 == i) and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz")):
-                    if (np.isclose(np.abs(non_clifford[0][0]), 1) and np.isclose(np.abs(non_clifford[1][1]), 1) and
-                        np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
+                    if (np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
                         # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
                         del circ.data[j]
                         continue
 
-                    if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0) and
-                        np.isclose(np.abs(non_clifford[0][1]), 1) and np.isclose(np.abs(non_clifford[1][0]), 1)):
+                    if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0)):
+                        # If we're not buffering negation (plus phase), the control qubit can be dropped.
                         c = QuantumCircuit(1)
                         if op.name == "cx":
                             c.x(0)
@@ -2915,7 +2914,7 @@ class QrackSimulator:
                 non_clifford = ident
                 break
 
-            if (j == len(circ.data)) and (i < width) and not np.allclose(non_clifford, ident):
+            if (j == len(circ.data)) and not np.allclose(non_clifford, ident):
                 # We're at the end of the wire, so add the buffer gate.
                 circ.unitary(non_clifford, i)
 
@@ -2927,8 +2926,8 @@ class QrackSimulator:
             while j >= 0:
                 op = circ.data[j].operation
                 qubits = circ.data[j].qubits
-                if (len(qubits) > 2):
-                    raise RuntimeError("Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits)")
+                if len(qubits) > 2:
+                    raise RuntimeError("Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits.)")
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
                     if op.name == "unitary":
@@ -2998,8 +2997,7 @@ class QrackSimulator:
                     orig_instr = circ.data[j]
                     del circ.data[j]
 
-                    if (np.isclose(np.abs(non_clifford[0][0]), 1) and np.isclose(np.abs(non_clifford[1][1]), 1) and
-                        np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
+                    if (np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
                         # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
                         j -= 1
                         continue
@@ -3048,7 +3046,6 @@ class QrackSimulator:
                 instr = c.data[0]
                 instr.qubits = (qubits[0],)
                 circ.data[j] = copy.deepcopy(instr)
-
                 j -= 1
 
         basis_gates=["u", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
