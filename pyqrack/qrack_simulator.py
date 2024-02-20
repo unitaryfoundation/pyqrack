@@ -2629,6 +2629,7 @@ class QrackSimulator:
             qb_count = int(f.readline())
         out = QrackSimulator(
             qubitCount=qb_count,
+            isTensorNetwork=False,
             isSchmidtDecomposeMulti=False,
             isSchmidtDecompose=False,
             isStabilizerHybrid=True,
@@ -2917,10 +2918,22 @@ class QrackSimulator:
                         non_clifford = np.matmul(non_clifford, np.array([[0, -1j], [1j, 0]], np.complex128))
                     elif op.name == "z":
                         non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1]], np.complex128))
+                    elif op.name == "sx":
+                        non_clifford = np.matmul(non_clifford, np.array([[(1+1j)/2, (1-1j)/2], [(1-1j)/2, (1+1j)/2]], np.complex128))
+                    elif op.name == "sxdg":
+                        non_clifford = np.matmul(non_clifford, np.array([[(1-1j)/2, (1+1j)/2], [(1+1j)/2, (1-1j)/2]], np.complex128))
+                    elif op.name == "sy":
+                        non_clifford = np.matmul(non_clifford, np.array([[(1+1j)/2, -(1+1j)/2], [(1+1j)/2, (1+1j)/2]], np.complex128))
+                    elif op.name == "sydg":
+                        non_clifford = np.matmul(non_clifford, np.array([[(1-1j)/2, (1-1j)/2], [(-1+1j)/2, (1-1j)/2]], np.complex128))
                     elif op.name == "s":
                         non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, 1j]], np.complex128))
                     elif op.name == "sdg":
                         non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1j]], np.complex128))
+                    elif op.name == "t":
+                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, np.sqrt(1j)]], np.complex128))
+                    elif op.name == "tdg":
+                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, np.sqrt(-1j)]], np.complex128))
                     else:
                         print("Warning: Something went wrong! (Dropped a single-qubit gate.")
 
