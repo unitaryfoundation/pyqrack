@@ -2862,18 +2862,14 @@ class QrackSimulator:
                     continue
 
                 if op.name == "swap":
-                    if i == q1:
-                        i = q2
-                    elif i == q2:
-                        i = q1
+                    i = (q2 if i == q1 else q1)
 
-                    if (i == q1) or (i == q2):
-                        if circ.data[j] in passed_swaps:
-                            passed_swaps.remove(circ.data[j])
-                            del circ.data[j]
-                            continue
+                    if circ.data[j] in passed_swaps:
+                        passed_swaps.remove(circ.data[j])
+                        del circ.data[j]
+                        continue
 
-                        passed_swaps.append(circ.data[j])
+                    passed_swaps.append(circ.data[j])
 
                     j += 1
                     continue 
@@ -2885,7 +2881,7 @@ class QrackSimulator:
                         continue
 
                     if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0)):
-                        # If we're not buffering negation (plus phase), the control qubit can be dropped.
+                        # If we're buffering full negation (plus phase), the control qubit can be dropped.
                         c = QuantumCircuit(1)
                         if op.name == "cx":
                             c.x(0)
@@ -2911,6 +2907,7 @@ class QrackSimulator:
                 instr = c.data[0]
                 instr.qubits = (qubits[0],)
                 circ.data.insert(j, copy.deepcopy(instr))
+
                 non_clifford = ident
                 break
 
@@ -2918,7 +2915,6 @@ class QrackSimulator:
                 # We're at the end of the wire, so add the buffer gate.
                 circ.unitary(non_clifford, i)
 
-        passed_swaps = []
         for i in range(width, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
             non_clifford = ident
@@ -2977,17 +2973,12 @@ class QrackSimulator:
                     continue
 
                 if op.name == "swap":
-                    if i == q1:
-                        i = q2
-                    elif i == q2:
-                        i = q1
-
-                    if ((i == q1) or (i == q2)) and (q1 >= width) and (q2 >= width):
-                        if circ.data[j] in passed_swaps:
-                            passed_swaps.remove(circ.data[j])
-                            del circ.data[j]
-                        else:
-                            passed_swaps.append(circ.data[j])
+                    i = (q2 if i == q1 else q1)
+                    if circ.data[j] in passed_swaps:
+                        passed_swaps.remove(circ.data[j])
+                        del circ.data[j]
+                    else:
+                        passed_swaps.append(circ.data[j])
 
                     j -= 1
                     continue
@@ -3017,8 +3008,8 @@ class QrackSimulator:
                     circ.data.insert(j, copy.deepcopy(instr))
                     instr.qubits = (qubits[1],)
                     circ.data.insert(j, copy.deepcopy(instr))
-                    j += 4
 
+                    j += 4
                     continue
 
                 if (q1 == i) or (op.name != "cx"):
@@ -3032,8 +3023,10 @@ class QrackSimulator:
                     instr = c.data[0]
                     instr.qubits = (qubits[0],)
                     circ.data.insert(j + 1, copy.deepcopy(instr))
+
                     break
 
+                # Re-injection branch (apply gadget to target)
                 to_inject = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]]))
                 if np.allclose(to_inject, ident):
                     # No buffer content to write to circuit definition
