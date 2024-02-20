@@ -2800,7 +2800,7 @@ class QrackSimulator:
 
         sqrt1_2 = 1 / math.sqrt(2)
         ident = np.eye(2, dtype=np.complex128)
-        passable_gates = ["unitary", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg"]
+        passable_gates = ["unitary", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg"]
 
         passed_swaps = []
         for i in range(0, circ.width()):
@@ -2814,6 +2814,9 @@ class QrackSimulator:
                 if (len(qubits) < 2) and (q1 == i):
                     if op.name == "unitary":
                         non_clifford = np.matmul(op.params[0], non_clifford)
+                    elif op.name == "rz":
+                        lm = float(op.params[0])
+                        non_clifford = np.matmul([[np.exp(-1j * lm / 2), 0], [0, np.exp(1j * lm / 2)]], non_clifford)
                     elif op.name == "h":
                         non_clifford = np.matmul(np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128), non_clifford)
                     elif op.name == "x":
@@ -2839,7 +2842,7 @@ class QrackSimulator:
                     elif op.name == "tdg":
                         non_clifford = np.matmul(np.array([[1, 0], [0, np.sqrt(-1j)]], np.complex128), non_clifford)
                     else:
-                        print("Warning: Something went wrong! (Dropped a single-qubit gate.")
+                        print("Warning: Something went wrong! (Dropped a single-qubit gate.)")
 
                     del circ.data[j]
                     continue
@@ -2922,6 +2925,9 @@ class QrackSimulator:
                 if (len(qubits) < 2) and (q1 == i):
                     if op.name == "unitary":
                         non_clifford = np.matmul(non_clifford, op.params[0])
+                    elif op.name == "rz":
+                        lm = float(op.params[0])
+                        non_clifford = np.matmul(non_clifford, [[np.exp(-1j * lm / 2), 0], [0, np.exp(1j * lm / 2)]])
                     elif op.name == "h":
                         non_clifford = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128))
                     elif op.name == "x":
@@ -2947,7 +2953,7 @@ class QrackSimulator:
                     elif op.name == "tdg":
                         non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, np.sqrt(-1j)]], np.complex128))
                     else:
-                        print("Warning: Something went wrong! (Dropped a single-qubit gate.")
+                        print("Warning: Something went wrong! (Dropped a single-qubit gate.)")
 
                     del circ.data[j]
                     j -= 1
