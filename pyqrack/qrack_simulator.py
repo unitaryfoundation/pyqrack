@@ -2761,7 +2761,7 @@ class QrackSimulator:
 
         basis_gates = ["rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
         try:
-            circ = transpile(clifford_circ, basis_gates=basis_gates, optimization_level=3)
+            circ = transpile(clifford_circ, basis_gates=basis_gates, optimization_level=2)
         except:
             circ = clifford_circ
 
@@ -3042,7 +3042,7 @@ class QrackSimulator:
                 j -= 1
 
         basis_gates=["u", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
-        circ = transpile(circ, basis_gates=basis_gates, optimization_level=3)
+        circ = transpile(circ, basis_gates=basis_gates, optimization_level=2)
 
         #Eliminate unused ancillae
         qasm = circ.qasm()
