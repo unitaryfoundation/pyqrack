@@ -2807,7 +2807,7 @@ class QrackSimulator:
         passed_swaps = []
         for i in range(0, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
-            non_clifford = ident
+            non_clifford = np.copy(ident)
             j = 0
             while j < len(circ.data):
                 op = circ.data[j].operation
@@ -2898,7 +2898,7 @@ class QrackSimulator:
 
                 if np.allclose(non_clifford, ident):
                     # No buffer content to write to circuit definition
-                    non_clifford = ident
+                    non_clifford = np.copy(ident)
                     break
 
                 # We're blocked, so we insert our buffer at this place in the circuit definition.
@@ -2908,7 +2908,7 @@ class QrackSimulator:
                 instr.qubits = (qubits[0],)
                 circ.data.insert(j, copy.deepcopy(instr))
 
-                non_clifford = ident
+                non_clifford = np.copy(ident)
                 break
 
             if (j == len(circ.data)) and not np.allclose(non_clifford, ident):
@@ -2918,7 +2918,7 @@ class QrackSimulator:
         passed_swaps.clear()
         for i in range(width, circ.width()):
             # We might trace out swap, but we want to maintain the iteration order of qubit channels.
-            non_clifford = ident
+            non_clifford = np.copy(ident)
             j = len(circ.data) - 1
             while j >= 0:
                 op = circ.data[j].operation
