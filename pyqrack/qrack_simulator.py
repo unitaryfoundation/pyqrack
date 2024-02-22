@@ -3488,10 +3488,5 @@ class QrackSimulator:
             )
 
         del self._sim
-        del self._shots
-        del self._sample_qubits
-        del self._sample_clbits
-        del self._sample_cregbits
-        del self._sample_measure
 
         return _data
