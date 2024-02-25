@@ -123,8 +123,7 @@ class QrackNeuron:
         """
         ket = self._real1_byref([0.0] * self.amp_count)
         Qrack.qrack_lib.get_qneuron_angles(self.nid, ket)
-        if self._get_error() != 0:
-            raise RuntimeError("QrackSimulator C++ library raised exception.")
+        self._throw_if_error()
         return list(ket)
 
     def set_alpha(self, a):
