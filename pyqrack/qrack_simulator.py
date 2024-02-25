@@ -2165,6 +2165,44 @@ class QrackSimulator:
         self._throw_if_error()
         return [complex(r, i) for r, i in self._pairwise(ket)]
 
+    def prob_all(self, q):
+        """Probabilities of all subset permutations
+
+        Get the probabilities of all permutations of the subset.
+
+        Args:
+            q: list of qubit ids
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            list representing the state vector.
+        """
+        probs = self._double_byref([0.0] * (1 << len(q)))
+        Qrack.qrack_lib.ProbAll(self.sid, len(q), self._ulonglong_byref(q), probs)
+        self._throw_if_error()
+        return list(probs)
+
+    def variance(self, q):
+        """Variance of probabilities of all subset permutations
+
+        Get the overall variance of probabilities of all
+        permutations of the subset.
+
+        Args:
+            q: list of qubit ids
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            float variance
+        """
+        result = Qrack.qrack_lib.Variance(self.sid, len(q), self._ulonglong_byref(q))
+        self._throw_if_error()
+        return result
+
     def prob(self, q):
         """Probability of `|1>`
 
