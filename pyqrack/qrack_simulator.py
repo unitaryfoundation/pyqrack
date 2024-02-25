@@ -2179,7 +2179,7 @@ class QrackSimulator:
         Returns:
             list representing the state vector.
         """
-        probs = self._double_byref([0.0] * (1 << len(q)))
+        probs = self._real1_byref([0.0] * (1 << len(q)))
         Qrack.qrack_lib.ProbAll(self.sid, len(q), self._ulonglong_byref(q), probs)
         self._throw_if_error()
         return list(probs)

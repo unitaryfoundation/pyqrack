@@ -116,12 +116,20 @@ class QrackSystem:
         # pseudo-quantum
 
         self.qrack_lib.ProbAll.restype = None
-        self.qrack_lib.ProbAll.argtypes = [
-            c_ulonglong,
-            c_ulonglong,
-            POINTER(c_ulonglong),
-            POINTER(c_double)
-        ]
+        if self.fppow == 5:
+            self.qrack_lib.ProbAll.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_float)
+            ]
+        elif self.fppow == 6:
+            self.qrack_lib.ProbAll.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_double)
+            ]
 
         self.qrack_lib.Variance.restype = c_double
         self.qrack_lib.Variance.argtypes = [
