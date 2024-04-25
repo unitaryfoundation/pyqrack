@@ -119,7 +119,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        ket = self._real1_byref([0.0] * (1 << len(controls)))
+        ket = self._real1_byref([0.0] * (1 << len(self.controls)))
         Qrack.qrack_lib.get_qneuron_angles(self.nid, ket)
         self._throw_if_error()
         return list(ket)
