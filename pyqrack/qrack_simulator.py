@@ -50,7 +50,7 @@ class QrackSimulator:
         isTensorNetwork=True,
         isSchmidtDecomposeMulti=True,
         isSchmidtDecompose=True,
-        isStabilizerHybrid=False,
+        isStabilizerHybrid=True,
         isBinaryDecisionTree=False,
         isPaged=True,
         isCpuGpuHybrid=True,
