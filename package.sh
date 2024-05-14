@@ -1,8 +1,8 @@
 #!/bin/bash
 
-PLATFORMS=("manylinux_2_35_x86_64" "linux_aarch64" "linux_armv7l" "manylinux2014_x86_64" "macosx_10_4_universal2" "win_amd64")
-LIB_FOLDERS=("pyqrack/qrack_system/qrack_lib/Linux/2_35" "pyqrack/qrack_system/qrack_lib/Linux/ARM64" "pyqrack/qrack_system/qrack_lib/Linux/ARMv7" "pyqrack/qrack_system/qrack_lib/Linux/x86_64" "pyqrack/qrack_system/qrack_lib/Mac/M2" "pyqrack/qrack_system/qrack_lib/Windows/x86_64")
-CL_FOLDERS=("pyqrack/qrack_cl_precompile/Linux/2_35" "pyqrack/qrack_cl_precompile/Linux/ARM64" "pyqrack/qrack_cl_precompile/Linux/ARMv7" "pyqrack/qrack_cl_precompile/Linux/x86_64" "pyqrack/qrack_cl_precompile/Mac/M2" "pyqrack/qrack_cl_precompile/Windows/x86_64")
+PLATFORMS=("manylinux_2_39_x86_64" "manylinux_2_35_x86_64" "linux_aarch64" "linux_armv7l" "manylinux2014_x86_64" "macosx_10_4_universal2" "win_amd64")
+LIB_FOLDERS=("pyqrack/qrack_system/qrack_lib/Linux/2_39" "pyqrack/qrack_system/qrack_lib/Linux/2_35" "pyqrack/qrack_system/qrack_lib/Linux/ARM64" "pyqrack/qrack_system/qrack_lib/Linux/ARMv7" "pyqrack/qrack_system/qrack_lib/Linux/x86_64" "pyqrack/qrack_system/qrack_lib/Mac/M2" "pyqrack/qrack_system/qrack_lib/Windows/x86_64")
+CL_FOLDERS=("pyqrack/qrack_cl_precompile/Linux/2_39" "pyqrack/qrack_cl_precompile/Linux/2_35" "pyqrack/qrack_cl_precompile/Linux/ARM64" "pyqrack/qrack_cl_precompile/Linux/ARMv7" "pyqrack/qrack_cl_precompile/Linux/x86_64" "pyqrack/qrack_cl_precompile/Mac/M2" "pyqrack/qrack_cl_precompile/Windows/x86_64")
 
 TEMP_DIR="temp_pyqrack"
 
