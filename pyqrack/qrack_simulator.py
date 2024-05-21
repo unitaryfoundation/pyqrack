@@ -2388,31 +2388,6 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def pauli_expectation(self, q, b):
-        """Pauli tensor product expectation value
-
-        Get the Pauli tensor product expectation value,
-        where each entry in "b" is a Pauli observable for
-        corresponding "q", as the product for each in "q".
-
-        Args:
-            q: qubits, from low to high
-            b: qubit Pauli bases
-
-        Raises:
-            RuntimeError: QrackSimulator raised an exception.
-
-        Returns:
-            Expectation value
-        """
-        if len(q) != len(b):
-            raise RuntimeError("pauli_expectation argument lengths do not match.")
-        result = Qrack.qrack_lib.PauliExpectation(
-            self.sid, len(q), self._ulonglong_byref(q), self._ulonglong_byref(b)
-        )
-        self._throw_if_error()
-        return result
-
     def factorized_expectation_fp(self, q, c):
         """Factorized expectation value (floating-point)
 
@@ -2461,6 +2436,131 @@ class QrackSimulator:
             raise RuntimeError("factorized_expectation_fp_rdm argument lengths do not match.")
         result = Qrack.qrack_lib.FactorizedExpectationFpRdm(
             self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c), r
+        )
+        self._throw_if_error()
+        return result
+
+    def unitary_expectation(self, q, b):
+        """3-parameter unitary tensor product expectation value
+
+        Get the single-qubit (3-parameter) operator
+        expectation value for the array of qubits and bases.
+
+        Args:
+            q: qubits, from low to high
+            b: 3-parameter, single-qubit, unitary bases (flat over wires)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        if (3 * len(q)) != len(b):
+            raise RuntimeError("unitary_expectation argument lengths do not match.")
+        result = Qrack.qrack_lib.UnitaryExpectation(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b)
+        )
+        self._throw_if_error()
+        return result
+
+    def matrix_expectation(self, q, b):
+        """Single-qubit operator tensor product expectation value
+
+        Get the single-qubit (3-parameter) operator
+        expectation value for the array of qubits and bases.
+
+        Args:
+            q: qubits, from low to high
+            b: single-qubit (2x2) operator unitary bases (flat over wires)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        if (4 * len(q)) != len(b):
+            raise RuntimeError("matrix_expectation argument lengths do not match.")
+        result = Qrack.qrack_lib.MatrixExpectation(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b)
+        )
+        self._throw_if_error()
+        return result
+
+    def unitary_expectation_eigenval(self, q, b, e):
+        """3-parameter unitary tensor product expectation value
+
+        Get the single-qubit (3-parameter) operator
+        expectation value for the array of qubits and bases.
+
+        Args:
+            q: qubits, from low to high
+            b: 3-parameter, single-qubit, unitary bases (flat over wires)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        if (3 * len(q)) != len(b):
+            raise RuntimeError("unitary_expectation_eigenval qubit and basis argument lengths do not match.")
+        if (2 * len(q)) != len(e):
+            raise RuntimeError("unitary_expectation_eigenval qubit and eigenvalue argument lengths do not match.")
+        result = Qrack.qrack_lib.UnitaryExpectationEigenVal(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b), self._real1_byref(e)
+        )
+        self._throw_if_error()
+        return result
+
+    def matrix_expectation_eigenval(self, q, b, e):
+        """Single-qubit operator tensor product expectation value
+
+        Get the single-qubit (3-parameter) operator
+        expectation value for the array of qubits and bases.
+
+        Args:
+            q: qubits, from low to high
+            b: single-qubit (2x2) operator unitary bases (flat over wires)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        if (3 * len(q)) != len(b):
+            raise RuntimeError("matrix_expectation_eigenval qubit and basis argument lengths do not match.")
+        if (2 * len(q)) != len(e):
+            raise RuntimeError("matrix_expectation_eigenval qubit and eigenvalue argument lengths do not match.")
+        result = Qrack.qrack_lib.MatrixExpectationEigenVal(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b), self._real1_byref(e)
+        )
+        self._throw_if_error()
+        return result
+
+    def pauli_expectation(self, q, b):
+        """Pauli tensor product expectation value
+
+        Get the Pauli tensor product expectation value,
+        where each entry in "b" is a Pauli observable for
+        corresponding "q", as the product for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            b: qubit Pauli bases
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        if len(q) != len(b):
+            raise RuntimeError("pauli_expectation argument lengths do not match.")
+        result = Qrack.qrack_lib.PauliExpectation(
+            self.sid, len(q), self._ulonglong_byref(q), self._ulonglong_byref(b)
         )
         self._throw_if_error()
         return result

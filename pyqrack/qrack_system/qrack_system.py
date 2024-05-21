@@ -195,14 +195,6 @@ class QrackSystem:
             c_bool
         ]
 
-        self.qrack_lib.PauliExpectation.restype = c_double
-        self.qrack_lib.PauliExpectation.argtypes = [
-            c_ulonglong,
-            c_ulonglong,
-            POINTER(c_ulonglong),
-            POINTER(c_ulonglong)
-        ]
-
         if self.fppow == 5:
             self.qrack_lib.FactorizedExpectationFp.restype = c_double
             self.qrack_lib.FactorizedExpectationFp.argtypes = [
@@ -211,7 +203,6 @@ class QrackSystem:
                 POINTER(c_ulonglong),
                 POINTER(c_float)
             ]
-
             self.qrack_lib.FactorizedExpectationFpRdm.restype = c_double
             self.qrack_lib.FactorizedExpectationFpRdm.argtypes = [
                 c_ulonglong,
@@ -219,6 +210,36 @@ class QrackSystem:
                 POINTER(c_ulonglong),
                 POINTER(c_float),
                 c_bool
+            ]
+            self.qrack_lib.UnitaryExpectation.restype = c_double
+            self.qrack_lib.UnitaryExpectation.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_float)
+            ]
+            self.qrack_lib.MatrixExpectation.restype = c_double
+            self.qrack_lib.MatrixExpectation.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_float)
+            ]
+            self.qrack_lib.UnitaryExpectationExpVal.restype = c_double
+            self.qrack_lib.UnitaryExpectationExpVal.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_float),
+                POINTER(c_float)
+            ]
+            self.qrack_lib.MatrixExpectationExpVal.restype = c_double
+            self.qrack_lib.MatrixExpectationExpVal.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_float),
+                POINTER(c_float)
             ]
         elif self.fppow == 6:
             self.qrack_lib.FactorizedExpectationFp.restype = c_double
@@ -228,7 +249,6 @@ class QrackSystem:
                 POINTER(c_ulonglong),
                 POINTER(c_double)
             ]
-
             self.qrack_lib.FactorizedExpectationFpRdm.restype = c_double
             self.qrack_lib.FactorizedExpectationFpRdm.argtypes = [
                 c_ulonglong,
@@ -237,6 +257,44 @@ class QrackSystem:
                 POINTER(c_double),
                 c_bool
             ]
+            self.qrack_lib.UnitaryExpectation.restype = c_double
+            self.qrack_lib.UnitaryExpectation.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_double)
+            ]
+            self.qrack_lib.MatrixExpectation.restype = c_double
+            self.qrack_lib.MatrixExpectation.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_double)
+            ]
+            self.qrack_lib.UnitaryExpectationExpVal.restype = c_double
+            self.qrack_lib.UnitaryExpectationExpVal.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_double),
+                POINTER(c_double)
+            ]
+            self.qrack_lib.MatrixExpectationExpVal.restype = c_double
+            self.qrack_lib.MatrixExpectationExpVal.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_double),
+                POINTER(c_double)
+            ]
+
+        self.qrack_lib.PauliExpectation.restype = c_double
+        self.qrack_lib.PauliExpectation.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
+        ]
 
         self.qrack_lib.JointEnsembleProbability.restype = c_double
         self.qrack_lib.JointEnsembleProbability.argtypes = [
