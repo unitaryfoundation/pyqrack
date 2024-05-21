@@ -2351,6 +2351,8 @@ class QrackSimulator:
         Returns:
             Expectation value
         """
+        if (len(q) << 1) != len(c):
+            raise RuntimeError("factorized_expectation argument lengths do not match.")
         m = max([(x.bit_length() + 63) // 64 for x in c])
         result = Qrack.qrack_lib.FactorizedExpectation(
             self.sid, len(q), self._ulonglong_byref(q), m, self._to_ulonglong(m, c)
@@ -2377,9 +2379,36 @@ class QrackSimulator:
         Returns:
             Expectation value
         """
+        if (len(q) << 1) != len(c):
+            raise RuntimeError("factorized_expectation_rdm argument lengths do not match.")
         m = max([(x.bit_length() + 63) // 64 for x in c])
         result = Qrack.qrack_lib.FactorizedExpectationRdm(
             self.sid, len(q), self._ulonglong_byref(q), m, self._to_ulonglong(m, c), r
+        )
+        self._throw_if_error()
+        return result
+
+    def pauli_expectation(self, q, b):
+        """Pauli tensor product expectation value
+
+        Get the Pauli tensor product expectation value,
+        where each entry in "b" is a Pauli observable for
+        corresponding "q", as the product for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            b: qubit Pauli bases
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Expectation value
+        """
+        if len(q) != len(b):
+            raise RuntimeError("pauli_expectation argument lengths do not match.")
+        result = Qrack.qrack_lib.PauliExpectation(
+            self.sid, len(q), self._ulonglong_byref(q), self._ulonglong_byref(b)
         )
         self._throw_if_error()
         return result
@@ -2401,6 +2430,8 @@ class QrackSimulator:
         Returns:
             Expectation value
         """
+        if (len(q) << 1) != len(c):
+            raise RuntimeError("factorized_expectation_rdm argument lengths do not match.")
         result = Qrack.qrack_lib.FactorizedExpectationFp(
             self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c)
         )
@@ -2426,6 +2457,8 @@ class QrackSimulator:
         Returns:
             Expectation value
         """
+        if (len(q) << 1) != len(c):
+            raise RuntimeError("factorized_expectation_fp_rdm argument lengths do not match.")
         result = Qrack.qrack_lib.FactorizedExpectationFpRdm(
             self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c), r
         )

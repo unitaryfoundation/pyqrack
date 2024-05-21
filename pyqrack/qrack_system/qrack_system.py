@@ -195,6 +195,14 @@ class QrackSystem:
             c_bool
         ]
 
+        self.qrack_lib.PauliExpectation.restype = c_double
+        self.qrack_lib.PauliExpectation.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong),
+            POINTER(c_ulonglong)
+        ]
+
         if self.fppow == 5:
             self.qrack_lib.FactorizedExpectationFp.restype = c_double
             self.qrack_lib.FactorizedExpectationFp.argtypes = [
