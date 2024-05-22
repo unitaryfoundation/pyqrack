@@ -225,16 +225,16 @@ class QrackSystem:
                 POINTER(c_ulonglong),
                 POINTER(c_float)
             ]
-            self.qrack_lib.UnitaryExpectationExpVal.restype = c_double
-            self.qrack_lib.UnitaryExpectationExpVal.argtypes = [
+            self.qrack_lib.UnitaryExpectationEigenVal.restype = c_double
+            self.qrack_lib.UnitaryExpectationEigenVal.argtypes = [
                 c_ulonglong,
                 c_ulonglong,
                 POINTER(c_ulonglong),
                 POINTER(c_float),
                 POINTER(c_float)
             ]
-            self.qrack_lib.MatrixExpectationExpVal.restype = c_double
-            self.qrack_lib.MatrixExpectationExpVal.argtypes = [
+            self.qrack_lib.MatrixExpectationEigenVal.restype = c_double
+            self.qrack_lib.MatrixExpectationEigenVal.argtypes = [
                 c_ulonglong,
                 c_ulonglong,
                 POINTER(c_ulonglong),
@@ -271,16 +271,16 @@ class QrackSystem:
                 POINTER(c_ulonglong),
                 POINTER(c_double)
             ]
-            self.qrack_lib.UnitaryExpectationExpVal.restype = c_double
-            self.qrack_lib.UnitaryExpectationExpVal.argtypes = [
+            self.qrack_lib.UnitaryExpectationEigenVal.restype = c_double
+            self.qrack_lib.UnitaryExpectationEigenVal.argtypes = [
                 c_ulonglong,
                 c_ulonglong,
                 POINTER(c_ulonglong),
                 POINTER(c_double),
                 POINTER(c_double)
             ]
-            self.qrack_lib.MatrixExpectationExpVal.restype = c_double
-            self.qrack_lib.MatrixExpectationExpVal.argtypes = [
+            self.qrack_lib.MatrixExpectationEigenVal.restype = c_double
+            self.qrack_lib.MatrixExpectationEigenVal.argtypes = [
                 c_ulonglong,
                 c_ulonglong,
                 POINTER(c_ulonglong),
