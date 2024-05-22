@@ -2184,25 +2184,6 @@ class QrackSimulator:
         self._throw_if_error()
         return list(probs)
 
-    def variance(self, q):
-        """Variance of probabilities of all subset permutations
-
-        Get the overall variance of probabilities of all
-        permutations of the subset.
-
-        Args:
-            q: list of qubit ids
-
-        Raises:
-            RuntimeError: QrackSimulator raised an exception.
-
-        Returns:
-            float variance
-        """
-        result = Qrack.qrack_lib.Variance(self.sid, len(q), self._ulonglong_byref(q))
-        self._throw_if_error()
-        return result
-
     def prob(self, q):
         """Probability of `|1>`
 
@@ -2565,6 +2546,279 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
+    def variance(self, q):
+        """Variance of probabilities of all subset permutations
+
+        Get the overall variance of probabilities of all
+        permutations of the subset.
+
+        Args:
+            q: list of qubit ids
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            float variance
+        """
+        result = Qrack.qrack_lib.Variance(self.sid, len(q), self._ulonglong_byref(q))
+        self._throw_if_error()
+        return result
+
+    def variance_rdm(self, q, r = True):
+        """Permutation variance, (tracing out the reduced
+        density matrix without stabilizer ancillary qubits)
+
+        Get the permutation variance, based upon the order of
+        input qubits.
+
+        Args:
+            q: qubits, from low to high
+            r: round Rz gates down from T^(1/2)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        result = Qrack.qrack_lib.VarianceRdm(
+            self.sid, len(q), self._ulonglong_byref(q), r
+        )
+        self._throw_if_error()
+        return result
+
+    def factorized_variance(self, q, c):
+        """Factorized variance
+
+        Get the factorized variance, where each entry
+        in "c" is an variance for corresponding "q"
+        being false, then true, repeated for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            c: qubit falsey/truthy values, from low to high
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if (len(q) << 1) != len(c):
+            raise RuntimeError("factorized_variance argument lengths do not match.")
+        m = max([(x.bit_length() + 63) // 64 for x in c])
+        result = Qrack.qrack_lib.FactorizedVariance(
+            self.sid, len(q), self._ulonglong_byref(q), m, self._to_ulonglong(m, c)
+        )
+        self._throw_if_error()
+        return result
+
+    def factorized_variance_rdm(self, q, c, r = True):
+        """Factorized variance, (tracing out the reduced
+        density matrix without stabilizer ancillary qubits)
+
+        Get the factorized variance, where each entry
+        in "c" is an variance for corresponding "q"
+        being false, then true, repeated for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            c: qubit falsey/truthy values, from low to high
+            r: round Rz gates down from T^(1/2)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if (len(q) << 1) != len(c):
+            raise RuntimeError("factorized_variance_rdm argument lengths do not match.")
+        m = max([(x.bit_length() + 63) // 64 for x in c])
+        result = Qrack.qrack_lib.FactorizedVarianceRdm(
+            self.sid, len(q), self._ulonglong_byref(q), m, self._to_ulonglong(m, c), r
+        )
+        self._throw_if_error()
+        return result
+
+    def factorized_variance_fp(self, q, c):
+        """Factorized variance (floating-point)
+
+        Get the factorized variance, where each entry
+        in "c" is an variance for corresponding "q"
+        being false, then true, repeated for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            c: qubit falsey/truthy values, from low to high
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if (len(q) << 1) != len(c):
+            raise RuntimeError("factorized_variance_rdm argument lengths do not match.")
+        result = Qrack.qrack_lib.FactorizedVarianceFp(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c)
+        )
+        self._throw_if_error()
+        return result
+
+    def factorized_variance_fp_rdm(self, q, c, r = True):
+        """Factorized variance, (tracing out the reduced
+        density matrix without stabilizer ancillary qubits)
+
+        Get the factorized variance, where each entry
+        in "c" is an variance for corresponding "q"
+        being false, then true, repeated for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            c: qubit falsey/truthy values, from low to high
+            r: round Rz gates down from T^(1/2)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if (len(q) << 1) != len(c):
+            raise RuntimeError("factorized_variance_fp_rdm argument lengths do not match.")
+        result = Qrack.qrack_lib.FactorizedVarianceFpRdm(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c), r
+        )
+        self._throw_if_error()
+        return result
+
+    def unitary_variance(self, q, b):
+        """3-parameter unitary tensor product variance
+
+        Get the single-qubit (3-parameter) operator
+        variance for the array of qubits and bases.
+
+        Args:
+            q: qubits, from low to high
+            b: 3-parameter, single-qubit, unitary bases (flat over wires)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if (3 * len(q)) != len(b):
+            raise RuntimeError("unitary_variance argument lengths do not match.")
+        result = Qrack.qrack_lib.UnitaryVariance(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b)
+        )
+        self._throw_if_error()
+        return result
+
+    def matrix_variance(self, q, b):
+        """Single-qubit operator tensor product variance
+
+        Get the single-qubit (3-parameter) operator
+        variance for the array of qubits and bases.
+
+        Args:
+            q: qubits, from low to high
+            b: single-qubit (2x2) operator unitary bases (flat over wires)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if (len(q) << 2) != len(b):
+            raise RuntimeError("matrix_variance argument lengths do not match.")
+        result = Qrack.qrack_lib.MatrixVariance(
+            self.sid, len(q), self._ulonglong_byref(q), self._complex_byref(b)
+        )
+        self._throw_if_error()
+        return result
+
+    def unitary_variance_eigenval(self, q, b, e):
+        """3-parameter unitary tensor product variance
+
+        Get the single-qubit (3-parameter) operator
+        variance for the array of qubits and bases.
+
+        Args:
+            q: qubits, from low to high
+            b: 3-parameter, single-qubit, unitary bases (flat over wires)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if (3 * len(q)) != len(b):
+            raise RuntimeError("unitary_variance_eigenval qubit and basis argument lengths do not match.")
+        if (len(q) << 1) != len(e):
+            raise RuntimeError("unitary_variance_eigenval qubit and eigenvalue argument lengths do not match.")
+        result = Qrack.qrack_lib.UnitaryVarianceEigenVal(
+            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b), self._real1_byref(e)
+        )
+        self._throw_if_error()
+        return result
+
+    def matrix_variance_eigenval(self, q, b, e):
+        """Single-qubit operator tensor product variance
+
+        Get the single-qubit (3-parameter) operator
+        variance for the array of qubits and bases.
+
+        Args:
+            q: qubits, from low to high
+            b: single-qubit (2x2) operator unitary bases (flat over wires)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if (len(q) << 2) != len(b):
+            raise RuntimeError("matrix_variance_eigenval qubit and basis argument lengths do not match.")
+        if (len(q) << 1) != len(e):
+            raise RuntimeError("matrix_variance_eigenval qubit and eigenvalue argument lengths do not match.")
+        result = Qrack.qrack_lib.MatrixVarianceEigenVal(
+            self.sid, len(q), self._ulonglong_byref(q), self._complex_byref(b), self._real1_byref(e)
+        )
+        self._throw_if_error()
+        return result
+
+    def pauli_variance(self, q, b):
+        """Pauli tensor product variance
+
+        Get the Pauli tensor product variance,
+        where each entry in "b" is a Pauli observable for
+        corresponding "q", as the product for each in "q".
+
+        Args:
+            q: qubits, from low to high
+            b: qubit Pauli bases
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            variance
+        """
+        if len(q) != len(b):
+            raise RuntimeError("pauli_variance argument lengths do not match.")
+        result = Qrack.qrack_lib.PauliVariance(
+            self.sid, len(q), self._ulonglong_byref(q), self._ulonglong_byref(b)
+        )
+        self._throw_if_error()
+        return result
+
     def joint_ensemble_probability(self, b, q):
         """Ensemble probability
 
@@ -2579,7 +2833,7 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
 
         Returns:
-            Expectation value
+            Variance
         """
         if len(b) != len(q):
             raise RuntimeError("Lengths of list parameters are mismatched.")
