@@ -2480,10 +2480,10 @@ class QrackSimulator:
         Returns:
             Expectation value
         """
-        if (len(q) << 3) != len(b):
+        if (len(q) << 2) != len(b):
             raise RuntimeError("matrix_expectation argument lengths do not match.")
         result = Qrack.qrack_lib.MatrixExpectation(
-            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b)
+            self.sid, len(q), self._ulonglong_byref(q), self._complex_byref(b)
         )
         self._throw_if_error()
         return result
@@ -2530,12 +2530,12 @@ class QrackSimulator:
         Returns:
             Expectation value
         """
-        if (len(q) << 3) != len(b):
+        if (len(q) << 2) != len(b):
             raise RuntimeError("matrix_expectation_eigenval qubit and basis argument lengths do not match.")
         if (len(q) << 1) != len(e):
             raise RuntimeError("matrix_expectation_eigenval qubit and eigenvalue argument lengths do not match.")
         result = Qrack.qrack_lib.MatrixExpectationEigenVal(
-            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b), self._real1_byref(e)
+            self.sid, len(q), self._ulonglong_byref(q), self._complex_byref(b), self._real1_byref(e)
         )
         self._throw_if_error()
         return result
