@@ -22,7 +22,7 @@ jobs:
           - linux_armv7l
           - manylinux2014_x86_64
           - macosx_10_4_universal2
-          - win_amd64
+#          - win_amd64
     steps:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
@@ -41,7 +41,7 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install wheel setuptools build
+          python -m pip install wheel setuptools
 
       - name: Prepare Build Environment (Linux)
         if: runner.os == 'Linux'
@@ -98,10 +98,10 @@ jobs:
 
       - name: Build Wheel
         run: |
-          python -m build
+          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pyqrack-${{ matrix.platform }}.whl
+          name: pyqrack-${{ matrix.platform }}
           path: dist/
