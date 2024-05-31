@@ -74,9 +74,11 @@ jobs:
       - name: Build Qrack Linux ARM64
         if: matrix.platform == 'linux_aarch64' || matrix.platform == 'linux_armv7l'
         run: |
+          pwd
           cd qrack
           mkdir build
           cd build
+          pwd
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
 
       - name: Build Qrack MacOS
@@ -98,6 +100,7 @@ jobs:
 
       - name: Build Wheel
         run: |
+          pwd
           mkdir pyqrack/qrack_system/qrack_lib
           cp $PYQRACK_SHARED_LIB_PATH pyqrack/qrack_system/qrack_lib/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
