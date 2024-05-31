@@ -5,6 +5,9 @@ on:
     branches:
       - main  # Trigger on pushes to the main branch (adjust if needed)
 
+  workflow_dispatch: # Allow manual triggering of the workflow
+
+
 jobs:
   build_wheels:
     runs-on: ubuntu-latest  # Use a Linux runner
@@ -19,29 +22,76 @@ jobs:
           - macosx_10_4_universal2
           - win_amd64
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v3
+      - name: Checkout PyQrack
+        uses: actions/checkout@v4
+
+      - name: Checkout Qrack
+        uses: actions/checkout@v4
+        with:
+          repository: 'unitaryfund/qrack'
+          path: qrack
 
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
-          python-version: '3.10'
+          python-version: '3.12'
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
           python -m pip install wheel
 
-      - name: Prepare Build Environment (Linux/macOS)
-        if: runner.os != 'Windows'
+      - name: Prepare Build Environment (Linux)
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential
+          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers
+
+      - name: Install Homebrew (MacOS)
+        if: runner.os == 'macOS'
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Prepare Build Environment (MacOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install cmake opencl-clhpp-headers
 
       - name: Prepare Build Environment (Windows)
         if: runner.os == 'Windows'
         run: |
-          choco install visualstudio2022-workload-nativedesktop
+          choco install visualstudio2022-workload-nativedesktop xxd
+
+      - name: Build Qrack Linux x86-64
+        if: matrix.platform == 'manylinux_2_39_x86_64' || matrix.platform == 'manylinux_2_35_x86_64' || matrix.platform == 'manylinux2014_x86_64'
+        run: |
+          cd qrack
+          mkdir build
+          cd build
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 -DUINTPOW=5 ..
+
+      - name: Build Qrack Linux ARM64
+        if: matrix.platform == 'linux_aarch64' || matrix.platform == 'linux_armv7l'
+        run: |
+          cd qrack
+          mkdir build
+          cd build
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
+
+      - name: Build Qrack MacOS
+        if: matrix.platform == 'macosx_10_4_universal2'
+        run: |
+          cd qrack
+          mkdir build
+          cd build
+          cmake -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
+
+      - name: Build Qrack Windows
+        if: matrix.platform == 'win_amd64'
+        run: |
+          cd qrack
+          mkdir _build
+          cd _build
+          cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DXXD_BIN="C:/Program Files (x86)/Vim/vim82/xxd.exe" -DFPPOW=6 ..
 
       - name: Build Wheel
         run: |
