@@ -70,6 +70,7 @@ jobs:
           mkdir build
           cd build
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 -DUINTPOW=5 ..
+          make all
 
       - name: Build Qrack Linux ARM64
         if: matrix.platform == 'linux_aarch64' || matrix.platform == 'linux_armv7l'
@@ -80,9 +81,7 @@ jobs:
           cd build
           pwd
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
-          ls
-          cd ..
-          ls
+          make all
 
       - name: Build Qrack MacOS
         if: matrix.platform == 'macosx_10_4_universal2'
@@ -91,6 +90,7 @@ jobs:
           mkdir build
           cd build
           cmake -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
+          make all
 
       - name: Build Qrack Windows
         if: matrix.platform == 'win_amd64'
@@ -99,6 +99,7 @@ jobs:
           mkdir _build
           cd _build
           cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DXXD_BIN="C:/Program Files (x86)/Vim/vim82/xxd.exe" -DFPPOW=6 ..
+          make all
           echo "PYQRACK_SHARED_LIB_PATH=/home/runner/pyqrack/pyqrack/qrack/build/libqrack_pinvoke.dll" >> $GITHUB_ENV
 
       - name: Build Wheel
