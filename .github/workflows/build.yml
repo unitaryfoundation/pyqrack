@@ -71,6 +71,7 @@ jobs:
           cd build
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 -DUINTPOW=5 ..
           make all
+          ls -l 
 
       - name: Build Qrack Linux ARM64
         if: matrix.platform == 'linux_aarch64' || matrix.platform == 'linux_armv7l'
