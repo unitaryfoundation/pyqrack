@@ -34,7 +34,7 @@ jobs:
           path: qrack
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -61,7 +61,7 @@ jobs:
       - name: Prepare Build Environment (Windows)
         if: runner.os == 'Windows'
         run: |
-          choco install visualstudio2022-workload-nativedesktop xxd
+          choco install cmake visualstudio2022-workload-nativedesktop xxd
 
       - name: Build Qrack Linux x86-64
         if: matrix.platform == 'manylinux_2_39_x86_64' || matrix.platform == 'manylinux_2_35_x86_64' || matrix.platform == 'manylinux2014_x86_64'
@@ -90,6 +90,7 @@ jobs:
       - name: Build Qrack Windows
         if: matrix.platform == 'win_amd64'
         run: |
+          python -m pip install dlib==19.4
           cd qrack
           mkdir _build
           cd _build
