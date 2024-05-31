@@ -12,7 +12,7 @@ jobs:
   build_wheels:
     runs-on: ubuntu-latest  # Use a Linux runner
     env:
-      PYQRACK_SHARED_LIB_PATH: "/home/runner/pyqrack/pyqrack/qrack/build/libqrack_pinvoke.so"
+      PYQRACK_SHARED_LIB_PATH: "/home/runner/pyqrack/pyqrack/qrack/build/libqrack_pinvoke.so.9.7.0"
     strategy:
       matrix:
         platform:
@@ -71,9 +71,7 @@ jobs:
           cd build
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 -DUINTPOW=5 ..
           make all
-          mv libqrack* libqrack_pinvoke.so
           pwd
-          ls
 
       - name: Build Qrack Linux ARM64
         if: matrix.platform == 'linux_aarch64' || matrix.platform == 'linux_armv7l'
@@ -85,7 +83,6 @@ jobs:
           pwd
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
           make all
-          mv libqrack* libqrack_pinvoke.so
 
       - name: Build Qrack MacOS
         if: matrix.platform == 'macosx_10_4_universal2'
@@ -95,7 +92,6 @@ jobs:
           cd build
           cmake -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
           make all
-          mv libqrack* libqrack_pinvoke.so
 
       - name: Build Qrack Windows
         if: matrix.platform == 'win_amd64'
