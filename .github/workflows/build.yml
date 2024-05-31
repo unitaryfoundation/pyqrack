@@ -98,6 +98,8 @@ jobs:
 
       - name: Build Wheel
         run: |
+          cd ..
+          pwd
           mkdir pyqrack/qrack_system/qrack_lib
           cp $PYQRACK_SHARED_LIB_PATH pyqrack/qrack_system/qrack_lib/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
