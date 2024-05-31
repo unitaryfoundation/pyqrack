@@ -34,7 +34,7 @@ jobs:
           path: qrack
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
@@ -90,6 +90,7 @@ jobs:
       - name: Build Qrack Windows
         if: matrix.platform == 'win_amd64'
         run: |
+          python -m pip install dlib==19.4
           cd qrack
           mkdir _build
           cd _build
