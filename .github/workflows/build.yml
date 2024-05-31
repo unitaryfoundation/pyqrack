@@ -11,6 +11,8 @@ on:
 jobs:
   build_wheels:
     runs-on: ubuntu-latest  # Use a Linux runner
+    env:
+      PYQRACK_SHARED_LIB_PATH: "qrack/build/libqrack_pinvoke.so"
     strategy:
       matrix:
         platform:
@@ -92,6 +94,7 @@ jobs:
           mkdir _build
           cd _build
           cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DXXD_BIN="C:/Program Files (x86)/Vim/vim82/xxd.exe" -DFPPOW=6 ..
+          echo "PYQRACK_SHARED_LIB_PATH=qrack/build/libqrack_pinvoke.dll" >> $GITHUB_ENV
 
       - name: Build Wheel
         run: |
