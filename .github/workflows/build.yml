@@ -22,7 +22,7 @@ jobs:
           - linux_armv7l
           - manylinux2014_x86_64
           - macosx_10_4_universal2
-#          - win_amd64
+          - win_amd64
     steps:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
