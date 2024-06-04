@@ -100,9 +100,6 @@ jobs:
           make all
           echo "PYQRACK_SHARED_LIB_PATH=/home/runner/work/pyqrack/pyqrack/qrack/build/libqrack_pinvoke.dll" >> $GITHUB_ENV
 
-      - name: Build wheels
-        uses: pypa/cibuildwheel@v2.18.1
-
       - name: Build Wheel
         run: |
           mkdir pyqrack/qrack_system/qrack_lib
