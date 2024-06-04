@@ -71,7 +71,6 @@ jobs:
           cd build
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 -DUINTPOW=5 ..
           make all
-          pwd
 
       - name: Build Qrack Linux ARM64
         if: matrix.platform == 'linux_aarch64' || matrix.platform == 'linux_armv7l'
@@ -103,12 +102,13 @@ jobs:
           make all
           echo "PYQRACK_SHARED_LIB_PATH=/home/runner/work/pyqrack/pyqrack/qrack/build/libqrack_pinvoke.dll" >> $GITHUB_ENV
 
-      - name: Build Wheel
+      - name: Move Shared Library
         run: |
-          pwd
           mkdir pyqrack/qrack_system/qrack_lib
           cp $PYQRACK_SHARED_LIB_PATH pyqrack/qrack_system/qrack_lib/
-          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.18.1
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
