@@ -16,13 +16,18 @@
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
 import os
+import pathlib
 from ctypes import *
 from sys import platform as _platform
 
 
 class QrackSystem:
     def __init__(self):
-        shared_lib_path = "/usr/local/lib/qrack/libqrack_pinvoke.so"
+        path = pathlib.Path(__file__).absolute().parent
+        if _platform == "win32":
+            shared_lib_path = str(path / "qrack_lib/libqrack_pinvoke.dll")
+        else:
+            shared_lib_path = str(path / "qrack_lib/libqrack_pinvoke.so")
         if os.environ.get('PYQRACK_SHARED_LIB_PATH') != None:
             shared_lib_path = os.environ.get('PYQRACK_SHARED_LIB_PATH')
         elif _platform == "darwin":
