@@ -1,1 +1,2 @@
 include pyqrack/qrack_system/qrack_lib/libqrack_pinvoke.so
+include pyqrack/qrack_system/qrack_lib/libqrack_pinvoke.dll
