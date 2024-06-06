@@ -22,7 +22,6 @@ jobs:
           - linux_armv7l
           - manylinux2014_x86_64
           - macosx_10_4_universal2
-          - win_amd64
     steps:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
@@ -58,11 +57,6 @@ jobs:
         run: |
           brew install cmake opencl-clhpp-headers
 
-      - name: Prepare Build Environment (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install cmake visualstudio2022-workload-nativedesktop xxd
-
       - name: Build Qrack Linux x86-64
         if: matrix.platform == 'manylinux_2_39_x86_64' || matrix.platform == 'manylinux_2_35_x86_64' || matrix.platform == 'manylinux2014_x86_64'
         run: |
@@ -89,16 +83,6 @@ jobs:
           cd build
           cmake -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
           make all
-
-      - name: Build Qrack Windows
-        if: matrix.platform == 'win_amd64'
-        run: |
-          cd qrack
-          mkdir _build
-          cd _build
-          cmake -DCMAKE_GENERATOR_PLATFORM=x64 -DXXD_BIN="C:/Program Files (x86)/Vim/vim82/xxd.exe" -DFPPOW=6 ..
-          make all
-          echo "PYQRACK_SHARED_LIB_PATH=/home/runner/work/pyqrack/pyqrack/qrack/build/libqrack_pinvoke.dll" >> $GITHUB_ENV
 
       - name: Build Wheel
         run: |
