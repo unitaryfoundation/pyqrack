@@ -11,10 +11,9 @@ README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.m
 with open(README_PATH) as readme_file:
     README = readme_file.read()
 
-# These are technically modules included in the language standard by PEP,
-# but some systems opt not to implement those PEPs.
+# This is technically a module included in the language standard by PEP,
+# but some systems might opt not to implement any particular PEP.
 requirements = [
-    "packaging",
     "pathlib"
 ]
 
