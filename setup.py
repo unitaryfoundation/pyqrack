@@ -4,14 +4,19 @@ import os
 from setuptools import setup
 
 
-requirements = []
-
 VERSION = "1.29.0"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
 with open(README_PATH) as readme_file:
     README = readme_file.read()
+
+# These are technically modules included in the language standard by PEP,
+# but some systems opt not to implement those PEPs.
+requirements = [
+    "packaging",
+    "pathlib"
+]
 
 setup(
     name='pyqrack',
