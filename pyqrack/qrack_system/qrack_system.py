@@ -440,6 +440,14 @@ class QrackSystem:
             POINTER(c_ulonglong)
         ]
 
+        self.qrack_lib.PhaseRootN.restype = None
+        self.qrack_lib.PhaseRootN.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong)
+        ]
+
         self.qrack_lib.ResetAll.restype = None
         self.qrack_lib.ResetAll.argtypes = [c_ulonglong]
 

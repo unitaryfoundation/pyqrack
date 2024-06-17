@@ -2865,6 +2865,27 @@ class QrackSimulator:
         )
         self._throw_if_error()
 
+    def phase_root_n(self, n, q):
+        """Phase to root n
+
+        Applies `-2 * math.pi / (2**N)` phase rotation to each qubit.
+
+        Args:
+            n: Phase root
+            q: specified qubits
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot phase_root_n()! (Turn off just this option, in the constructor.)
+        """
+        if self.is_tensor_network:
+            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot phase_root_n()! (Turn off just this option, in the constructor.)")
+
+        Qrack.qrack_lib.PhaseRootN(
+            self.sid, n, len(q), self._ulonglong_byref(q)
+        )
+        self._throw_if_error()
+
     def try_separate_1qb(self, qi1):
         """Manual seperation
 
