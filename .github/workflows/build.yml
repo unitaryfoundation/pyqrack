@@ -63,7 +63,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 -DUINTPOW=5 ..
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 ..
           make all
 
       - name: Build Qrack Linux ARM64
@@ -72,7 +72,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DQBCAPPOW=12  -DCPP_STD=14 ..
           make all
 
       - name: Build Qrack MacOS
@@ -81,7 +81,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DQBCAPPOW=12 -DUINTPOW=5 -DCPP_STD=14 ..
+          cmake -DQBCAPPOW=12 -DCPP_STD=14 ..
           make all
 
       - name: Build Wheel
