@@ -62,7 +62,7 @@ jobs:
           mkdir build
           cd build
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 ..
-          make qrack_pinvoke
+          make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Qrack Linux ARM64
         if: matrix.platform == 'linux_aarch64' || matrix.platform == 'linux_armv7l'
@@ -71,7 +71,7 @@ jobs:
           mkdir build
           cd build
           cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DQBCAPPOW=12  -DCPP_STD=14 ..
-          make qrack_pinvoke
+          make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Qrack MacOS
         if: matrix.platform == 'macosx_10_4_universal2'
@@ -80,7 +80,7 @@ jobs:
           mkdir build
           cd build
           cmake -DQBCAPPOW=12 -DCPP_STD=14 ..
-          make qrack_pinvoke
+          make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
         run: |
