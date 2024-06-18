@@ -9,16 +9,155 @@ on:
 
 
 jobs:
-  build_linux:
-    runs-on: ubuntu-latest  # Use a Linux runner
+  build_noble:
+    runs-on: ubuntu-24.04  # Use a Noble Numbat runner
     strategy:
       matrix:
         platform:
           - manylinux_2_39_x86_64
+    steps:
+      - name: Checkout PyQrack
+        uses: actions/checkout@v4
+
+      - name: Checkout Qrack
+        uses: actions/checkout@v4
+        with:
+          repository: 'unitaryfund/qrack'
+          path: qrack
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prepare Build Environment (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers
+
+      - name: Build Qrack Linux x86-64
+        run: |
+          cd qrack
+          mkdir build
+          cd build
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 ..
+          make qrack_pinvoke qrack_cl_precompile
+
+      - name: Build Wheel
+        run: |
+          mkdir pyqrack/qrack_system/qrack_lib
+          mkdir pyqrack/qrack_system/qrack_cl_precompile
+          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
+          cp qrack/build/qrack_cl_precompile pyqrack/qrack_system/qrack_cl_precompile/
+          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyqrack-${{ matrix.platform }}
+          path: dist/
+
+  build_jammy:
+    runs-on: ubuntu-22.04  # Use a Jammy Jellyfish runner
+    strategy:
+      matrix:
+        platform:
           - manylinux_2_35_x86_64
-          - linux_aarch64
-          - linux_armv7l
+    steps:
+      - name: Checkout PyQrack
+        uses: actions/checkout@v4
+
+      - name: Checkout Qrack
+        uses: actions/checkout@v4
+        with:
+          repository: 'unitaryfund/qrack'
+          path: qrack
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prepare Build Environment (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers
+
+      - name: Build Qrack Linux x86-64
+        run: |
+          cd qrack
+          mkdir build
+          cd build
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 ..
+          make qrack_pinvoke qrack_cl_precompile
+
+      - name: Build Wheel
+        run: |
+          mkdir pyqrack/qrack_system/qrack_lib
+          mkdir pyqrack/qrack_system/qrack_cl_precompile
+          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
+          cp qrack/build/qrack_cl_precompile pyqrack/qrack_system/qrack_cl_precompile/
+          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyqrack-${{ matrix.platform }}
+          path: dist/
+
+  build_focal:
+    runs-on: ubuntu-20.04  # Use a Focal Fossa runner
+    strategy:
+      matrix:
+        platform:
           - manylinux2014_x86_64
+    steps:
+      - name: Checkout PyQrack
+        uses: actions/checkout@v4
+
+      - name: Checkout Qrack
+        uses: actions/checkout@v4
+        with:
+          repository: 'unitaryfund/qrack'
+          path: qrack
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Prepare Build Environment (Linux)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers
+
+      - name: Build Qrack Linux x86-64
+        run: |
+          cd qrack
+          mkdir build
+          cd build
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 ..
+          make qrack_pinvoke qrack_cl_precompile
+
+      - name: Build Wheel
+        run: |
+          mkdir pyqrack/qrack_system/qrack_lib
+          mkdir pyqrack/qrack_system/qrack_cl_precompile
+          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
+          cp qrack/build/qrack_cl_precompile pyqrack/qrack_system/qrack_cl_precompile/
+          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyqrack-${{ matrix.platform }}
+          path: dist/
+
+  build_mac:
+    runs-on: macos-latest  # Use a Mac OS runner
+    strategy:
+      matrix:
+        platform:
           - macosx_10_4_universal2
     steps:
       - name: Checkout PyQrack
@@ -35,51 +174,19 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install wheel setuptools
-
-      - name: Prepare Build Environment (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers
-
       - name: Install Homebrew (MacOS)
-        if: runner.os == 'macOS'
         uses: Homebrew/actions/setup-homebrew@master
 
       - name: Prepare Build Environment (MacOS)
-        if: runner.os == 'macOS'
         run: |
           brew install cmake opencl-clhpp-headers
 
-      - name: Build Qrack Linux x86-64
-        if: matrix.platform == 'manylinux_2_39_x86_64' || matrix.platform == 'manylinux_2_35_x86_64' || matrix.platform == 'manylinux2014_x86_64'
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=12 -DCPP_STD=14 ..
-          make qrack_pinvoke qrack_cl_precompile
-
-      - name: Build Qrack Linux ARM64
-        if: matrix.platform == 'linux_aarch64' || matrix.platform == 'linux_armv7l'
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DQBCAPPOW=12  -DCPP_STD=14 ..
-          make qrack_pinvoke qrack_cl_precompile
-
       - name: Build Qrack MacOS
-        if: matrix.platform == 'macosx_10_4_universal2'
         run: |
           cd qrack
           mkdir build
           cd build
-          cmake -DQBCAPPOW=12 -DCPP_STD=14 ..
+          cmake -DCMAKE_CXX_FLAGS=-I\ /opt/homebrew/opt/opencl-clhpp-headers/include -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_RDRAND=OFF -DQBCAPPOW=12 -DCPP_STD=14 ..
           make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
@@ -129,7 +236,6 @@ jobs:
           vcpkg install opencl
 
       - name: Build Qrack Windows x86-64
-        if: matrix.platform == 'win-amd64'
         run: |
           cd qrack
           mkdir build
