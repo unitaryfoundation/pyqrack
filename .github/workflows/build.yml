@@ -275,7 +275,7 @@ jobs:
           mkdir pyqrack/qrack_system/qrack_lib
           mkdir pyqrack/qrack_system/qrack_cl_precompile
           copy qrack/build/Release/qrack_pinvoke.dll pyqrack/qrack_system/qrack_lib/
-          copy qrack/build/Release/qrack_cl_precomple.exe pyqrack/qrack_system/qrack_cl_precompile/
+          copy qrack/build/Release/qrack_cl_precompile.exe pyqrack/qrack_system/qrack_cl_precompile/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
