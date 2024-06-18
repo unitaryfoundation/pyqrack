@@ -1,2 +1,2 @@
 include pyqrack/qrack_system/qrack_lib/*
-include pyqrack/qrack_system/qrack_cl_precopile/*
+include pyqrack/qrack_system/qrack_cl_precompile/*
