@@ -36,7 +36,24 @@ class QrackSystem:
         try:
             self.qrack_lib = CDLL(shared_lib_path)
         except Exception as e:
-            print(e)
+            try:
+                if _platform == "win32":
+                    shared_lib_path = "C:/Program Files/libqrack*/lib/qrack_pinvoke.lib"
+                elif _platform == "darwin":
+                    shared_lib_path = "/usr/local/lib/qrack/libqrack_pinvoke.dylib"
+                else:
+                    shared_lib_path = "/usr/local/lib/qrack/libqrack_pinvoke.so"
+                self.qrack_lib = CDLL(shared_lib_path)
+            except Exception as e:
+                try:
+                    if _platform == "win32":
+                        raise e
+                    elif _platform == "darwin":
+                        shared_lib_path = "/usr/lib/qrack/libqrack_pinvoke.dylib"
+                    else:
+                        shared_lib_path = "/usr/lib/qrack/libqrack_pinvoke.so"
+                except Exception as e:
+                    print(e)
 
         self.fppow = 5
         if "QRACK_FPPOW" in os.environ:
