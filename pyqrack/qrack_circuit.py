@@ -12,6 +12,7 @@ _IS_QISKIT_AVAILABLE = True
 try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.compiler.transpiler import transpile
+    from qiskit.circuit.library import UCGate
     import numpy as np
     import math
 except ImportError:
@@ -291,7 +292,7 @@ class QrackCircuit:
                 else:
                     gate_list.append(np.array([[1, 0],[0, 1]]))
 
-            circ.uc(gate_list, controls, target)
+            circ.append(UCGate(gate_list), controls + [target])
 
         return circ
 
