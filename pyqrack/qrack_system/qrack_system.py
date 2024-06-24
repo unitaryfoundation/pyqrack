@@ -29,7 +29,7 @@ class QrackSystem:
         elif _platform == "win32":
             shared_lib_path = str(path / "qrack_lib/qrack_pinvoke.dll")
         elif _platform == "darwin":
-            shared_lib_path = str(path / "qrack_lib/qrack_pinvoke.dylib")
+            shared_lib_path = str(path / "qrack_lib/libqrack_pinvoke.dylib")
         else:
             shared_lib_path = str(path / "qrack_lib/libqrack_pinvoke.so")
 
