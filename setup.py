@@ -4,18 +4,15 @@ import os
 from setuptools import setup
 
 
-VERSION = "1.29.6"
+VERSION = "1.29.8"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
 with open(README_PATH) as readme_file:
     README = readme_file.read()
 
-# This is technically a module included in the language standard by PEP,
-# but some systems might opt not to implement any particular PEP.
-requirements = [
-    "pathlib"
-]
+# Pure language standard!
+requirements = []
 
 setup(
     name='pyqrack',
@@ -36,12 +33,19 @@ setup(
         "Operating System :: MacOS",
         "Operating System :: POSIX :: Linux",
         "Programming Language :: C++",
+        "Programming Language :: Python :: 3.0",
+        "Programming Language :: Python :: 3.1",
+        "Programming Language :: Python :: 3.2",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
         "Programming Language :: Python :: 3.5",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.12",
         "Topic :: Scientific/Engineering",
     ],
     keywords="pyqrack qrack simulator quantum gpu",
