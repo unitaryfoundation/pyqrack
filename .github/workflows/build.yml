@@ -25,15 +25,18 @@ jobs:
           repository: 'unitaryfund/qrack'
           path: qrack
 
-      - name: Install Python Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install wheel setuptools python3
-
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers python3-venv
+
+      - name: Install Python Dependencies
+        run: |
+          mkdir venv
+          python -m venv venv
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install wheel setuptools python3
 
       - name: Build Qrack Linux x86-64
         run: |
@@ -45,8 +48,6 @@ jobs:
 
       - name: Build Wheel
         run: |
-          mkdir venv
-          python -m venv venv
           source venv/bin/activate
           mkdir pyqrack/qrack_system/qrack_lib
           mkdir pyqrack/qrack_system/qrack_cl_precompile
@@ -76,15 +77,18 @@ jobs:
           repository: 'unitaryfund/qrack'
           path: qrack
 
-      - name: Install Python Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install wheel setuptools python3
-
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers python3-venv
+
+      - name: Install Python Dependencies
+        run: |
+          mkdir venv
+          python -m venv venv
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install wheel setuptools python3
 
       - name: Build Qrack Linux x86-64
         run: |
@@ -96,8 +100,6 @@ jobs:
 
       - name: Build Wheel
         run: |
-          mkdir venv
-          python -m venv venv
           source venv/bin/activate
           mkdir pyqrack/qrack_system/qrack_lib
           mkdir pyqrack/qrack_system/qrack_cl_precompile
@@ -126,15 +128,19 @@ jobs:
         with:
           repository: 'unitaryfund/qrack'
           path: qrack
-      - name: Install Python Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install wheel setuptools python3
 
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
           sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers python3-venv
+
+      - name: Install Python Dependencies
+        run: |
+          mkdir venv
+          python -m venv venv
+          source venv/bin/activate
+          python -m pip install --upgrade pip
+          python -m pip install wheel setuptools python3
 
       - name: Build Qrack Linux x86-64
         run: |
@@ -146,8 +152,6 @@ jobs:
 
       - name: Build Wheel
         run: |
-          mkdir venv
-          python -m venv venv
           source venv/bin/activate
           mkdir pyqrack/qrack_system/qrack_lib
           mkdir pyqrack/qrack_system/qrack_cl_precompile
