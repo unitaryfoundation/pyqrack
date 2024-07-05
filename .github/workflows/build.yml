@@ -203,7 +203,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_RDRAND=OFF -DENABLE_OPENCL=OFF -DENABLE_FIXED_POINT=ON -DQBCAPPOW=12 -DCPP_STD=14 ..
+          cmake -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_RDRAND=OFF -DENABLE_OPENCL=OFF -DQBCAPPOW=12 -DCPP_STD=14 ..
           make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
