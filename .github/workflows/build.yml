@@ -118,7 +118,7 @@ jobs:
     strategy:
       matrix:
         platform:
-          - manylinux2014_x86_64
+          - manylinux_2_31_x86_64
     steps:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
