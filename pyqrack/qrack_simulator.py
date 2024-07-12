@@ -56,6 +56,7 @@ class QrackSimulator:
         isCpuGpuHybrid=True,
         isOpenCL=True,
         isHostPointer=False,
+        isNoisy=False,
         pyzxCircuit=None,
         qiskitCircuit=None,
     ):
@@ -89,10 +90,10 @@ class QrackSimulator:
                 isStabilizerHybrid,
                 isBinaryDecisionTree,
                 isPaged,
-                False,
+                isNoisy,
                 isCpuGpuHybrid,
                 isOpenCL,
-                isHostPointer,
+                isHostPointer
             )
 
         self._throw_if_error()
@@ -3051,6 +3052,21 @@ class QrackSimulator:
         Qrack.qrack_lib.SetTInjection(self.sid, iti)
         self._throw_if_error()
 
+    def set_noise_parameter(self, np):
+        """Set noise parameter option
+
+        If noisy simulation is on, then this set the depolarization
+        parameter per qubit per gate. (Default is 0.01.)
+
+        Args:
+            np: depolarizing noise parameter
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetNoiseParameter(self.sid, np)
+        self._throw_if_error()
+
     def out_to_file(self, filename):
         """Output state to file (stabilizer only!)
 
@@ -3062,7 +3078,7 @@ class QrackSimulator:
         Qrack.qrack_lib.qstabilizer_out_to_file(self.sid, filename.encode('utf-8'))
         self._throw_if_error()
 
-    def in_from_file(filename, is_binary_decision_tree = False, is_paged = True, is_cpu_gpu_hybrid = True, is_opencl = True, is_host_pointer = False):
+    def in_from_file(filename, is_binary_decision_tree = False, is_paged = True, is_cpu_gpu_hybrid = True, is_opencl = True, is_host_pointer = False, is_noisy = False):
         """Input state from file (stabilizer only!)
 
         Reads in a hybrid stabilizer state from file.
@@ -3083,7 +3099,8 @@ class QrackSimulator:
             isPaged=is_paged,
             isCpuGpuHybrid=is_cpu_gpu_hybrid,
             isOpenCL=is_opencl,
-            isHostPointer=is_host_pointer
+            isHostPointer=is_host_pointer,
+            is_noisy=is_noisy
         )
         Qrack.qrack_lib.qstabilizer_in_from_file(out.sid, filename.encode('utf-8'))
         out._throw_if_error()
