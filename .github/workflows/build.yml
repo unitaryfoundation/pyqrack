@@ -196,6 +196,7 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
+          brew upgrade
           brew install cmake
 
       - name: Build Qrack MacOS
@@ -251,6 +252,7 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
+          brew upgrade
           brew install cmake opencl-clhpp-headers
 
       - name: Build Qrack MacOS
@@ -258,8 +260,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          export CPPFLAGS="-I/usr/local/opt/opencl-clhpp-headers/include"
-          cmake -DQBCAPPOW=12 -DCPP_STD=14 -DENABLE_RDRAND=OFF ..
+          cmake -DQBCAPPOW=12 -DCPP_STD=14 -DENABLE_RDRAND=OFF -DCMAKE_CXX_FLAGS=-isystem\ /usr/local/opt/opencl-clhpp-headers/include ..
           make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
@@ -307,6 +308,7 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
+          brew upgrade
           brew install cmake opencl-clhpp-headers
 
       - name: Build Qrack MacOS
@@ -314,8 +316,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          export CPPFLAGS="-I/usr/local/opt/opencl-clhpp-headers/include"
-          cmake -DQBCAPPOW=12 -DCPP_STD=14 -DENABLE_RDRAND=OFF ..
+          cmake -DQBCAPPOW=12 -DCPP_STD=14 -DENABLE_RDRAND=OFF -DCMAKE_CXX_FLAGS=-isystem\ /usr/local/opt/opencl-clhpp-headers/include ..
           make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
