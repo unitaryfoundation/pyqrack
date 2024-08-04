@@ -55,7 +55,8 @@ class QrackSystem:
                 try:
                     self.qrack_lib = CDLL(shared_lib_path)
                 except Exception as e:
-                    print(e)
+                    print("IMPORTANT: Did you remember to install OpenCL, if your Qrack version was built with OpenCL?")
+                    raise e
 
         self.fppow = 5
         if "QRACK_FPPOW" in os.environ:
