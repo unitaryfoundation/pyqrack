@@ -258,7 +258,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DQBCAPPOW=12 -DCPP_STD=14 ..
+          cmake -DQBCAPPOW=12 -DCPP_STD=14 -DENABLE_RDRAND=OFF ..
           make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
@@ -313,7 +313,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DQBCAPPOW=12 -DCPP_STD=14 ..
+          cmake -DQBCAPPOW=12 -DCPP_STD=14 -DENABLE_RDRAND=OFF ..
           make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
