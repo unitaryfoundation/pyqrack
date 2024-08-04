@@ -251,14 +251,14 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
-          brew install cmake opencl-headers
+          brew install cmake opencl-clhpp-headers
 
       - name: Build Qrack MacOS
         run: |
           cd qrack
           mkdir build
           cd build
-          export CPPFLAGS="-I/usr/local/opt/opencl-headers/include"
+          export CPPFLAGS="-I/usr/local/opt/opencl-clhpp-headers/include"
           cmake -DQBCAPPOW=12 -DCPP_STD=14 -DENABLE_RDRAND=OFF ..
           make qrack_pinvoke qrack_cl_precompile
 
@@ -307,14 +307,14 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
-          brew install cmake opencl-headers
+          brew install cmake opencl-clhpp-headers
 
       - name: Build Qrack MacOS
         run: |
           cd qrack
           mkdir build
           cd build
-          export CPPFLAGS="-I/usr/local/opt/opencl-headers/include"
+          export CPPFLAGS="-I/usr/local/opt/opencl-clhpp-headers/include"
           cmake -DQBCAPPOW=12 -DCPP_STD=14 -DENABLE_RDRAND=OFF ..
           make qrack_pinvoke qrack_cl_precompile
 
