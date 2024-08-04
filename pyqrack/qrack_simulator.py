@@ -3100,7 +3100,7 @@ class QrackSimulator:
             isCpuGpuHybrid=is_cpu_gpu_hybrid,
             isOpenCL=is_opencl,
             isHostPointer=is_host_pointer,
-            is_noisy=is_noisy
+            isNoisy=is_noisy
         )
         Qrack.qrack_lib.qstabilizer_in_from_file(out.sid, filename.encode('utf-8'))
         out._throw_if_error()
