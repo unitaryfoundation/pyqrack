@@ -1,3 +1,9 @@
+pyqrack (1.30.6) bionic; urgency=medium
+
+  * Depolarizing noise layer and Clifford+RZ env. var. debugging (Bionic 4/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sun, 18 Aug 2024 09:26:52 -0400
+
 pyqrack (1.30.5) focal; urgency=medium
 
   * Depolarizing noise layer and Clifford+RZ env. var. debugging (Focal 3/4)
