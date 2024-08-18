@@ -1,3 +1,9 @@
+pyqrack (1.30.5) focal; urgency=medium
+
+  * Depolarizing noise layer and Clifford+RZ env. var. debugging (Focal 3/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sun, 18 Aug 2024 09:24:21 -0400
+
 pyqrack (1.30.4) jammy; urgency=medium
 
   * Depolarizing noise layer and Clifford+RZ env. var. debugging (Jammy 2/4)
