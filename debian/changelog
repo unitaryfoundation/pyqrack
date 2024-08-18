@@ -1,3 +1,9 @@
+pyqrack (1.30.4) jammy; urgency=medium
+
+  * Depolarizing noise layer and Clifford+RZ env. var. debugging (Jammy 2/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sun, 18 Aug 2024 09:21:41 -0400
+
 pyqrack (1.30.3) noble; urgency=medium
 
   * Depolarizing noise layer and Clifford+RZ env. var. debugging (Noble 1/4)
