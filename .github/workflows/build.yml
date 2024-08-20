@@ -252,7 +252,7 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
-          brew upgrade
+          brew upgrade rustup
           brew install cmake opencl-clhpp-headers
 
       - name: Build Qrack MacOS
