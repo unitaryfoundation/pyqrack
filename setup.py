@@ -11,9 +11,6 @@ README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.m
 with open(README_PATH) as readme_file:
     README = readme_file.read()
 
-# Pure language standard!
-requirements = []
-
 setup(
     name='pyqrack',
     version=VERSION,
@@ -56,7 +53,7 @@ setup(
         "Topic :: Scientific/Engineering",
     ],
     keywords="pyqrack qrack simulator quantum gpu",
-    install_requires=requirements,
+    install_requires=[],
     setup_requires=[],
     extras_require={
         "dev": [
