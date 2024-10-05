@@ -3849,7 +3849,7 @@ class QrackSimulator:
                     qubit_outcome << clbit
                 )
 
-            data.append(hex(int(bin(self._classical_memory)[2:], 2)))
+            data.append(bin(self._classical_memory)[2:].zfill(self.num_qubits()))
 
         return data
 
@@ -3940,7 +3940,7 @@ class QrackSimulator:
                 self._apply_op(operation)
 
             if not self._sample_measure and (len(self._sample_qubits) > 0):
-                _data += [hex(int(bin(self._classical_memory)[2:], 2))]
+                _data += [bin(self._classical_memory)[2:].zfill(self.num_qubits())]
                 self._sample_qubits = []
                 self._sample_clbits = []
                 self._sample_cregbits = []
