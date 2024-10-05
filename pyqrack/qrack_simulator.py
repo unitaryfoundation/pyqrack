@@ -2182,7 +2182,7 @@ class QrackSimulator:
             list representing the basis dimension probabilities.
         """
         prob_count = 1 << self.num_qubits()
-        probs = self._qrack_real1_byref([0.0] * prob_count)
+        probs = self._real1_byref([0.0] * prob_count)
         Qrack.qrack_lib.OutProbs(self.sid, probs)
         self._throw_if_error()
         return list(probs)
