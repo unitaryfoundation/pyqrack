@@ -82,13 +82,16 @@ class QrackSystem:
         # These next two methods need to have c_double pointers, if PyQrack is built with fp64.
         self.qrack_lib.InKet.restype = None
         self.qrack_lib.OutKet.restype = None
+        self.qrack_lib.OutProbs.restype = None
 
         if self.fppow < 6:
             self.qrack_lib.InKet.argtypes = [c_ulonglong, POINTER(c_float)]
             self.qrack_lib.OutKet.argtypes = [c_ulonglong, POINTER(c_float)]
+            self.qrack_lib.OutProbs.argtypes = [c_ulonglong, POINTER(c_float)]
         else:
             self.qrack_lib.InKet.argtypes = [c_ulonglong, POINTER(c_double)]
             self.qrack_lib.OutKet.argtypes = [c_ulonglong, POINTER(c_double)]
+            self.qrack_lib.OutProbs.argtypes = [c_ulonglong, POINTER(c_double)]
 
         self.qrack_lib.init.restype = c_ulonglong
         self.qrack_lib.init.argtypes = []

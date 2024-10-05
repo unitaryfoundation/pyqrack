@@ -56,7 +56,7 @@ class QrackSimulator:
         isCpuGpuHybrid=True,
         isOpenCL=True,
         isHostPointer=False,
-        isNoisy=False,
+        noise=0,
         pyzxCircuit=None,
         qiskitCircuit=None,
     ):
@@ -90,13 +90,16 @@ class QrackSimulator:
                 isStabilizerHybrid,
                 isBinaryDecisionTree,
                 isPaged,
-                isNoisy,
+                (noise > 0),
                 isCpuGpuHybrid,
                 isOpenCL,
                 isHostPointer
             )
 
         self._throw_if_error()
+
+        if noise > 0:
+            self.set_noise_parameter(noise)
 
         if pyzxCircuit is not None:
             self.run_pyzx_gates(pyzxCircuit.gates)
@@ -2148,7 +2151,7 @@ class QrackSimulator:
         self._throw_if_error()
 
     def out_ket(self):
-        """Set state vector
+        """Get state vector
 
         Returns the raw state vector of the simulator.
         Warning: State vector is not always the internal representation leading 
@@ -2165,6 +2168,24 @@ class QrackSimulator:
         Qrack.qrack_lib.OutKet(self.sid, ket)
         self._throw_if_error()
         return [complex(r, i) for r, i in self._pairwise(ket)]
+
+    def out_probs(self):
+        """Get basis dimension probabilities
+
+        Returns the probabilities of each basis dimension in the state vector
+        of the simulator.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            list representing the basis dimension probabilities.
+        """
+        prob_count = 1 << self.num_qubits()
+        probs = self._qrack_real1_byref([0.0] * prob_count)
+        Qrack.qrack_lib.OutProbs(self.sid, probs)
+        self._throw_if_error()
+        return list(probs)
 
     def prob_all(self, q):
         """Probabilities of all subset permutations
