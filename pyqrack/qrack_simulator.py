@@ -2967,6 +2967,23 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
+    def separate(self, qs):
+        """Force Manual multi-qubits seperation
+
+        Force separation as per `try_separate_tolerance`.
+
+        Args:
+            qs: list of qubits to be decomposed
+
+        Raises:
+            Runtimeerror: QrackSimulator raised an exception.
+        """
+        result = Qrack.qrack_lib.Separate(
+            self.sid, len(qs), self._ulonglong_byref(qs)
+        )
+        self._throw_if_error()
+
+
     def get_unitary_fidelity(self):
         """Get fidelity estimate
 
@@ -3086,6 +3103,20 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         Qrack.qrack_lib.SetNoiseParameter(self.sid, np)
+        self._throw_if_error()
+
+    def normalize(self):
+        """Normalize the state
+
+        This should never be necessary to use unless
+        decompose() is "abused." ("Abusing" decompose()
+        might lead to efficient entanglement-breaking
+        channels, though.)
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.Normalize(self.sid)
         self._throw_if_error()
 
     def out_to_file(self, filename):

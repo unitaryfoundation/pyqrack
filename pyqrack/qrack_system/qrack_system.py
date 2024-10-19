@@ -1157,6 +1157,13 @@ class QrackSystem:
             c_double
         ]
 
+        self.qrack_lib.Separate.restype = None
+        self.qrack_lib.Separate.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong)
+        ]
+
         self.qrack_lib.GetUnitaryFidelity.restype = c_double
         self.qrack_lib.GetUnitaryFidelity.argtypes = [c_ulonglong]
 
@@ -1169,14 +1176,17 @@ class QrackSystem:
         self.qrack_lib.SetNcrp.restype = None
         self.qrack_lib.SetNcrp.argtypes = [c_ulonglong, c_double]
 
-        self.qrack_lib.SetReactiveSeparate.restype = c_bool
+        self.qrack_lib.SetReactiveSeparate.restype = None
         self.qrack_lib.SetReactiveSeparate.argtypes = [c_ulonglong, c_bool]
 
-        self.qrack_lib.SetTInjection.restype = c_bool
+        self.qrack_lib.SetTInjection.restype = None
         self.qrack_lib.SetTInjection.argtypes = [c_ulonglong, c_bool]
 
-        self.qrack_lib.SetNoiseParameter.restype = c_bool
+        self.qrack_lib.SetNoiseParameter.restype = None
         self.qrack_lib.SetNoiseParameter.argtypes = [c_ulonglong, c_double]
+
+        self.qrack_lib.Normalize.restype = None
+        self.qrack_lib.Normalize.argtypes = [c_ulonglong]
 
         self.qrack_lib.qstabilizer_out_to_file.restype = None
         self.qrack_lib.qstabilizer_out_to_file.argtypes = [c_ulonglong, c_char_p]
