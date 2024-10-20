@@ -1,3 +1,33 @@
+pyqrack (1.32.4) noble; urgency=medium
+
+  * Remove wheels from distribution (Noble)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 19 Oct 2024 16:38:49 -0400
+
+pyqrack (1.32.3) bionic; urgency=medium
+
+  * separate() and normalize() (Bionic 4/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 19 Oct 2024 16:37:36 -0400
+
+pyqrack (1.32.2) focal; urgency=medium
+
+  * separate() and normalize() (Focal 3/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 19 Oct 2024 16:35:29 -0400
+
+pyqrack (1.32.1) jammy; urgency=medium
+
+  * separate() and normalize() (Jammy 2/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 19 Oct 2024 16:33:20 -0400
+
+pyqrack (1.32.0) noble; urgency=medium
+
+  * separate() and normalize() (Noble 1/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 19 Oct 2024 16:29:54 -0400
+
 pyqrack (1.30.6) bionic; urgency=medium
 
   * Depolarizing noise layer and Clifford+RZ env. var. debugging (Bionic 4/4)

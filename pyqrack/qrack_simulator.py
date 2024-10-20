@@ -2968,7 +2968,7 @@ class QrackSimulator:
         return result
 
     def separate(self, qs):
-        """Force Manual multi-qubits seperation
+        """Force manual multi-qubits seperation
 
         Force separation as per `try_separate_tolerance`.
 
