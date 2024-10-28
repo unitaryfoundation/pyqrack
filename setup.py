@@ -12,7 +12,7 @@ with open(README_PATH) as readme_file:
     README = readme_file.read()
 
 setup(
-    name='pyqrack',
+    name='pyqrack-cpu',
     version=VERSION,
     packages=['pyqrack', 'pyqrack.qrack_system', 'pyqrack.util'],
     description="pyqrack - Pure Python vm6502q/qrack Wrapper",

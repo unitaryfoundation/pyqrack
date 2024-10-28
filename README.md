@@ -1,11 +1,13 @@
 # pyqrack
-[![Downloads](https://pepy.tech/badge/pyqrack)](https://pepy.tech/project/pyqrack) [![Downloads](https://pepy.tech/badge/pyqrack/month)](https://pepy.tech/project/pyqrack) [![Downloads](https://static.pepy.tech/badge/pyqrack/week)](https://pepy.tech/project/pyqrack)
+[![Downloads](https://pepy.tech/badge/pyqrack-cpu)](https://pepy.tech/project/pyqrack-cpu) [![Downloads](https://pepy.tech/badge/pyqrack-cpu/month)](https://pepy.tech/project/pyqrack-cpu) [![Downloads](https://static.pepy.tech/badge/pyqrack-cpu/week)](https://pepy.tech/project/pyqrack-cpu)
 
-Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator library
+Pure Python bindings for the pure C++11 Qrack quantum computer simulator library
 
 (**PyQrack** is just pure Qrack.)
 
-**IMPORTANT**: You must build and install [unitaryfund/qrack](https://github.com/unitaryfund/qrack) to use this `main` branch. CI/CD builds wheels that contain pre-compiled Qrack binaries, and that is the form published on PyPi. **You must also install OpenCL.**
+This is the **purely CPU-based** variant of PyQrack (with module name `pyqrack-cpu`). This alternate build of PyQrack is provided so that systems that won't use OpenCL anyway (such as because they lack any GPUs or other accelerators like the Intel HD) do not need to install the OpenCL library in order to use PyQrack. In this form, both the PyQrack module and the underlying C++ Qrack library are entirely external **dependency-free.**
+
+(**If you installing from source,** it doesn't matter whether you use `pyqrack` or `pyqrack-cpu`, because the build version of C++ Qrack you intend to use must already be installed locally.)
 
 Import and instantiate [`QrackSimulator`](https://github.com/unitaryfund/pyqrack/blob/main/pyqrack/qrack_simulator.py) instances. This simulator can perform arbitrary single qubit and controlled-single-qubit gates, as well as other specific gates like `SWAP`.
 
