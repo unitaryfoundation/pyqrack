@@ -57,7 +57,7 @@ setup(
     setup_requires=[],
     extras_require={
         "dev": [
-            "pytest>=7.3.1"
+            "pytest>=7.3.1",
         ],
     },
     include_package_data=True,
