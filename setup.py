@@ -4,7 +4,7 @@ import os
 from setuptools import setup
 
 
-VERSION = "1.32.10"
+VERSION = "1.32.11"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
@@ -50,14 +50,14 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
-        "Topic :: Scientific/Engineering",
+        "Topic :: Scientific/Engineering"
     ],
     keywords="pyqrack qrack simulator quantum gpu",
     install_requires=[],
     setup_requires=[],
     extras_require={
         "dev": [
-            "pytest>=7.3.1",
+            "pytest>=7.3.1"
         ],
     },
     include_package_data=True,
