@@ -33,11 +33,8 @@ except ImportError:
 
 
 def euler_angles_1q(m):
-    if len(m) != 2:
-        raise ValueError("euler_angles_1q: expected flat 2x2 matrix")
-
-    phase = (m[0] * m[3] - m[1] * m[2]) ** (-1.0/2.0)
-    U = phase * m
+    phase = (m[0][0] * m[1][1] - m[0][1] * m[1][1]) ** (-1.0/2.0)
+    U = [phase * m[0][0], phase * m[0][1], phase * m[1][0], phase * m[1][1]]
 
     theta = 2 * math.atan2(abs(U[1]), abs(U[0]))
 
@@ -220,6 +217,19 @@ class QrackCircuit:
 
         return out
 
+    def file_gate_count(filename):
+        """File gate count
+
+        Return the count of gates in a QrackCircuit file
+
+        Args:
+            filename: Name of file
+        """
+        tokens = []
+        with open(filename, 'r') as file:
+            tokens = file.read().split()
+        return int(tokens[1])
+
     def file_to_qiskit_circuit(filename):
         """Convert an output file to a Qiskit circuit
 
@@ -311,10 +321,13 @@ class QrackCircuit:
             if (pLen == 1) or ((control_pow - pLen) > (1 << 15)):
                 for c, p in payloads.items():
                     theta, phi, lam = euler_angles_1q(p)
-                    circ.append(
-                        U3Gate(theta, phi, lam).control(control_count, c),
-                        controls + [target]
-                    )
+                    if control_count > 0:
+                        circ.append(
+                            U3Gate(theta, phi, lam).control(num_ctrl_qubits=control_count, ctrl_state=c),
+                            controls + [target]
+                        )
+                    else:
+                        circ.append(U3Gate(theta, phi, lam), [target])
             else:
                 for j in range(control_pow):
                     if j in payloads:
