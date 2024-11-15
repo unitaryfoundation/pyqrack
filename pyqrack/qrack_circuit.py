@@ -33,7 +33,7 @@ except ImportError:
 
 
 def euler_angles_1q(m):
-    phase = (m[0][0] * m[1][1] - m[0][1] * m[1][1]) ** (-1.0/2.0)
+    phase = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) ** (-1.0/2.0)
     U = [[phase * m[0][0], phase * m[0][1]], [phase * m[1][0], phase * m[1][1]]]
 
     theta = 2 * math.atan2(abs(U[1][0]), abs(U[0][0]))
