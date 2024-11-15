@@ -12,7 +12,7 @@ _IS_QISKIT_AVAILABLE = True
 try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.compiler.transpiler import transpile
-    from qiskit.circuit.library import UCGate
+    from qiskit.circuit.library import U3Gate, UCGate
     import numpy as np
     import math
 except ImportError:
@@ -30,6 +30,26 @@ try:
     import tensorcircuit as tc
 except ImportError:
     _IS_TENSORCIRCUIT_AVAILABLE = False
+
+
+def euler_angles_1q(m):
+    if len(m) != 2:
+        raise ValueError("euler_angles_1q: expected flat 2x2 matrix")
+
+    phase = (m[0] * m[3] - m[1] * m[2]) ** (-1.0/2.0)
+    U = phase * m
+
+    theta = 2 * math.atan2(abs(U[1]), abs(U[0]))
+
+    # Find phi and lambda
+    phiplambda = 2 * np.angle(U[3])
+    phimlambda = 2 * np.angle(U[1])
+
+    phi = (phiplambda + phimlambda) / 2.0
+    lamb = (phiplambda - phimlambda) / 2.0
+
+    return theta, phi, lamb
+
 
 class QrackCircuit:
     """Class that exposes the QCircuit class of Qrack
@@ -286,13 +306,22 @@ class QrackCircuit:
                 payloads[key] = np.array(op)
 
             gate_list = []
-            for j in range(1 << control_count):
-                if j in payloads:
-                    gate_list.append(payloads[j])
-                else:
-                    gate_list.append(np.array([[1, 0],[0, 1]]))
-
-            circ.append(UCGate(gate_list), controls + [target])
+            control_pow = 1 << control_count
+            pLen = len(payloads)
+            if (pLen == 1) or ((pLen < (control_pow >> 1)) and (control_pow > 20)):
+                for c, p in payloads.items():
+                    theta, phi, lam = euler_angles_1q(p)
+                    circ.append(
+                        U3Gate(theta, phi, lam).control(control_count, c),
+                        controls + [target]
+                    )
+            else:
+                for j in range(control_pow):
+                    if j in payloads:
+                        gate_list.append(payloads[j])
+                    else:
+                        gate_list.append(np.array([[1, 0],[0, 1]]))
+                circ.append(UCGate(gate_list), controls + [target])
 
         return circ
 
