@@ -34,13 +34,13 @@ except ImportError:
 
 def euler_angles_1q(m):
     phase = (m[0][0] * m[1][1] - m[0][1] * m[1][1]) ** (-1.0/2.0)
-    U = [phase * m[0][0], phase * m[0][1], phase * m[1][0], phase * m[1][1]]
+    U = [[phase * m[0][0], phase * m[0][1]], [phase * m[1][0], phase * m[1][1]]]
 
-    theta = 2 * math.atan2(abs(U[1]), abs(U[0]))
+    theta = 2 * math.atan2(abs(U[1][0]), abs(U[0][0]))
 
     # Find phi and lambda
-    phiplambda = 2 * np.angle(U[3])
-    phimlambda = 2 * np.angle(U[1])
+    phiplambda = 2 * np.angle(U[1][1])
+    phimlambda = 2 * np.angle(U[1][0])
 
     phi = (phiplambda + phimlambda) / 2.0
     lamb = (phiplambda - phimlambda) / 2.0
