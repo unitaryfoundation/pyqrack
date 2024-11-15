@@ -308,7 +308,7 @@ class QrackCircuit:
             gate_list = []
             control_pow = 1 << control_count
             pLen = len(payloads)
-            if (pLen == 1) or ((pLen < (control_pow >> 1)) and (control_pow > 20)):
+            if (pLen == 1) or ((pLen < (control_pow >> 1)) and (control_pow > 16)):
                 for c, p in payloads.items():
                     theta, phi, lam = euler_angles_1q(p)
                     circ.append(
