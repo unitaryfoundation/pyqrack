@@ -27,7 +27,7 @@ where `c` is a PyZX circuit object. The circuit will automatically be simulated 
 
 See [https://pyqrack.readthedocs.io/en/latest/](https://pyqrack.readthedocs.io/en/latest/) for an API reference.
 
-For custom Qrack build floating-point precision, where options are `half`, `float`, `double`, and `quad`, set an environment variable via `export QRACK_FPPOW=[n]` (or as appropriate to your shell) where `[n]` is the logarithm base 2 of the number of bits in the systemic floating point type (`4`, `5`, `6`, or `7`, with `5` or `float` as default, i.e. `2**5=32` for 32-bit `float`).
+For custom Qrack build floating-point precision, where options are `half`, `float`, `double`, and `quad`, set an environment variable via `export QRACK_FPPOW=[n]` (or as appropriate to your shell) where `[n]` is the logarithm base 2 of the number of bits in the systemic floating point type (`4`, `5`, `6`, or `7`, with `5` or `float` as default, i.e. `2**5=32` for 32-bit `float`). Your Qrack installation floating-point build option must match this specific value, which might require a custom Qrack build.
 
 Please feel welcome to open an issue, if you'd like help. 😃
 
