@@ -1,3 +1,27 @@
+pyqrack (1.32.24) bionic; urgency=medium
+
+  * Optimize QrackCircuit to Qiskit circuit (Bionic 4/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Mon, 18 Nov 2024 04:39:48 -0500
+
+pyqrack (1.32.23) focal; urgency=medium
+
+  * Optimize QrackCircuit to Qiskit circuit (Focal 3/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Mon, 18 Nov 2024 04:38:31 -0500
+
+pyqrack (1.32.22) jammy; urgency=medium
+
+  * Optimize QrackCircuit to Qiskit circuit (Jammy 2/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Mon, 18 Nov 2024 04:37:07 -0500
+
+pyqrack (1.32.21) noble; urgency=medium
+
+  * Optimize QrackCircuit to Qiskit circuit (Noble 1/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Mon, 18 Nov 2024 04:33:33 -0500
+
 pyqrack (1.32.4) noble; urgency=medium
 
   * Remove wheels from distribution (Noble)

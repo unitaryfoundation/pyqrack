@@ -53,7 +53,7 @@ class QrackSimulator:
         isStabilizerHybrid=True,
         isBinaryDecisionTree=False,
         isPaged=True,
-        isCpuGpuHybrid=True,
+        isCpuGpuHybrid=False,
         isOpenCL=True,
         isHostPointer=False,
         noise=0,
@@ -3130,7 +3130,7 @@ class QrackSimulator:
         Qrack.qrack_lib.qstabilizer_out_to_file(self.sid, filename.encode('utf-8'))
         self._throw_if_error()
 
-    def in_from_file(filename, is_binary_decision_tree = False, is_paged = True, is_cpu_gpu_hybrid = True, is_opencl = True, is_host_pointer = False, is_noisy = False):
+    def in_from_file(filename, is_binary_decision_tree = False, is_paged = True, is_cpu_gpu_hybrid = False, is_opencl = True, is_host_pointer = False, is_noisy = False):
         """Input state from file (stabilizer only!)
 
         Reads in a hybrid stabilizer state from file.
