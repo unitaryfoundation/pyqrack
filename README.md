@@ -5,7 +5,7 @@ Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator 
 
 (**PyQrack** is just pure Qrack.)
 
-**Note, if building from source**: You must build and install [unitaryfund/qrack](https://github.com/unitaryfund/qrack) to build the `main` branch from source. CI/CD builds wheels that contain pre-compiled Qrack binaries, and that is the form published on PyPi. **You must also install OpenCL.**
+**Note, if building from source**: You must build and install [unitaryfund/qrack](https://github.com/unitaryfund/qrack) to build the `main` branch from source. CI/CD builds wheels that contain pre-compiled Qrack binaries, and that is the form published on PyPi. **For PyQrack-CUDA, the package is distributed as source-only on PyPi, so that the Qrack build step can do its best to try to automatically detect your available CUDA architectures.**
 
 Import and instantiate [`QrackSimulator`](https://github.com/unitaryfund/pyqrack/blob/main/pyqrack/qrack_simulator.py) instances. This simulator can perform arbitrary single qubit and controlled-single-qubit gates, as well as other specific gates like `SWAP`.
 
