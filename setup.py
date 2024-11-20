@@ -7,7 +7,7 @@ from setuptools import setup
 from setuptools.command.build_py import build_py
 
 
-VERSION = "1.32.28"
+VERSION = "1.32.29"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
