@@ -4,7 +4,7 @@ import os
 from setuptools import setup
 
 
-VERSION = "1.32.30"
+VERSION = "1.32.31"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
