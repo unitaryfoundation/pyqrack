@@ -1275,3 +1275,9 @@ class QrackSystem:
 
         self.qrack_lib.qcircuit_in_from_file.restype = None
         self.qrack_lib.qcircuit_in_from_file.argtypes = [c_ulonglong, c_char_p]
+
+        self.qrack_lib.qcircuit_out_to_string_length.restype = c_size_t
+        self.qrack_lib.qcircuit_out_to_string_length.argtypes = [c_ulonglong]
+
+        self.qrack_lib.qcircuit_out_to_string.restype = None
+        self.qrack_lib.qcircuit_out_to_string.argtypes = [c_ulonglong, c_char_p]
