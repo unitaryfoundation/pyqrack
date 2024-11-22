@@ -217,6 +217,17 @@ class QrackCircuit:
 
         return out
 
+    def out_to_string(self):
+        """Output optimized circuit to string
+
+        Outputs the (optimized) circuit to a string.
+        """
+        string_length = Qrack.qrack_lib.qcircuit_out_to_string_length(self.cid)
+        out = ctypes.create_string_buffer(string_length)
+        Qrack.qrack_lib.qcircuit_out_to_string(self.cid, out)
+
+        return out.value.decode("utf-8")
+
     def file_gate_count(filename):
         """File gate count
 
@@ -229,6 +240,22 @@ class QrackCircuit:
         with open(filename, 'r') as file:
             tokens = file.read().split()
         return int(tokens[1])
+
+    def to_qiskit_circuit(self):
+        """Convert to a Qiskit circuit
+
+        Outputs a Qiskit circuit from a QrackCircuit.
+
+        Raises:
+            RuntimeErorr: Before trying to string_to_qiskit_circuit() with
+                QrackCircuit, you must install Qiskit, numpy, and math!
+        """
+        if not _IS_QISKIT_AVAILABLE:
+            raise RuntimeError(
+                "Before trying to_qiskit_circuit() with QrackCircuit, you must install Qiskit, numpy, and math!"
+            )
+
+        return QrackCircuit.string_to_qiskit_circuit(self.out_to_string())
 
     def file_to_qiskit_circuit(filename):
         """Convert an output file to a Qiskit circuit
@@ -251,7 +278,27 @@ class QrackCircuit:
 
         tokens = []
         with open(filename, 'r') as file:
-            tokens = file.read().split()
+            return QrackCircuit.string_to_qiskit_circuit(file.read())
+
+    def string_to_qiskit_circuit(circ_string):
+        """Convert an output string to a Qiskit circuit
+
+        Reads in an (optimized) circuit from a string
+        parameter and outputs a Qiskit circuit.
+
+        Args:
+            circ_string: String representation of circuit
+
+        Raises:
+            RuntimeErorr: Before trying to string_to_qiskit_circuit() with
+                QrackCircuit, you must install Qiskit, numpy, and math!
+        """
+        if not _IS_QISKIT_AVAILABLE:
+            raise RuntimeError(
+                "Before trying to string_to_qiskit_circuit() with QrackCircuit, you must install Qiskit, numpy, and math!"
+            )
+
+        tokens = circ_string.split()
 
         i = 0
         num_qubits = int(tokens[i])
