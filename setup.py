@@ -7,7 +7,7 @@ from setuptools import setup
 from setuptools.command.build_py import build_py
 
 
-VERSION = "1.33.1"
+VERSION = "1.33.2"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
@@ -68,7 +68,7 @@ setup(
     ],
     keywords="pyqrack qrack simulator quantum gpu",
     install_requires=[],
-    setup_requires=[],
+    setup_requires=['cmake'],
     extras_require={
         "dev": [
             "pytest>=7.3.1"
