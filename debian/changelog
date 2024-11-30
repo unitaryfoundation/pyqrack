@@ -1,3 +1,27 @@
+pyqrack (1.33.4) bionic; urgency=medium
+
+  * Bounds checking and QrackCircuit to string (Bionic 4/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 23 Nov 2024 12:24:11 -0500
+
+pyqrack (1.33.3) focal; urgency=medium
+
+  * Bounds checking and QrackCircuit to string (Focal 3/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 23 Nov 2024 12:21:42 -0500
+
+pyqrack (1.33.2) jammy; urgency=medium
+
+  * Bounds checking and QrackCircuit to string (Jammy 2/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 23 Nov 2024 12:20:26 -0500
+
+pyqrack (1.33.1) noble; urgency=medium
+
+  * Bounds checking and QrackCircuit to string (Noble 1/4)
+
+ -- Daniel Strano <dan@unitary.fund>  Sat, 23 Nov 2024 12:18:16 -0500
+
 pyqrack (1.32.24) bionic; urgency=medium
 
   * Optimize QrackCircuit to Qiskit circuit (Bionic 4/4)
