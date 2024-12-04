@@ -385,6 +385,18 @@ class QrackCircuit:
 
         return circ
 
+    def _u3_to_mtrx(params):
+        th = float(params[0])
+        ph = float(params[1])
+        lm = float(params[2])
+
+        c = math.cos(th / 2)
+        s = math.sin(th / 2)
+        el = np.exp(1j * lm)
+        ep = np.exp(1j * ph)
+
+        return [ c + 0j, -el * s, ep * s, el * ep * c]
+
     def in_from_qiskit_circuit(circ):
         """Read a Qiskit circuit into a QrackCircuit
 
@@ -404,29 +416,26 @@ class QrackCircuit:
 
         out = QrackCircuit()
 
-        basis_gates = ["u", "cx"]
-        circ = transpile(circ, basis_gates=basis_gates, optimization_level=3)
+        basis_gates = ["x", "y", "z", "u", "cx", "cy", "cz", "cu"]
+        circ = transpile(circ, basis_gates=basis_gates, optimization_level=0)
         for gate in circ.data:
             o = gate.operation
-            if o.name == "u":
-                th = float(o.params[0])
-                ph = float(o.params[1])
-                lm = float(o.params[2])
-
-                c = math.cos(th / 2)
-                s = math.sin(th / 2)
-
-                op = [
-                    c + 0j,
-                    -np.exp(1j * lm) * s,
-                    np.exp(1j * ph) * s,
-                    np.exp(1j * (ph + lm)) * c
-                ]
+            op = []
+            if o.name in ["x", "cx"]:
+                op = [0, 1, 1, 0]
+            elif o.name in ["y", "cy"]:
+                op = [0, -1j, 1j, 0]
+            elif o.name in ["z", "cz"]:
+                op = [1, 0, 0, -1]
+            else:
+                op = QrackCircuit._u3_to_mtrx(o.params)
+            if o.name in ["x", "y", "z", "u"]:
                 out.mtrx(op, circ.find_bit(gate.qubits[0])[0])
             else:
                 ctrls = []
                 for c in gate.qubits[0:1]:
                     ctrls.append(circ.find_bit(c)[0])
+
                 out.ucmtrx(ctrls, [0, 1, 1, 0], circ.find_bit(gate.qubits[1])[0], 1)
 
         return out
