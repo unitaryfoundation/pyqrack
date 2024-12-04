@@ -21,6 +21,11 @@ try:
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
 
+try:
+    from qiskit import qasm3
+except ImportError:
+    pass
+
 _IS_NUMPY_AVAILABLE = True
 try:
     import numpy as np
@@ -3187,9 +3192,7 @@ class QrackSimulator:
 
         stabilizer_count = int(lines[2])
 
-        reg = QuantumRegister(stabilizer_qubits, name="q")
-        circ_qubits = [Qubit(reg, i) for i in range(stabilizer_qubits)]
-        clifford_circ = QuantumCircuit(reg)
+        clifford_circ = None
         line_number = 3
         for i in range(stabilizer_count):
             shard_map_size = int(lines[line_number])
@@ -3200,10 +3203,6 @@ class QrackSimulator:
                 line = lines[line_number].split()
                 line_number += 1
                 shard_map[int(line[0])] = int(line[1])
-
-            sub_reg = []
-            for index, _ in sorted(shard_map.items(), key=lambda x: x[1]):
-                sub_reg.append(circ_qubits[index])
 
             line_number += 1
             tableau = []
@@ -3221,16 +3220,8 @@ class QrackSimulator:
             tableau = np.array(tableau, bool)
 
             clifford = Clifford(tableau, validate=False, copy=False)
-            circ = clifford.to_circuit()
-
-            for instr in circ.data:
-                qubits = instr.qubits
-                n_qubits = []
-                for qubit in qubits:
-                    n_qubits.append(sub_reg[circ.find_bit(qubit)[0]])
-                instr.qubits = tuple(n_qubits)
-                clifford_circ.data.append(instr)
-            del circ
+            clifford_circ = clifford.to_circuit()
+            clifford_circ = QrackSimulator._reorder_qubits(clifford_circ, shard_map)
 
         non_clifford_gates = []
         g = 0
@@ -3290,6 +3281,35 @@ class QrackSimulator:
                 circ.h(i + 1)
 
         return circ
+
+    def _reorder_qubits(circuit, mapping):
+        """
+        Reorders qubits in the circuit according to the given mapping using SWAP gates.
+        (Thanks to "Elara," an OpenAI GPT, for this implementation)
+        
+        Parameters:
+        - circuit (QuantumCircuit): The circuit to modify.
+        - mapping (dict): Dictionary mapping internal qubit indices to logical qubit indices.
+        
+        Returns:
+        - QuantumCircuit: The modified circuit with qubits reordered.
+        """
+        swaps = []
+        
+        # Determine swaps to fix the order
+        for logical_index in sorted(mapping):
+            internal_index = mapping[logical_index]
+            if logical_index != internal_index:
+                swaps.append((logical_index, internal_index))
+                # Update the reverse mapping for subsequent swaps
+                mapping[logical_index] = logical_index
+                mapping[internal_index] = internal_index
+        
+        # Apply the swaps to the circuit
+        for qubit1, qubit2 in swaps:
+            circuit.swap(qubit1, qubit2)
+        
+        return circuit
 
     def file_to_optimized_qiskit_circuit(filename):
         """Convert an output state file to a Qiskit circuit
@@ -3397,16 +3417,14 @@ class QrackSimulator:
 
                     if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0)):
                         # If we're buffering full negation (plus phase), the control qubit can be dropped.
-                        c = QuantumCircuit(1)
+                        c = QuantumCircuit(circ.qubits)
                         if op.name == "cx":
-                            c.x(0)
+                            c.x(qubits[1])
                         elif op.name == "cy":
-                            c.y(0)
+                            c.y(qubits[1])
                         else:
-                            c.z(0)
-                        instr = c.data[0]
-                        instr.qubits = (qubits[1],)
-                        circ.data[j] = copy.deepcopy(instr)
+                            c.z(qubits[1])
+                        circ.data[j] = copy.deepcopy(c.data[0])
 
                         j += 1
                         continue
@@ -3417,11 +3435,9 @@ class QrackSimulator:
                     break
 
                 # We're blocked, so we insert our buffer at this place in the circuit definition.
-                c = QuantumCircuit(1)
-                c.unitary(non_clifford, 0)
-                instr = c.data[0]
-                instr.qubits = (qubits[0],)
-                circ.data.insert(j, copy.deepcopy(instr))
+                c = QuantumCircuit(circ.qubits)
+                c.unitary(non_clifford, qubits[0])
+                circ.data.insert(j, copy.deepcopy(c.data[0]))
 
                 non_clifford = np.copy(ident)
                 break
@@ -3508,21 +3524,18 @@ class QrackSimulator:
                     orig_instr = circ.data[j]
                     del circ.data[j]
 
-                    h = QuantumCircuit(1)
-                    h.h(0)
-                    instr = h.data[0]
-
                     # We're replacing CNOT with CNOT in the opposite direction plus four H gates
-                    instr.qubits = (qubits[0],)
-                    circ.data.insert(j, copy.deepcopy(instr))
-                    instr.qubits = (qubits[1],)
-                    circ.data.insert(j, copy.deepcopy(instr))
-                    orig_instr.qubits = (qubits[1], qubits[0])
-                    circ.data.insert(j, copy.deepcopy(orig_instr))
-                    instr.qubits = (qubits[0],)
-                    circ.data.insert(j, copy.deepcopy(instr))
-                    instr.qubits = (qubits[1],)
-                    circ.data.insert(j, copy.deepcopy(instr))
+                    rep = QuantumCircuit(circ.qubits)
+                    rep.h(qubits[0])
+                    circ.data.insert(j, copy.deepcopy(rep.data[0]))
+                    rep.h(qubits[1])
+                    circ.data.insert(j, copy.deepcopy(rep.data[1]))
+                    rep.cx(qubits[1], qubits[0])
+                    circ.data.insert(j, copy.deepcopy(rep.data[2]))
+                    rep.h(qubits[0])
+                    circ.data.insert(j, copy.deepcopy(rep.data[3]))
+                    rep.h(qubits[1])
+                    circ.data.insert(j, copy.deepcopy(rep.data[4]))
 
                     j += 4
                     continue
@@ -3533,11 +3546,9 @@ class QrackSimulator:
                         break
 
                     # We're blocked, so we insert our buffer at this place in the circuit definition.
-                    c = QuantumCircuit(1)
-                    c.unitary(non_clifford, 0)
-                    instr = c.data[0]
-                    instr.qubits = (qubits[0],)
-                    circ.data.insert(j + 1, copy.deepcopy(instr))
+                    c = QuantumCircuit(circ.qubits)
+                    c.unitary(non_clifford, qubits[0])
+                    circ.data.insert(j + 1, copy.deepcopy(c.data[0]))
 
                     break
 
@@ -3549,18 +3560,19 @@ class QrackSimulator:
                     j -= 1
                     continue
 
-                c = QuantumCircuit(1)
-                c.unitary(to_inject, 0)
-                instr = c.data[0]
-                instr.qubits = (qubits[0],)
-                circ.data[j] = copy.deepcopy(instr)
+                c = QuantumCircuit(circ.qubits)
+                c.unitary(to_inject, qubits[0])
+                circ.data.insert(j, copy.deepcopy(c.data[0]))
                 j -= 1
 
         basis_gates=["u", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
         circ = transpile(circ, basis_gates=basis_gates, optimization_level=2)
 
         #Eliminate unused ancillae
-        qasm = circ.qasm()
+        try:
+            qasm = qasm3.dumps(circ)
+        except:
+            qasm = circ.qasm()
         qasm = qasm.replace("qreg q[" + str(circ.width()) + "];", "qreg q[" + str(width) + "];")
         highest_index = max([int(x) for x in re.findall(r"\[(.*?)\]", qasm) if x.isdigit()])
         if highest_index != width:
