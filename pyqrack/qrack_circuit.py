@@ -12,9 +12,8 @@ _IS_QISKIT_AVAILABLE = True
 try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.compiler.transpiler import transpile
-    from qiskit.circuit.library import UnitaryGate
+    from qiskit.circuit.library import UCGate
     import numpy as np
-    import cmath
     import math
     import sys
 except ImportError:
@@ -362,29 +361,22 @@ class QrackCircuit:
                     mtrx.append(float(amp[0]) + float(amp[1])*1j)
                     i += 1
 
-                payloads[key] = mtrx
+                op = np.eye(2, dtype=complex)
+                op[0][0] = mtrx[0]
+                op[0][1] = mtrx[1]
+                op[1][0] = mtrx[2]
+                op[1][1] = mtrx[3]
 
+                payloads[key] = op
+
+            gate_list=[]
             control_pow = 1 << control_count
-            for c, p in payloads.items():
-                if control_count > 0:
-                    op = np.eye(1 << (control_count + 1), dtype=complex)
-                    q = c << 1
-                    op[q][q] = p[0]
-                    op[q][q + 1] = p[1]
-                    op[q + 1][q] = p[2]
-                    op[q + 1][q + 1] = p[3]
-                    circ.append(
-                        UnitaryGate(op, check_input=False),
-                        [target] + controls
-                    )
+            for j in range(control_pow):
+                if j in payloads:
+                    gate_list.append(payloads[j])
                 else:
-                    op = np.zeros((2,2), dtype=complex)
-                    op[0][0] = p[0]
-                    op[0][1] = p[1]
-                    op[1][0] = p[2]
-                    op[1][1] = p[3]
-
-                    circ.append(UnitaryGate(op, check_input=False), [target])
+                    gate_list.append(np.array([[1, 0],[0, 1]]))
+            circ.append(UCGate(gate_list), controls + [target])
 
         return circ
 
