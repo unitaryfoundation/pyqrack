@@ -71,6 +71,30 @@ class QrackCircuit:
         t = [(c.real, c.imag) for c in a]
         return self._double_byref([float(item) for sublist in t for item in sublist])
 
+    def _mtrx_to_u4(m):
+        nrm = abs(m[0])
+        if (nrm * nrm) < sys.float_info.epsilon:
+            phase = 1.0 + 0.0j
+            th = math.pi / 2;
+        else:
+            phase = m[0] / nrm
+            if nrm > 1.0:
+                nrm = 1.0
+            th = math.acos(nrm)
+
+        nrm1 = abs(m[1])
+        nrm2 = abs(m[2])
+        nrm1 *= nrm1
+        nrm2 *= nrm2
+        if (nrm1 < sys.float_info.epsilon) or (nrm2 < sys.float_info.epsilon):
+            ph = np.angle(m[3] / phase)
+            lm = 0.0
+        else:
+            ph = np.angle(m[2] / phase)
+            lm = np.angle(-m[1] / phase)
+
+        return th, ph, lm, np.angle(phase)
+
     def _u3_to_mtrx(params):
         th = float(params[0])
         ph = float(params[1])
@@ -82,6 +106,14 @@ class QrackCircuit:
         ep = np.exp(1j * ph)
 
         return [c + 0j, -el * s, ep * s, ep * el * c]
+
+    def _u4_to_mtrx(params):
+        m = _u3_to_mtrx(params)
+        g = np.exp(1j * float(params[3]))
+        for i in range(4):
+            m[i] *= g
+
+        return m
 
     def clone(self):
         """Make a new circuit that is an exact clone of this circuit
