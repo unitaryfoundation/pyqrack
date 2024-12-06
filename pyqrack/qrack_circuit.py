@@ -369,13 +369,13 @@ class QrackCircuit:
 
                 payloads[key] = op
 
+            identity = np.eye(2, dtype=complex)
             gate_list=[]
-            control_pow = 1 << control_count
-            for j in range(control_pow):
+            for j in range(1 << control_count):
                 if j in payloads:
                     gate_list.append(payloads[j])
                 else:
-                    gate_list.append(np.array([[1, 0],[0, 1]]))
+                    gate_list.append(identity)
             circ.append(UCGate(gate_list), controls + [target])
 
         return circ
