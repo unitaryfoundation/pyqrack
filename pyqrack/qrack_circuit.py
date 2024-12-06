@@ -12,9 +12,11 @@ _IS_QISKIT_AVAILABLE = True
 try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.compiler.transpiler import transpile
-    from qiskit.circuit.library import U3Gate, UCGate
+    from qiskit.circuit.library import UnitaryGate
     import numpy as np
+    import cmath
     import math
+    import sys
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
 
@@ -30,22 +32,6 @@ try:
     import tensorcircuit as tc
 except ImportError:
     _IS_TENSORCIRCUIT_AVAILABLE = False
-
-
-def euler_angles_1q(m):
-    phase = (m[0][0] * m[1][1] - m[0][1] * m[1][0]) ** (-1.0/2.0)
-    U = [[phase * m[0][0], phase * m[0][1]], [phase * m[1][0], phase * m[1][1]]]
-
-    theta = 2 * math.atan2(abs(U[1][0]), abs(U[0][0]))
-
-    # Find phi and lambda
-    phiplambda = 2 * np.angle(U[1][1])
-    phimlambda = 2 * np.angle(U[1][0])
-
-    phi = (phiplambda + phimlambda) / 2.0
-    lamb = (phiplambda - phimlambda) / 2.0
-
-    return theta, phi, lamb
 
 
 class QrackCircuit:
@@ -84,6 +70,18 @@ class QrackCircuit:
     def _complex_byref(self, a):
         t = [(c.real, c.imag) for c in a]
         return self._double_byref([float(item) for sublist in t for item in sublist])
+
+    def _u3_to_mtrx(params):
+        th = float(params[0])
+        ph = float(params[1])
+        lm = float(params[2])
+
+        c = math.cos(th / 2)
+        s = math.sin(th / 2)
+        el = np.exp(1j * lm)
+        ep = np.exp(1j * ph)
+
+        return [c + 0j, -el * s, ep * s, ep * el * c]
 
     def clone(self):
         """Make a new circuit that is an exact clone of this circuit
@@ -302,100 +300,61 @@ class QrackCircuit:
 
         i = 0
         num_qubits = int(tokens[i])
-        i = i + 1
+        i += 1
         circ = QuantumCircuit(num_qubits)
 
         num_gates = int(tokens[i])
-        i = i + 1
+        i += 1
 
         for g in range(num_gates):
             target = int(tokens[i])
-            i = i + 1
+            i += 1
 
             control_count = int(tokens[i])
-            i = i + 1
+            i += 1
             controls = []
             for j in range(control_count):
                 controls.append(int(tokens[i]))
-                i = i + 1
+                i += 1
 
             payload_count = int(tokens[i])
-            i = i + 1
+            i += 1
             payloads = {}
             for j in range(payload_count):
                 key = int(tokens[i])
-                i = i + 1
-                op = np.zeros((2,2), dtype=complex)
-                row = []
-                for _ in range(2):
+                i += 1
+
+                mtrx = []
+                for _ in range(4):
                     amp = tokens[i].replace("(","").replace(")","").split(',')
-                    row.append(float(amp[0]) + float(amp[1])*1j)
-                    i = i + 1
-                l = math.sqrt(np.real(row[0] * np.conj(row[0]) + row[1] * np.conj(row[1])))
-                op[0][0] = row[0] / l
-                op[0][1] = row[1] / l
+                    mtrx.append(float(amp[0]) + float(amp[1])*1j)
+                    i += 1
 
-                if np.abs(op[0][0] - row[0]) > 1e-5:
-                    print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
-                if np.abs(op[0][1] - row[1]) > 1e-5:
-                    print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
+                payloads[key] = mtrx
 
-                row = []
-                for _ in range(2):
-                    amp = tokens[i].replace("(","").replace(")","").split(',')
-                    row.append(float(amp[0]) + float(amp[1])*1j)
-                    i = i + 1
-                l = math.sqrt(np.real(row[0] * np.conj(row[0]) + row[1] * np.conj(row[1])))
-                op[1][0] = row[0] / l
-                op[1][1] = row[1] / l
-
-                ph = np.real(np.log(np.linalg.det(op)) / 1j)
-
-                op[1][0] = -np.exp(1j * ph) * np.conj(op[0][1])
-                op[1][1] = np.exp(1j * ph) * np.conj(op[0][0])
-
-                if np.abs(op[1][0] - row[0]) > 1e-5:
-                    print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
-                if np.abs(op[1][1] - row[1]) > 1e-5:
-                    print("Warning: gate ", str(g), ", payload ", str(j), " might not be unitary!")
-
-                # Qiskit has a lower tolerance for deviation from numerically unitary.
-                payloads[key] = np.array(op)
-
-            gate_list = []
             control_pow = 1 << control_count
-            pLen = len(payloads)
-            if (pLen == 1) or ((control_pow - pLen) > (1 << 15)):
-                for c, p in payloads.items():
-                    theta, phi, lam = euler_angles_1q(p)
-                    if control_count > 0:
-                        circ.append(
-                            U3Gate(theta, phi, lam).control(num_ctrl_qubits=control_count, ctrl_state=c),
-                            controls + [target]
-                        )
-                    else:
-                        circ.append(U3Gate(theta, phi, lam), [target])
-            else:
-                for j in range(control_pow):
-                    if j in payloads:
-                        gate_list.append(payloads[j])
-                    else:
-                        gate_list.append(np.array([[1, 0],[0, 1]]))
-                circ.append(UCGate(gate_list), controls + [target])
+            for c, p in payloads.items():
+                if control_count > 0:
+                    op = np.eye(1 << (control_count + 1), dtype=complex)
+                    q = c << 1
+                    op[q][q] = p[0]
+                    op[q][q + 1] = p[1]
+                    op[q + 1][q] = p[2]
+                    op[q + 1][q + 1] = p[3]
+                    circ.append(
+                        UnitaryGate(op, check_input=False),
+                        [target] + controls
+                    )
+                else:
+                    op = np.zeros((2,2), dtype=complex)
+                    op[0][0] = p[0]
+                    op[0][1] = p[1]
+                    op[1][0] = p[2]
+                    op[1][1] = p[3]
+
+                    circ.append(UnitaryGate(op, check_input=False), [target])
 
         return circ
-
-    def _u3_to_mtrx(params):
-        th = float(params[0])
-        ph = float(params[1])
-        lm = float(params[2])
-
-        c = math.cos(th / 2)
-        s = math.sin(th / 2)
-        el = np.exp(1j * lm)
-        ep = np.exp(1j * ph)
-
-        return [ c + 0j, -el * s, ep * s, el * ep * c]
 
     def in_from_qiskit_circuit(circ):
         """Read a Qiskit circuit into a QrackCircuit
@@ -415,11 +374,11 @@ class QrackCircuit:
             )
 
         out = QrackCircuit()
-
         basis_gates = ["x", "y", "z", "u", "cx", "cy", "cz", "cu"]
         circ = transpile(circ, basis_gates=basis_gates, optimization_level=0)
         for gate in circ.data:
             o = gate.operation
+
             op = []
             if o.name in ["x", "cx"]:
                 op = [0, 1, 1, 0]
@@ -429,14 +388,11 @@ class QrackCircuit:
                 op = [1, 0, 0, -1]
             else:
                 op = QrackCircuit._u3_to_mtrx(o.params)
+
             if o.name in ["x", "y", "z", "u"]:
                 out.mtrx(op, circ.find_bit(gate.qubits[0])[0])
             else:
-                ctrls = []
-                for c in gate.qubits[0:1]:
-                    ctrls.append(circ.find_bit(c)[0])
-
-                out.ucmtrx(ctrls, [0, 1, 1, 0], circ.find_bit(gate.qubits[1])[0], 1)
+                out.ucmtrx([circ.find_bit(gate.qubits[0])[0]], op, circ.find_bit(gate.qubits[1])[0], 1)
 
         return out
 
