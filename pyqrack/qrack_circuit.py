@@ -74,12 +74,12 @@ class QrackCircuit:
         nrm = abs(m[0])
         if (nrm * nrm) < sys.float_info.epsilon:
             phase = 1.0 + 0.0j
-            th = math.pi / 2;
+            th = math.pi;
         else:
             phase = m[0] / nrm
             if nrm > 1.0:
                 nrm = 1.0
-            th = math.acos(nrm)
+            th = 2 * math.acos(nrm)
 
         nrm1 = abs(m[1])
         nrm2 = abs(m[2])
@@ -107,12 +107,15 @@ class QrackCircuit:
         return [c + 0j, -el * s, ep * s, ep * el * c]
 
     def _u4_to_mtrx(params):
-        m = _u3_to_mtrx(params)
+        m = QrackCircuit._u3_to_mtrx(params)
         g = np.exp(1j * float(params[3]))
         for i in range(4):
             m[i] *= g
 
         return m
+
+    def _make_mtrx_unitary(m):
+        return QrackCircuit._u4_to_mtrx(QrackCircuit._mtrx_to_u4(m))
 
     def clone(self):
         """Make a new circuit that is an exact clone of this circuit
@@ -337,6 +340,7 @@ class QrackCircuit:
         num_gates = int(tokens[i])
         i += 1
 
+        identity = np.eye(2, dtype=complex)
         for g in range(num_gates):
             target = int(tokens[i])
             i += 1
@@ -361,6 +365,8 @@ class QrackCircuit:
                     mtrx.append(float(amp[0]) + float(amp[1])*1j)
                     i += 1
 
+                mtrx = QrackCircuit._make_mtrx_unitary(mtrx)
+
                 op = np.eye(2, dtype=complex)
                 op[0][0] = mtrx[0]
                 op[0][1] = mtrx[1]
@@ -369,14 +375,13 @@ class QrackCircuit:
 
                 payloads[key] = op
 
-            identity = np.eye(2, dtype=complex)
             gate_list=[]
             for j in range(1 << control_count):
                 if j in payloads:
                     gate_list.append(payloads[j])
                 else:
                     gate_list.append(identity)
-            circ.append(UCGate(gate_list), controls + [target])
+            circ.append(UCGate(gate_list), [target] + controls)
 
         return circ
 
