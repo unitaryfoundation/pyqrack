@@ -9,7 +9,7 @@ Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator 
 
 **Performance can benefit greatly from following the [Qrack repository "Quick Start" and "Power user considerations."](https://github.com/unitaryfund/qrack/blob/main/README.md#quick-start)**
 
-**If you use an integrated graphics accelerator, like the Intel HD,** setting environment variable `PYQRACK_HOST_POINTER_DEFAULT_ON=1` or to any "truthy" value will automatically engage the `isHostPointer=True` option of `QrackSimulator` (and override that constructor option in general), to engage "zero-copy" mode.
+**If you use an integrated graphics accelerator, like the Intel HD,** setting environment variable `PYQRACK_HOST_POINTER_DEFAULT_ON=1` (or to any "truthy" value) will automatically set the default of `isHostPointer` option of `QrackSimulator` to `True`, to engage "zero-copy" mode by default.
 
 Import and instantiate [`QrackSimulator`](https://github.com/unitaryfund/pyqrack/blob/main/pyqrack/qrack_simulator.py) instances. This simulator can perform arbitrary single qubit and controlled-single-qubit gates, as well as other specific gates like `SWAP`.
 
