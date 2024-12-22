@@ -9,6 +9,8 @@ Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator 
 
 **Performance can benefit greatly from following the [Qrack repository "Quick Start" and "Power user considerations."](https://github.com/unitaryfund/qrack/blob/main/README.md#quick-start)**
 
+**If you use only an integrated graphics accelerator, like the Intel HD, you probably can't use this CUDA version of PyQrack.** Use the **OpenCL** version of PyQrack instead (by uninstalling all other versions of PyQrack, then installing from `main` branch or with `pip install pyqrack`).
+
 Import and instantiate [`QrackSimulator`](https://github.com/unitaryfund/pyqrack/blob/main/pyqrack/qrack_simulator.py) instances. This simulator can perform arbitrary single qubit and controlled-single-qubit gates, as well as other specific gates like `SWAP`.
 
 Any 2x2 bit operator matrix is represented by a list of 4 `complex` floating point numbers, in [**row-major order**](https://en.wikipedia.org/wiki/Row-_and_column-major_order).
