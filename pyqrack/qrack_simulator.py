@@ -6,13 +6,13 @@
 import copy
 import ctypes
 import math
+import os
 import re
 from .qrack_system import Qrack
 from .pauli import Pauli
 
 _IS_QISKIT_AVAILABLE = True
 try:
-    from qiskit.circuit import QuantumRegister, Qubit
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.compiler import transpile
     from qiskit.qobj.qasm_qobj import QasmQobjExperiment
@@ -60,7 +60,7 @@ class QrackSimulator:
         isPaged=True,
         isCpuGpuHybrid=True,
         isOpenCL=True,
-        isHostPointer=False,
+        isHostPointer=True if os.environ.get('PYQRACK_HOST_POINTER_DEFAULT_ON') else False,
         noise=0,
         pyzxCircuit=None,
         qiskitCircuit=None,
