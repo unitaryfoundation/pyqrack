@@ -11,6 +11,8 @@ This is the **purely CPU-based** variant of PyQrack (with module name `pyqrack-c
 
 **Performance can benefit greatly from following the [Qrack repository "Quick Start" and "Power user considerations."](https://github.com/unitaryfund/qrack/blob/main/README.md#quick-start)**
 
+**If you use an integrated graphics accelerator, like the Intel HD,** setting environment variable `PYQRACK_HOST_POINTER_DEFAULT_ON=1` (or to any "truthy" value) will automatically set the default of `isHostPointer` option of `QrackSimulator` to `True`, to engage "zero-copy" mode by default.
+
 Import and instantiate [`QrackSimulator`](https://github.com/unitaryfund/pyqrack/blob/main/pyqrack/qrack_simulator.py) instances. This simulator can perform arbitrary single qubit and controlled-single-qubit gates, as well as other specific gates like `SWAP`.
 
 Any 2x2 bit operator matrix is represented by a list of 4 `complex` floating point numbers, in [**row-major order**](https://en.wikipedia.org/wiki/Row-_and_column-major_order).
