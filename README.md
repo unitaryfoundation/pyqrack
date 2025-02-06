@@ -7,6 +7,8 @@ Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator 
 
 **Note, if building from source**: You must build and install [unitaryfund/qrack](https://github.com/unitaryfund/qrack) to build the `main` branch from source. CI/CD builds wheels that contain pre-compiled Qrack binaries, and that is the form published on PyPi. **You must also install OpenCL.**
 
+**If you're looking for Mac ARM support, use the package `pyqrack`, not `pyqrack-cpu`.** Mac officially "deprecated" OpenCL years ago. Hence, accelerator support is not included in ARM-based Mac wheels, and OpenCL installation is **not** required on these systems, but, if you have a CUDA accelerator on ARM-based Mac, you could try the package `pyqrack-cuda` instead.
+
 **Performance can benefit greatly from following the [Qrack repository "Quick Start" and "Power user considerations."](https://github.com/unitaryfund/qrack/blob/main/README.md#quick-start)**
 
 **If you use an integrated graphics accelerator, like the Intel HD,** setting environment variable `PYQRACK_HOST_POINTER_DEFAULT_ON=1` (or to any "truthy" value) will automatically set the default of `isHostPointer` option of `QrackSimulator` to `True`, to engage "zero-copy" mode by default.
