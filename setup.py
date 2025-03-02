@@ -4,7 +4,7 @@ import os
 from setuptools import setup
 
 
-VERSION = "1.35.8"
+VERSION = "1.35.9"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
@@ -14,7 +14,7 @@ with open(README_PATH) as readme_file:
 setup(
     name='pyqrack-cpu',
     version=VERSION,
-    packages=['pyqrack', 'pyqrack.qrack_system', 'pyqrack.util'],
+    packages=['pyqrack', 'pyqrack.qrack_system'],
     description="pyqrack - Pure Python vm6502q/qrack Wrapper",
     long_description=README,
     long_description_content_type='text/markdown',

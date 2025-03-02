@@ -15,9 +15,7 @@ _IS_QISKIT_AVAILABLE = True
 try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.compiler import transpile
-    from qiskit.qobj.qasm_qobj import QasmQobjExperiment
     from qiskit.quantum_info.operators.symplectic.clifford import Clifford
-    from .util import convert_qiskit_circuit_to_qasm_experiment
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
 
@@ -3265,7 +3263,7 @@ class QrackSimulator:
             non_clifford_gates.append(op)
             g = g + 1
 
-        basis_gates = ["rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
+        basis_gates = ["rz", "h", "x", "y", "z", "sx", "sxdg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
         try:
             circ = transpile(clifford_circ, basis_gates=basis_gates, optimization_level=2)
         except:
@@ -3337,7 +3335,7 @@ class QrackSimulator:
         sqrt_ni = np.sqrt(-1j)
         sqrt1_2 = 1 / math.sqrt(2)
         ident = np.eye(2, dtype=np.complex128)
-        # passable_gates = ["unitary", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg"]
+        # passable_gates = ["unitary", "rz", "h", "x", "y", "z", "sx", "sxdg", "s", "sdg", "t", "tdg"]
 
         passed_swaps = []
         for i in range(0, circ.width()):
@@ -3565,7 +3563,7 @@ class QrackSimulator:
                 circ.data.insert(j, copy.deepcopy(c.data[0]))
                 j -= 1
 
-        basis_gates=["u", "rz", "h", "x", "y", "z", "sx", "sxdg", "sy", "sydg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
+        basis_gates=["u", "rz", "h", "x", "y", "z", "sx", "sxdg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
         circ = transpile(circ, basis_gates=basis_gates, optimization_level=2)
 
         #Eliminate unused ancillae
@@ -3662,150 +3660,150 @@ class QrackSimulator:
                     return
 
         if (name == 'u1') or (name == 'p'):
-            self._sim.u(operation.qubits[0], 0, 0, float(operation.params[0]))
+            self._sim.u(operation.qubits[0]._index, 0, 0, float(operation.params[0]))
         elif name == 'u2':
             self._sim.u(
-                operation.qubits[0],
+                operation.qubits[0]._index,
                 math.pi / 2,
                 float(operation.params[0]),
                 float(operation.params[1]),
             )
         elif (name == 'u3') or (name == 'u'):
             self._sim.u(
-                operation.qubits[0],
+                operation.qubits[0]._index,
                 float(operation.params[0]),
                 float(operation.params[1]),
                 float(operation.params[2]),
             )
         elif (name == 'unitary') and (len(operation.qubits) == 1):
-            self._sim.mtrx(operation.params[0].flatten(), operation.qubits[0])
+            self._sim.mtrx(operation.params[0].flatten(), operation.qubits[0]._index)
         elif name == 'r':
             self._sim.u(
-                operation.qubits[0],
+                operation.qubits[0]._index,
                 float(operation.params[0]),
                 float(operation.params[1]) - math.pi / 2,
                 (-1 * float(operation.params[1])) + math.pi / 2,
             )
         elif name == 'rx':
-            self._sim.r(Pauli.PauliX, float(operation.params[0]), operation.qubits[0])
+            self._sim.r(Pauli.PauliX, float(operation.params[0]), operation.qubits[0]._index)
         elif name == 'ry':
-            self._sim.r(Pauli.PauliY, float(operation.params[0]), operation.qubits[0])
+            self._sim.r(Pauli.PauliY, float(operation.params[0]), operation.qubits[0]._index)
         elif name == 'rz':
-            self._sim.r(Pauli.PauliZ, float(operation.params[0]), operation.qubits[0])
+            self._sim.r(Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index)
         elif name == 'h':
-            self._sim.h(operation.qubits[0])
+            self._sim.h(operation.qubits[0]._index)
         elif name == 'x':
-            self._sim.x(operation.qubits[0])
+            self._sim.x(operation.qubits[0]._index)
         elif name == 'y':
-            self._sim.y(operation.qubits[0])
+            self._sim.y(operation.qubits[0]._index)
         elif name == 'z':
-            self._sim.z(operation.qubits[0])
+            self._sim.z(operation.qubits[0]._index)
         elif name == 's':
-            self._sim.s(operation.qubits[0])
+            self._sim.s(operation.qubits[0]._index)
         elif name == 'sdg':
-            self._sim.adjs(operation.qubits[0])
+            self._sim.adjs(operation.qubits[0]._index)
         elif name == 'sx':
             self._sim.mtrx(
                 [(1 + 1j) / 2, (1 - 1j) / 2, (1 - 1j) / 2, (1 + 1j) / 2],
-                operation.qubits[0],
+                operation.qubits[0]._index,
             )
         elif name == 'sxdg':
             self._sim.mtrx(
                 [(1 - 1j) / 2, (1 + 1j) / 2, (1 + 1j) / 2, (1 - 1j) / 2],
-                operation.qubits[0],
+                operation.qubits[0]._index,
             )
         elif name == 't':
-            self._sim.t(operation.qubits[0])
+            self._sim.t(operation.qubits[0]._index)
         elif name == 'tdg':
-            self._sim.adjt(operation.qubits[0])
+            self._sim.adjt(operation.qubits[0]._index)
         elif name == 'cu1':
             self._sim.mcu(
-                operation.qubits[0:1], operation.qubits[1], 0, 0, float(operation.params[0])
+                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index, 0, 0, float(operation.params[0])
             )
         elif name == 'cu2':
             self._sim.mcu(
-                operation.qubits[0:1],
-                operation.qubits[1],
+                [q._index for q in operation.qubits[0:1]],
+                operation.qubits[1]._index,
                 math.pi / 2,
                 float(operation.params[0]),
                 float(operation.params[1]),
             )
         elif (name == 'cu3') or (name == 'cu'):
             self._sim.mcu(
-                operation.qubits[0:1],
-                operation.qubits[1],
+                [q._index for q in operation.qubits[0:1]],
+                operation.qubits[1]._index,
                 float(operation.params[0]),
                 float(operation.params[1]),
                 float(operation.params[2]),
             )
         elif name == 'cx':
-            self._sim.mcx(operation.qubits[0:1], operation.qubits[1])
+            self._sim.mcx([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
         elif name == 'cy':
-            self._sim.mcy(operation.qubits[0:1], operation.qubits[1])
+            self._sim.mcy([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
         elif name == 'cz':
-            self._sim.mcz(operation.qubits[0:1], operation.qubits[1])
+            self._sim.mcz([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
         elif name == 'ch':
-            self._sim.mch(operation.qubits[0:1], operation.qubits[1])
+            self._sim.mch([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
         elif name == 'cp':
             self._sim.mcmtrx(
-                operation.qubits[0:1],
+                [q._index for q in operation.qubits[0:1]],
                 [
                     1,
                     0,
                     0,
                     math.cos(float(operation.params[0])) + 1j * math.sin(float(operation.params[0])),
                 ],
-                operation.qubits[1],
+                operation.qubits[1]._index,
             )
         elif name == 'csx':
             self._sim.mcmtrx(
-                operation.qubits[0:1],
+                [q._index for q in operation.qubits[0:1]],
                 [(1 + 1j) / 2, (1 - 1j) / 2, (1 - 1j) / 2, (1 + 1j) / 2],
-                operation.qubits[1],
+                operation.qubits[1]._index,
             )
         elif name == 'csxdg':
             self._sim.mcmtrx(
-                operation.qubits[0:1],
+                [q._index for q in operation.qubits[0:1]],
                 [(1 - 1j) / 2, (1 + 1j) / 2, (1 + 1j) / 2, (1 - 1j) / 2],
-                operation.qubits[1],
+                operation.qubits[1]._index,
             )
         elif name == 'dcx':
-            self._sim.mcx(operation.qubits[0:1], operation.qubits[1])
-            self._sim.mcx(operation.qubits[1:2], operation.qubits[0])
+            self._sim.mcx([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
+            self._sim.mcx(operation.qubits[1:2]._index, operation.qubits[0]._index)
         elif name == 'ccx':
-            self._sim.mcx(operation.qubits[0:2], operation.qubits[2])
+            self._sim.mcx([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
         elif name == 'ccy':
-            self._sim.mcy(operation.qubits[0:2], operation.qubits[2])
+            self._sim.mcy([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
         elif name == 'ccz':
-            self._sim.mcz(operation.qubits[0:2], operation.qubits[2])
+            self._sim.mcz([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
         elif name == 'mcx':
-            self._sim.mcx(operation.qubits[0:-1], operation.qubits[-1])
+            self._sim.mcx([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
         elif name == 'mcy':
-            self._sim.mcy(operation.qubits[0:-1], operation.qubits[-1])
+            self._sim.mcy([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
         elif name == 'mcz':
-            self._sim.mcz(operation.qubits[0:-1], operation.qubits[-1])
+            self._sim.mcz([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
         elif name == 'swap':
-            self._sim.swap(operation.qubits[0], operation.qubits[1])
+            self._sim.swap(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == 'iswap':
-            self._sim.iswap(operation.qubits[0], operation.qubits[1])
+            self._sim.iswap(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == 'iswap_dg':
-            self._sim.adjiswap(operation.qubits[0], operation.qubits[1])
+            self._sim.adjiswap(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == 'cswap':
             self._sim.cswap(
-                operation.qubits[0:1], operation.qubits[1], operation.qubits[2]
+                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index, operation.qubits[2]._index
             )
         elif name == 'mcswap':
             self._sim.cswap(
-                operation.qubits[:-2], operation.qubits[-2], operation.qubits[-1]
+                [q._index for q in operation.qubits[:-2]], operation.qubits[-2]._index, operation.qubits[-1]._index
             )
         elif name == 'reset':
             qubits = operation.qubits
             for qubit in qubits:
-                if self._sim.m(qubit):
-                    self._sim.x(qubit)
+                if self._sim.m(qubit._index):
+                    self._sim.x(qubit._index)
         elif name == 'measure':
             qubits = operation.qubits
-            clbits = operation.memory
+            clbits = operation.clbits
             cregbits = (
                 operation.register
                 if hasattr(operation, 'register')
@@ -3892,7 +3890,6 @@ class QrackSimulator:
         measure_clbit = [clbit for clbit in sample_clbits]
 
         # Sample and convert to bit-strings
-        data = []
         if num_samples == 1:
             sample = self._sim.m_all()
             result = 0
@@ -3902,12 +3899,13 @@ class QrackSimulator:
                 result |= qubit_outcome << index
             measure_results = [result]
         else:
-            measure_results = self._sim.measure_shots(measure_qubit, num_samples)
+            measure_results = self._sim.measure_shots([q._index for q in measure_qubit], num_samples)
 
+        data = []
         for sample in measure_results:
             for index in range(len(measure_qubit)):
                 qubit_outcome = (sample >> index) & 1
-                clbit = measure_clbit[index]
+                clbit = measure_clbit[index]._index
                 clmask = 1 << clbit
                 self._classical_memory = (self._classical_memory & (~clmask)) | (
                     qubit_outcome << clbit
@@ -3923,12 +3921,9 @@ class QrackSimulator:
                 "Before trying to run_qiskit_circuit() with QrackSimulator, you must install Qiskit!"
             )
 
-        if isinstance(experiment, QuantumCircuit):
-            experiment = convert_qiskit_circuit_to_qasm_experiment(experiment)
-
         instructions = []
-        if isinstance(experiment, QasmQobjExperiment):
-            instructions = experiment.instructions
+        if isinstance(experiment, QuantumCircuit):
+            instructions = experiment.data
         else:
             raise RuntimeError('Unrecognized "run_input" argument specified for run().')
 
@@ -3938,7 +3933,6 @@ class QrackSimulator:
         self._sample_cregbits = []
         self._sample_measure = True
         _data = []
-        shotsPerLoop = self._shots
         shotLoopMax = 1
 
         is_initializing = True
