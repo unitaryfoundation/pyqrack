@@ -10,4 +10,3 @@ from .qrack_circuit import QrackCircuit
 from .pauli import Pauli
 from .neuron_activation_fn import NeuronActivationFn
 from .quimb_circuit_type import QuimbCircuitType
-from .util import convert_qiskit_circuit_to_qasm_experiment
