@@ -18,7 +18,7 @@ help:
 build-deps:
 ifneq ($(OS),Windows_NT)
 ifeq ($(QRACK_PRESENT),)
-	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout 540fe7e7ddf339a34b2c05d7048ee29faea3cbaf; cd ..
+	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout d9cd9015a661d39f5f35b1a7a6e2bb437219346e; cd ..
 endif
 	mkdir -p qrack/build
 ifeq ($(UNAME_S),Linux)
