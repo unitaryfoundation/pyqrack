@@ -182,6 +182,9 @@ class QrackSimulator:
         Qrack.qrack_lib.set_concurrency(self.sid, p)
         self._throw_if_error()
 
+    def clone(self):
+        return QrackSimulator(cloneSid=self.sid)
+
     # standard gates
 
     ## single-qubits gates
