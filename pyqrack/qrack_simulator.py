@@ -3897,7 +3897,7 @@ class QrackSimulator:
             sample = self._sim.m_all()
             result = 0
             for index in range(len(measure_qubit)):
-                qubit = measure_qubit[index]
+                qubit = measure_qubit[index]._index
                 qubit_outcome = (sample >> qubit) & 1
                 result |= qubit_outcome << index
             measure_results = [result]
