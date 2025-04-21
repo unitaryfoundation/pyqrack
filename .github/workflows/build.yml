@@ -113,58 +113,6 @@ jobs:
           name: pyqrack-${{ matrix.platform }}
           path: dist/
 
-  build_focal:
-    runs-on: ubuntu-20.04  # Use a Focal Fossa runner
-    strategy:
-      matrix:
-        platform:
-          - manylinux_2_31_x86_64
-    steps:
-      - name: Checkout PyQrack
-        uses: actions/checkout@v4
-
-      - name: Checkout Qrack
-        uses: actions/checkout@v4
-        with:
-          repository: 'unitaryfund/qrack'
-          path: qrack
-
-      - name: Prepare Build Environment (Linux)
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers python3-venv
-
-      - name: Install Python Dependencies
-        run: |
-          mkdir venv
-          python -m venv venv
-          source venv/bin/activate
-          python -m pip install --upgrade pip
-          python -m pip install wheel setuptools
-
-      - name: Build Qrack Linux x86-64
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=14 ..
-          make qrack_pinvoke qrack_cl_precompile
-
-      - name: Build Wheel
-        run: |
-          source venv/bin/activate
-          mkdir pyqrack/qrack_system/qrack_lib
-          mkdir pyqrack/qrack_system/qrack_cl_precompile
-          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
-          cp qrack/build/qrack_cl_precompile pyqrack/qrack_system/qrack_cl_precompile/
-          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
-
-      - name: Upload Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: pyqrack-${{ matrix.platform }}
-          path: dist/
-
   build_mac_15:
     runs-on: macos-15  # Use a Mac OS runner
     strategy:
