@@ -43,7 +43,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=7 -DCPP_STD=14 -DENABLE_OPENCL=OFF ..
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF ..
           make qrack_pinvoke
 
       - name: Build Wheel
@@ -93,7 +93,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=7 -DCPP_STD=14 -DENABLE_OPENCL=OFF ..
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF ..
           make qrack_pinvoke
 
       - name: Build Wheel
@@ -143,7 +143,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=7 -DCPP_STD=14 -DENABLE_OPENCL=OFF ..
+          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF ..
           make qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
@@ -198,7 +198,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake -DQBCAPPOW=7 -DCPP_STD=14 -DENABLE_RDRAND=OFF -DENABLE_OPENCL=OFF ..
+          cmake -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_RDRAND=OFF -DENABLE_OPENCL=OFF ..
           make qrack_pinvoke
 
       - name: Build Wheel
@@ -245,7 +245,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake .. -DQBCAPPOW=7 -DCPP_STD=14 -DENABLE_OPENCL=OFF
+          cmake .. -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF
           cmake --build . --config Release --target qrack_pinvoke
 
       - name: Build Wheel
