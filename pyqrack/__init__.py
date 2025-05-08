@@ -6,6 +6,7 @@
 from .qrack_system import QrackSystem, Qrack
 from .qrack_simulator import QrackSimulator
 from .qrack_neuron import QrackNeuron
+from .qrack_neuron_torch_layer import QrackNeuronTorchLayer
 from .qrack_circuit import QrackCircuit
 from .pauli import Pauli
 from .neuron_activation_fn import NeuronActivationFn
