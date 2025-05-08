@@ -23,18 +23,30 @@ def powerset(iterable):
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
 
+class QrackTorchNeuron(nn.Module):
+    def __init__(self, neuron: QrackNeuron) -> None:
+        super().__init__()
+        self.neuron = neuron
+
+    def forward(self, x):
+        neuron = self.neuron
+        neuron.predict(True, False)
+
+        return neuron.simulator.prob(neuron.target)
+
+
 class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
     @staticmethod
-    def forward(ctx, neuron: QrackNeuron):
+    def forward(ctx, neuron: object):
         # Save for backward
         ctx.neuron = neuron
 
-        init_prob = neuron.simulator.prob(neuron.output_id)
+        init_prob = neuron.simulator.prob(neuron.target)
         neuron.predict(True, False)
-        final_prob = neuron.simulator.prob(neuron.output_id)
+        final_prob = neuron.simulator.prob(neuron.target)
         ctx.delta = final_prob - init_prob
 
-        return torch.tensor([delta], dtype=torch.float32) if _IS_TORCH_AVAILABLE else ctx.delta
+        return torch.tensor([ctx.delta], dtype=torch.float32) if _IS_TORCH_AVAILABLE else ctx.delta
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -51,18 +63,18 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
-    def __init__(self, simulator: QrackSimulator, input_indices: list[int], output_size: int,
-                 activation: NeuronActivationFn = NeuronActivationFn.Generalized_Logistic):
+    def __init__(self, simulator: object, input_indices: list[int], output_size: int,
+                 activation: int = int(NeuronActivationFn.Generalized_Logistic)):
         super(QrackNeuronTorchLayer, self).__init__()
         self.simulator = simulator
         self.input_indices = input_indices
         self.output_size = output_size
-        self.activation = activation
+        self.activation = NeuronActivationFn(activation)
         self.fn = QrackNeuronFunction.apply if _IS_TORCH_AVAILABLE else lambda x: QrackNeuronFunction.forward(object(), x)
 
         # Create neurons from all powerset input combinations, projecting to coherent output qubits
         self.neurons = nn.ModuleList([
-            QrackNeuron(simulator, list(input_subset), len(input_indices) + output_id, activation)
+            QrackTorchNeuron(QrackNeuron(simulator, list(input_subset), len(input_indices) + output_id, activation))
             for input_subset in powerset(input_indices)
             for output_id in range(output_size)
         ])
@@ -75,8 +87,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             self.simulator.h(output_id)
 
         # Assume quantum inputs already loaded into simulator state
-        for neuron in self.neurons:
-            self.fn(neuron)
+        for neuron_wrapper in self.neurons:
+            self.fn(neuron_wrapper.neuron)
 
         # These are classical views over quantum state; simulator still maintains full coherence
         outputs = [
