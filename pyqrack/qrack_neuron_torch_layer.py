@@ -23,7 +23,7 @@ def powerset(iterable):
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
 
-class QrackNeuronFunction(Function):
+class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else None):
     @staticmethod
     def forward(ctx, neuron: QrackNeuron):
         # Save for backward
