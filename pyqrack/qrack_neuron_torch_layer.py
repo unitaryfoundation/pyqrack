@@ -96,6 +96,14 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                 self.simulator.x(output_id)
             self.simulator.h(output_id)
 
+        # Set Qrack's internal parameters:
+        param_count = 0
+        for neuron_wrapper in self.neurons:
+            neuron = neuron_wrapper.neuron
+            p_count = 1 << len(neuron.controls)
+            neuron.set_angles(self.weights[param_count:(param_count+p_count+1)])
+            param_count += p_count
+
         # Assume quantum inputs already loaded into simulator state
         for neuron_wrapper in self.neurons:
             self.fn(neuron_wrapper.neuron)
