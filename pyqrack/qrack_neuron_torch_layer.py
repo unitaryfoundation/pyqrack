@@ -23,7 +23,7 @@ def powerset(iterable):
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
 
-class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else None):
+class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
     @staticmethod
     def forward(ctx, neuron: QrackNeuron):
         # Save for backward
@@ -50,7 +50,7 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else None):
         return torch.tensor([grad], dtype=torch.float32) if _IS_TORCH_AVAILABLE else grad
 
 
-class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else None):
+class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
     def __init__(self, simulator: QrackSimulator, input_indices: list[int], output_size: int,
                  activation: NeuronActivationFn = NeuronActivationFn.Generalized_Logistic):
         super(QrackNeuronTorchLayer, self).__init__()
