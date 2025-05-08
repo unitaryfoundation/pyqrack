@@ -1,9 +1,13 @@
 # Initial draft by Elara (OpenAI custom GPT)
 # Refined and architecturally clarified by Dan Strano
 
-import torch
-import torch.nn as nn
-from torch.autograd import Function
+_IS_TORCH_AVAILABLE = True
+try:
+    import torch
+    import torch.nn as nn
+    from torch.autograd import Function
+except ImportError:
+    _IS_TORCH_AVAILABLE = False
 
 from .qrack_simulator import QrackSimulator
 from .qrack_neuron import QrackNeuron
@@ -30,7 +34,7 @@ class QrackNeuronFunction(Function):
         final_prob = neuron.simulator.prob(neuron.output_id)
         ctx.delta = final_prob - init_prob
 
-        return torch.tensor([delta], dtype=torch.float32)
+        return torch.tensor([delta], dtype=torch.float32) if _IS_TORCH_AVAILABLE else None
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -43,10 +47,10 @@ class QrackNeuronFunction(Function):
 
         grad = reverse_delta - ctx.delta
 
-        return torch.tensor([grad], dtype=torch.float32)
+        return torch.tensor([grad], dtype=torch.float32) if _IS_TORCH_AVAILABLE else None
 
 
-class QrackNeuronTorchLayer(nn.Module):
+class QrackNeuronTorchLayer(nn.Module  if _IS_TORCH_AVAILABLE else None):
     def __init__(self, simulator: QrackSimulator, input_indices: list[int], output_size: int,
                  activation: NeuronActivationFn = NeuronActivationFn.Generalized_Logistic):
         super(QrackNeuronTorchLayer, self).__init__()
@@ -80,5 +84,5 @@ class QrackNeuronTorchLayer(nn.Module):
             for output_id in range(self.output_size)
         ]
 
-        return torch.tensor(outputs, dtype=torch.float32)
+        return torch.tensor(outputs, dtype=torch.float32) if _IS_TORCH_AVAILABLE else None
 
