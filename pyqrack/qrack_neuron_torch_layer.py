@@ -63,7 +63,7 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
-    def __init__(self, simulator: object, input_indices: list[int], output_size: int,
+    def __init__(self, simulator: object, input_indices: list[int], output_size: int, parameters: list[float] = None,
                  activation: int = int(NeuronActivationFn.Generalized_Logistic)):
         super(QrackNeuronTorchLayer, self).__init__()
         self.simulator = simulator
@@ -78,6 +78,16 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             for input_subset in powerset(input_indices)
             for output_id in range(output_size)
         ])
+
+        # Set Qrack's internal parameters:
+        param_count = 0
+        for neuron_wrapper in self.neurons:
+            neuron = neuron_wrapper.neuron
+            p_count = 1 << len(neuron.controls)
+            neuron.set_angles(parameters[param_count:(param_count+p_count+1)] if parameters else ([0.0] * p_count))
+            param_count += p_count
+
+        self.weights = nn.ParameterList(parameters if parameters else ([0.0] * param_count)) if _IS_TORCH_AVAILABLE else ([0.0] * param_count)
 
     def forward(self, _):
         # Assume quantum outputs should overwrite the simulator state
@@ -96,5 +106,17 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             for output_id in range(self.output_size)
         ]
 
-        return torch.tensor(outputs, dtype=torch.float32) if _IS_TORCH_AVAILABLE else outputs
+        return torch.tensor(outputs, dtype=torch.float32)
 
+    def parameters(self):
+        # Get Qrack's internal parameters:
+        param_count = 0
+        for neuron_wrapper in self.neurons:
+            neuron = neuron_wrapper.neuron
+            angles = neuron.get_angles()
+            p_count = len(angles)
+            for p in range(p_count):
+                self.weights[param_count + p] = torch.tensor(angles[p], dtype=torch.float32)
+            param_count += p_count
+
+        return self.weights
