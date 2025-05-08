@@ -58,7 +58,7 @@ class QrackNeuronTorchLayer(nn.Module  if _IS_TORCH_AVAILABLE else None):
         self.input_indices = input_indices
         self.output_size = output_size
         self.activation = activation
-        self.fn = QrackNeuronFunction.apply
+        self.fn = QrackNeuronFunction.apply if _IS_TORCH_AVAILABLE else QrackNeuronFunction.forward
 
         # Create neurons from all powerset input combinations, projecting to coherent output qubits
         self.neurons = nn.ModuleList([
