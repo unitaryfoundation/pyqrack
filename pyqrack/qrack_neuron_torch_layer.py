@@ -34,7 +34,7 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else None):
         final_prob = neuron.simulator.prob(neuron.output_id)
         ctx.delta = final_prob - init_prob
 
-        return torch.tensor([delta], dtype=torch.float32) if _IS_TORCH_AVAILABLE else None
+        return torch.tensor([delta], dtype=torch.float32) if _IS_TORCH_AVAILABLE else ctx.delta
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -47,10 +47,10 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else None):
 
         grad = reverse_delta - ctx.delta
 
-        return torch.tensor([grad], dtype=torch.float32) if _IS_TORCH_AVAILABLE else None
+        return torch.tensor([grad], dtype=torch.float32) if _IS_TORCH_AVAILABLE else grad
 
 
-class QrackNeuronTorchLayer(nn.Module  if _IS_TORCH_AVAILABLE else None):
+class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else None):
     def __init__(self, simulator: QrackSimulator, input_indices: list[int], output_size: int,
                  activation: NeuronActivationFn = NeuronActivationFn.Generalized_Logistic):
         super(QrackNeuronTorchLayer, self).__init__()
@@ -58,7 +58,7 @@ class QrackNeuronTorchLayer(nn.Module  if _IS_TORCH_AVAILABLE else None):
         self.input_indices = input_indices
         self.output_size = output_size
         self.activation = activation
-        self.fn = QrackNeuronFunction.apply if _IS_TORCH_AVAILABLE else QrackNeuronFunction.forward
+        self.fn = QrackNeuronFunction.apply if _IS_TORCH_AVAILABLE else lambda x: QrackNeuronFunction.forward(dict(), x)
 
         # Create neurons from all powerset input combinations, projecting to coherent output qubits
         self.neurons = nn.ModuleList([
@@ -67,7 +67,7 @@ class QrackNeuronTorchLayer(nn.Module  if _IS_TORCH_AVAILABLE else None):
             for output_id in range(output_size)
         ])
 
-    def forward(self, _: torch.Tensor) -> torch.Tensor:
+    def forward(self, _):
         # Assume quantum outputs should overwrite the simulator state
         for output_id in range(self.output_size):
             if self.simulator.m(len(self.input_indices) + output_id):
@@ -84,5 +84,5 @@ class QrackNeuronTorchLayer(nn.Module  if _IS_TORCH_AVAILABLE else None):
             for output_id in range(self.output_size)
         ]
 
-        return torch.tensor(outputs, dtype=torch.float32) if _IS_TORCH_AVAILABLE else None
+        return torch.tensor(outputs, dtype=torch.float32) if _IS_TORCH_AVAILABLE else outputs
 
