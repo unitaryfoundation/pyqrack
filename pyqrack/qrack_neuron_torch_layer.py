@@ -87,7 +87,9 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             neuron.set_angles(parameters[param_count:(param_count+p_count+1)] if parameters else ([0.0] * p_count))
             param_count += p_count
 
-        self.weights = nn.ParameterList(parameters if parameters else ([0.0] * param_count)) if _IS_TORCH_AVAILABLE else ([0.0] * param_count)
+        self.weights = nn.ParameterList()
+        for pid in range(param_count):
+            self.weights.append(nn.Parameter(torch.tensor(parameters[pid] if parameters else 0.0)))
 
     def forward(self, _):
         # Assume quantum outputs should overwrite the simulator state
@@ -101,7 +103,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         for neuron_wrapper in self.neurons:
             neuron = neuron_wrapper.neuron
             p_count = 1 << len(neuron.controls)
-            neuron.set_angles(self.weights[param_count:(param_count+p_count+1)])
+            angles = [w.item() for w in self.weights[param_count:(param_count+p_count)]]
+            neuron.set_angles(angles)
             param_count += p_count
 
         # Assume quantum inputs already loaded into simulator state
@@ -116,15 +119,3 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 
         return torch.tensor(outputs, dtype=torch.float32)
 
-    def parameters(self):
-        # Get Qrack's internal parameters:
-        param_count = 0
-        for neuron_wrapper in self.neurons:
-            neuron = neuron_wrapper.neuron
-            angles = neuron.get_angles()
-            p_count = len(angles)
-            for p in range(p_count):
-                self.weights[param_count + p] = torch.tensor(angles[p], dtype=torch.float32)
-            param_count += p_count
-
-        return self.weights
