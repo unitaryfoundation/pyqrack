@@ -9,7 +9,7 @@ try:
 
     def quantize_by_range(data: np.ndarray, feature_indices: list[int], bits: int) -> np.ndarray:
         """
-        Discretize selected features of a dataset into binary variables using percentile-based binning.
+        Discretize selected features of a dataset into binary variables using numpy.linspace binning.
 
         Args:
             data (np.ndarray): Input data of shape (n_samples, n_features).
@@ -36,5 +36,16 @@ try:
         return np.hstack(new_features)
 except ImportError:
     def quantize_by_range(data, feature_indices: list[int], bits: int):
+        """
+        Discretize selected features of a dataset into binary variables using numpy.linspace binning.
+
+        Args:
+            data (np.ndarray): Input data of shape (n_samples, n_features).
+            feature_indices (list[int]): Indices of features to discretize.
+            bits (int): Number of bits to represent each discretized feature (e.g., 2 bits = 4 quantiles).
+
+        Returns:
+            np.ndarray: Transformed data with selected features replaced by binary bit columns.
+        """
         raise NotImplementedError("You must have numpy installed to use quantize_by_percentile()!")
 
