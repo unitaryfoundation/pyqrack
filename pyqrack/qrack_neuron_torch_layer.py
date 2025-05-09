@@ -29,6 +29,11 @@ def powerset(iterable):
 
 
 class QrackTorchNeuron(nn.Module):
+    """Torch wrapper for QrackNeuron
+
+    Attributes:
+        neuron(QrackNeuron): QrackNeuron backing this torch wrapper
+    """
     def __init__(self, neuron: QrackNeuron) -> None:
         super().__init__()
         self.neuron = neuron
@@ -41,6 +46,7 @@ class QrackTorchNeuron(nn.Module):
 
 
 class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
+    """Static forward/backward/apply functions for QrackTorchNeuron"""
     @staticmethod
     def forward(ctx, neuron: object):
         # Save for backward
@@ -68,8 +74,20 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
-    def __init__(self, simulator: object, input_indices: list[int], output_size: int, parameters: list[float] = None,
-                 activation: int = int(NeuronActivationFn.Generalized_Logistic)):
+    """Torch layer wrapper for QrackNeuron (with power set of neurons between inputs and outputs)"""
+    def __init__(self, simulator: object, input_indices: list[int], output_indices: list[int],
+                 activation: int = int(NeuronActivationFn.Generalized_Logistic), parameters: list[float] = None):
+        """
+        Initialize a QrackNeuron layer for PyTorch with a power set of neurons connecting inputs to outputs.
+        The inputs and outputs must take the form of discrete, binary features (loaded manually into the backing QrackSimulator)
+
+        Args:
+            sim (QrackSimulator): Simulator into which predictor features are loaded
+            input_indices (list[int]): List of input bits
+            output_indices (list[int]): List of output bits
+            activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
+            parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of power set of input indices, repeated for each output index (with empty set being constant bias)
+        """
         super(QrackNeuronTorchLayer, self).__init__()
         self.simulator = simulator
         self.input_indices = input_indices
