@@ -34,7 +34,7 @@ class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
     Attributes:
         neuron(QrackNeuron): QrackNeuron backing this torch wrapper
     """
-    def __init__(self, neuron: QrackNeuron) -> None:
+    def __init__(self, neuron: QrackNeuron):
         super().__init__()
         self.neuron = neuron
 
@@ -48,7 +48,7 @@ class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
 class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackTorchNeuron"""
     @staticmethod
-    def forward(ctx, neuron: object):
+    def forward(ctx, neuron):
         # Save for backward
         ctx.neuron = neuron
 
@@ -75,8 +75,8 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
     """Torch layer wrapper for QrackNeuron (with power set of neurons between inputs and outputs)"""
-    def __init__(self, simulator: object, input_indices: list[int], output_indices: list[int],
-                 activation: int = int(NeuronActivationFn.Generalized_Logistic), parameters: list[float] = None):
+    def __init__(self, simulator, input_indices, output_indices,
+                 activation=int(NeuronActivationFn.Generalized_Logistic), parameters=None):
         """
         Initialize a QrackNeuron layer for PyTorch with a power set of neurons connecting inputs to outputs.
         The inputs and outputs must take the form of discrete, binary features (loaded manually into the backing QrackSimulator)

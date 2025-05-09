@@ -7,7 +7,7 @@ try:
     # Written by Elara (custom OpenAI GPT)
     import numpy as np
 
-    def quantize_by_range(data: np.ndarray, feature_indices: list[int], bits: int) -> np.ndarray:
+    def quantize_by_range(data, feature_indices, bits):
         """
         Discretize selected features of a dataset into binary variables using numpy.linspace binning.
 
@@ -35,7 +35,7 @@ try:
 
         return np.hstack(new_features)
 except ImportError:
-    def quantize_by_range(data, feature_indices: list[int], bits: int):
+    def quantize_by_range(data, feature_indices, bits):
         """
         Discretize selected features of a dataset into binary variables using numpy.linspace binning.
 
