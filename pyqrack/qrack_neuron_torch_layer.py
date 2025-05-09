@@ -1,5 +1,10 @@
+# (C) Daniel Strano and the Qrack contributors 2017-2025. All rights reserved.
+#
 # Initial draft by Elara (OpenAI custom GPT)
 # Refined and architecturally clarified by Dan Strano
+#
+# Use of this source code is governed by an MIT-style license that can be
+# found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
 _IS_TORCH_AVAILABLE = True
 try:
