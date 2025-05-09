@@ -91,7 +91,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         super(QrackNeuronTorchLayer, self).__init__()
         self.simulator = simulator
         self.input_indices = input_indices
-        self.output_size = output_size
+        self.output_indices = output_indices
         self.activation = NeuronActivationFn(activation)
         self.fn = QrackNeuronFunction.apply if _IS_TORCH_AVAILABLE else lambda x: QrackNeuronFunction.forward(object(), x)
 
@@ -99,7 +99,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.neurons = nn.ModuleList([
             QrackTorchNeuron(QrackNeuron(simulator, list(input_subset), len(input_indices) + output_id, activation))
             for input_subset in powerset(input_indices)
-            for output_id in range(output_size)
+            for output_id in output_indices
         ])
 
         # Set Qrack's internal parameters:
@@ -116,7 +116,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 
     def forward(self, _):
         # Assume quantum outputs should overwrite the simulator state
-        for output_id in range(self.output_size):
+        for output_id in self.output_indices:
             if self.simulator.m(len(self.input_indices) + output_id):
                 self.simulator.x(output_id)
             self.simulator.h(output_id)
@@ -137,7 +137,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         # These are classical views over quantum state; simulator still maintains full coherence
         outputs = [
             self.simulator.prob(len(self.input_indices) + output_id)
-            for output_id in range(self.output_size)
+            for output_id in self.output_indices
         ]
 
         return torch.tensor(outputs, dtype=torch.float32)
