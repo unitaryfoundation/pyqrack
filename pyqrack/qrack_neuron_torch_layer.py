@@ -28,7 +28,7 @@ def powerset(iterable):
     return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
 
 
-class QrackTorchNeuron(nn.Module):
+class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
     """Torch wrapper for QrackNeuron
 
     Attributes:
