@@ -1,4 +1,4 @@
-# (C) Daniel Strano and the Qrack contributors 2017-2023. All rights reserved.
+# (C) Daniel Strano and the Qrack contributors 2017-2025. All rights reserved.
 #
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
@@ -8,6 +8,7 @@ import sys
 
 from .qrack_system import Qrack
 from .neuron_activation_fn import NeuronActivationFn
+
 
 class QrackNeuron:
     """Class that exposes the QNeuron class of Qrack
