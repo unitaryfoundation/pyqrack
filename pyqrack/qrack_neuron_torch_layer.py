@@ -14,7 +14,6 @@ try:
 except ImportError:
     _IS_TORCH_AVAILABLE = False
 
-from .qrack_simulator import QrackSimulator
 from .qrack_neuron import QrackNeuron
 from .neuron_activation_fn import NeuronActivationFn
 
