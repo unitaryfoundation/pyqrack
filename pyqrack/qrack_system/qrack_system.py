@@ -120,6 +120,9 @@ class QrackSystem:
             c_bool
         ]
 
+        self.qrack_lib.init_count_stabilizer.restype = c_ulonglong
+        self.qrack_lib.init_count_stabilizer.argtypes = [c_ulonglong]
+
         self.qrack_lib.init_clone.restype = c_ulonglong
         self.qrack_lib.init_clone.argtypes = [c_ulonglong]
 

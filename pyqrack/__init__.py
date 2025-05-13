@@ -10,5 +10,6 @@ from .qrack_circuit import QrackCircuit
 from .qrack_neuron import QrackNeuron
 from .qrack_neuron_torch_layer import QrackTorchNeuron, QrackNeuronFunction, QrackNeuronTorchLayer
 from .qrack_simulator import QrackSimulator
+from .qrack_stabilizer import QrackStabilizer
 from .qrack_system import QrackSystem, Qrack
 from .stats.quantize_by_range import quantize_by_range
