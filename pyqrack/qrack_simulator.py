@@ -32,10 +32,9 @@ except:
 
 
 class QrackSimulator:
-    """Interface for all the QRack functionality.
+    """Interface for all the Qrack functionality.
 
     Attributes:
-        qubitCount(int): Number of qubits that are to be simulated.
         sid(int): Corresponding simulator id.
     """
 
@@ -78,6 +77,7 @@ class QrackSimulator:
             )
 
         self.is_tensor_network = isTensorNetwork
+        self.is_pure_stabilizer = False
 
         if cloneSid > -1:
             self.sid = Qrack.qrack_lib.init_clone(cloneSid)
@@ -1250,6 +1250,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mul()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot mul()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1283,6 +1285,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot div()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot div()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1374,6 +1378,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot pown()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot pown()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1461,6 +1467,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcmul()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot mcmul()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1497,6 +1505,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcdiv()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot mcdiv()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1599,6 +1609,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcpown()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot mcpown()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1634,6 +1646,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot lda()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot lda()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         Qrack.qrack_lib.LDA(
             self.sid,
@@ -1662,6 +1676,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot adc()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot adc()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         Qrack.qrack_lib.ADC(
             self.sid,
@@ -1691,6 +1707,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot sbc()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot sbc()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         Qrack.qrack_lib.SBC(
             self.sid,
@@ -1721,6 +1739,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot hash()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot hash()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         Qrack.qrack_lib.Hash(
             self.sid, len(q), self._ulonglong_byref(q), self._to_ubyte(len(q), t)
@@ -2887,6 +2907,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot phase_parity()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot phase_parity()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         Qrack.qrack_lib.PhaseParity(
             self.sid, ctypes.c_double(la), len(q), self._ulonglong_byref(q)
@@ -2908,6 +2930,8 @@ class QrackSimulator:
         """
         if self.is_tensor_network:
             raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot phase_root_n()! (Turn off just this option, in the constructor.)")
+        if self.is_pure_stabilizer:
+            raise RuntimeError("QrackStabilizer cannot phase_root_n()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
 
         Qrack.qrack_lib.PhaseRootN(
             self.sid, n, len(q), self._ulonglong_byref(q)
