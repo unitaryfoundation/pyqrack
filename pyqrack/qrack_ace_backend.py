@@ -191,7 +191,7 @@ class QrackAceBackend:
         else:
             return
 
-        if (lq2 == (lq1 + 1)) or (lq1 == (lq2 + 1)):
+        if lq2 == (lq1 + 1):
             hq1 = self._unpack(lq1, True)
             hq2 = self._unpack(lq2, False)
             self._decode(hq1, True)
@@ -199,6 +199,14 @@ class QrackAceBackend:
             gate([hq1[0]], hq2[0])
             self._encode(hq2, False)
             self._encode(hq1, True)
+        elif lq1 == (lq2 + 1):
+            hq2 = self._unpack(lq2, True)
+            hq1 = self._unpack(lq1, False)
+            self._decode(hq2, True)
+            self._decode(hq1, False)
+            gate([hq1[0]], hq2[0])
+            self._encode(hq1, False)
+            self._encode(hq2, True)
         else:
             hq1 = self._unpack(lq1)
             hq2 = self._unpack(lq2)
