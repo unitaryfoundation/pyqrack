@@ -17,10 +17,12 @@ class QrackAceBackend:
     This back end uses elided repetition code on a nearest-neighbor topology to emulate
     a utility-scale superconducting chip quantum computer in very little memory.
 
+    The backend was originally designed assuming a 2D qubit grid like 2019 Sycamore.
+    However, it quickly became apparent that users can basically design their own
+    connectivity topologies, without breaking the concept. (Not all will work equally well.)
+
     Attributes:
         sim(QrackSimulator): Corresponding simulator.
-        row_length(int): Qubit width
-        col_length(int): Qubit length
     """
 
     def __init__(
@@ -28,18 +30,6 @@ class QrackAceBackend:
         qubit_count=-1,
     ):
         self.sim = QrackSimulator(3 * qubit_count)
-        self.row_length, self.col_length = self._factor_width(qubit_count)
-
-
-    def _factor_width(self, width):
-        row_len = math.floor(math.sqrt(width))
-        while (((width // row_len) * row_len) != width):
-            row_len -= 1
-        col_len = width // row_len
-        if row_len == 1:
-            raise Exception("ERROR: Can't simulate prime number width!")
-
-        return (row_len, col_len)
 
 
     def _ct_pair_prob(self, q1, q2):
