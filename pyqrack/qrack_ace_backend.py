@@ -259,3 +259,29 @@ class QrackAceBackend:
 
         return result
 
+
+    def measure_shots(self, q, s):
+        _q = []
+        for i in q:
+            _q.append(3 * i)
+            _q.append(3 * i + 1)
+            _q.append(3 * i + 2)
+
+        samples = self.sim.measure_shots(_q, s)
+
+        results = []
+        for sample in samples:
+            logical_sample = 0
+            for i in range(len(q)):
+                logical_sample <<= 1
+                bit_count = 0
+                for _ in range(3):
+                    if sample & 1:
+                        bit_count += 1
+                    sample >>= 1
+                if bit_count > 1:
+                    logical_sample |= 1
+            results.append(logical_sample)
+
+        return results
+
