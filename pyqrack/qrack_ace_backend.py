@@ -311,16 +311,6 @@ class QrackAceBackend:
         return results
 
 
-    def prob(self, lq):
-        hq = self._unpack(lq)
-        prob = 0
-        for q in hq:
-            prob += self.sim.prob(q)
-        prob /= 3
-
-        return prob
-
-
     def _apply_op(self, operation):
         name = operation.name
 
