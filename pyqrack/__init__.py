@@ -6,6 +6,7 @@
 from .pauli import Pauli
 from .neuron_activation_fn import NeuronActivationFn
 from .quimb_circuit_type import QuimbCircuitType
+from .qrack_ace_backend import QrackAceBackend
 from .qrack_circuit import QrackCircuit
 from .qrack_neuron import QrackNeuron
 from .qrack_neuron_torch_layer import QrackTorchNeuron, QrackNeuronFunction, QrackNeuronTorchLayer
