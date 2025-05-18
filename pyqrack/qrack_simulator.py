@@ -3843,7 +3843,7 @@ class QrackSimulator:
 
             if not self._sample_measure:
                 for index in range(len(qubits)):
-                    qubit_outcome = self._sim.m(qubits[index])
+                    qubit_outcome = self._sim.m(qubits[index]._index)
 
                     clbit = clbits[index]
                     clmask = 1 << clbit
