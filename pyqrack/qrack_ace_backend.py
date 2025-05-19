@@ -26,12 +26,10 @@ class QrackAceBackend:
     This back end uses elided repetition code on a nearest-neighbor topology to emulate
     a utility-scale superconducting chip quantum computer in very little memory.
 
-    The backend was originally designed assuming a 2D qubit grid like 2019 Sycamore.
-    However, it quickly became apparent that users can basically design their own
-    connectivity topologies, without breaking the concept. (Not all will work equally well.)
-
     Attributes:
         sim(QrackSimulator): Corresponding simulator.
+        row_length(int): Qubits per row.
+        col_length(int): Qubits per column.
     """
 
     def __init__(
@@ -40,7 +38,17 @@ class QrackAceBackend:
         toClone=None
     ):
         self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count)
+        self._factor_width(qubit_count)
 
+
+    def _factor_width(self, width):
+        col_len = math.floor(math.sqrt(width))
+        while (((width // col_len) * col_len) != width):
+            col_len -= 1
+        row_len = width // col_len
+
+        self.col_length = col_len
+        self.row_length = row_len
 
     def _ct_pair_prob(self, q1, q2):
         p1 = self.sim.prob(q1)
@@ -93,7 +101,9 @@ class QrackAceBackend:
 
 
     def _encode(self, hq, reverse = False):
-        if reverse:
+        row = (hq[0] // 3) // self.row_length
+        even_row = not (row & 1)
+        if even_row == reverse:
             self._cx_shadow(hq[0], hq[1])
             self.sim.mcx([hq[1]], hq[2])
         else:
@@ -102,7 +112,9 @@ class QrackAceBackend:
 
 
     def _decode(self, hq, reverse = False):
-        if reverse:
+        row = (hq[0] // 3) // self.row_length
+        even_row = not (row & 1)
+        if even_row == reverse:
             self.sim.mcx([hq[1]], hq[2])
             self._cx_shadow(hq[0], hq[1])
         else:
@@ -182,12 +194,16 @@ class QrackAceBackend:
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         gate = None
+        shadow = None
         if pauli == Pauli.PauliX:
             gate = self.sim.macx if anti else self.sim.mcx
+            shadow = self._anti_cx_shadow if anti else self._cx_shadow
         elif pauli == Pauli.PauliY:
             gate = self.sim.macy if anti else self.sim.mcy
+            shadow = self._anti_cy_shadow if anti else self._cy_shadow
         elif pauli == Pauli.PauliZ:
             gate = self.sim.macz if anti else self.sim.mcz
+            shadow = self._anti_cz_shadow if anti else self._cz_shadow
         else:
             return
 
@@ -211,7 +227,7 @@ class QrackAceBackend:
             hq1 = self._unpack(lq1)
             hq2 = self._unpack(lq2)
             gate([hq1[0]], hq2[0])
-            gate([hq1[1]], hq2[1])
+            shadow(hq1[1], hq2[1])
             gate([hq1[2]], hq2[2])
 
 
