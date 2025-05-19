@@ -24,10 +24,17 @@ class QrackAceBackend:
     """A back end for elided quantum error correction
 
     This back end uses elided repetition code on a nearest-neighbor topology to emulate
-    a utility-scale superconducting chip quantum computer in very little memory.
+    a utility-scale superconducting chip quantum computer in very little memory.4
+
+    The backend was originally designed assuming a 2D qubit grid like 2019 Sycamore.
+    However, it quickly became apparent that users can basically design their own
+    connectivity topologies, without breaking the concept. (Not all will work equally well.)
+    For maximum flexibility, set "alternating_codes=False". (For best performance on
+    Sycamore-like topologies, leave it "True.")
 
     Attributes:
         sim(QrackSimulator): Corresponding simulator.
+        alternating_codes(bool): Alternate repetition code elision by index?
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
     """
@@ -35,10 +42,12 @@ class QrackAceBackend:
     def __init__(
         self,
         qubit_count=-1,
+        alternating_codes=True,
         toClone=None
     ):
         self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count)
         self._factor_width(qubit_count)
+        self.alternating_codes = alternating_codes
 
 
     def _factor_width(self, width):
@@ -103,7 +112,7 @@ class QrackAceBackend:
     def _encode(self, hq, reverse = False):
         row = (hq[0] // 3) // self.row_length
         even_row = not (row & 1)
-        if even_row == reverse:
+        if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             self._cx_shadow(hq[0], hq[1])
             self.sim.mcx([hq[1]], hq[2])
         else:
@@ -114,7 +123,7 @@ class QrackAceBackend:
     def _decode(self, hq, reverse = False):
         row = (hq[0] // 3) // self.row_length
         even_row = not (row & 1)
-        if even_row == reverse:
+        if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             self.sim.mcx([hq[1]], hq[2])
             self._cx_shadow(hq[0], hq[1])
         else:
@@ -227,7 +236,10 @@ class QrackAceBackend:
             hq1 = self._unpack(lq1)
             hq2 = self._unpack(lq2)
             gate([hq1[0]], hq2[0])
-            shadow(hq1[1], hq2[1])
+            if self.alternating_codes:
+                shadow(hq1[1], hq2[1])
+            else:
+                gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
 
 
