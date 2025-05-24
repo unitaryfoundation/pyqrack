@@ -11,7 +11,7 @@ from enum import IntEnum
 class NeuronActivationFn(IntEnum):
     # Default
     Sigmoid = 0
-    # Rectified linear 
+    # Rectified linear
     ReLU = 1
     # Gaussian linear
     GeLU = 2
