@@ -46,10 +46,10 @@ class QrackNeuron:
         simulator,
         controls,
         target,
-        activation_fn = NeuronActivationFn.Sigmoid,
-        alpha = 1.0,
-        tolerance = sys.float_info.epsilon,
-        _init = True
+        activation_fn=NeuronActivationFn.Sigmoid,
+        alpha=1.0,
+        tolerance=sys.float_info.epsilon,
+        _init=True,
     ):
         self.simulator = simulator
         self.controls = controls
@@ -61,7 +61,15 @@ class QrackNeuron:
         if not _init:
             return
 
-        self.nid = Qrack.qrack_lib.init_qneuron(simulator.sid, len(controls), self._ulonglong_byref(controls), target, activation_fn, alpha, tolerance)
+        self.nid = Qrack.qrack_lib.init_qneuron(
+            simulator.sid,
+            len(controls),
+            self._ulonglong_byref(controls),
+            target,
+            activation_fn,
+            alpha,
+            tolerance,
+        )
 
         self._throw_if_error()
 
@@ -79,7 +87,14 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        result = QrackNeuron(self.simulator, self.controls, self.target, self.activation_fn, self.alpha, self.tolerance)
+        result = QrackNeuron(
+            self.simulator,
+            self.controls,
+            self.target,
+            self.activation_fn,
+            self.alpha,
+            self.tolerance,
+        )
         self.nid = Qrack.qrack_lib.clone_qneuron(self.simulator.sid)
         self._throw_if_error()
         return result
@@ -107,7 +122,9 @@ class QrackNeuron:
             RuntimeError: QrackSimulator raised an exception.
         """
         if len(a) < (1 << len(self.controls)):
-            raise ValueError("Angles 'a' in QrackNeuron.set_angles() must contain at least (2 ** len(self.controls)) elements.")
+            raise ValueError(
+                "Angles 'a' in QrackNeuron.set_angles() must contain at least (2 ** len(self.controls)) elements."
+            )
         Qrack.qrack_lib.set_qneuron_angles(self.nid, self._real1_byref(a))
         self._throw_if_error()
 
@@ -145,7 +162,7 @@ class QrackNeuron:
 
         Nonlinear activation functions can be important to neural net
         applications, like DNN. The available activation functions are
-        enumerated in `NeuronActivationFn`. 
+        enumerated in `NeuronActivationFn`.
 
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.

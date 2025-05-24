@@ -8,7 +8,7 @@ from .qrack_system import Qrack
 
 class QrackStabilizer(QrackSimulator):
     """Interface for pure-stabilizer Qrack functionality.
-    
+
     Like QrackSimulator with isTensorNetwork=True, QrackStabilizer does not implement a general ALU or phase parity operations.
     Unlike isTensorNetwork=True, QrackStabilizer does implement compose(), decompose(), and dispose()
     Even if your operation is non-Clifford in full generality, QrackStabilizer will attempt to reduce it to a Clifford case.
@@ -56,4 +56,3 @@ class QrackStabilizer(QrackSimulator):
             self.run_pyzx_gates(pyzxCircuit.gates)
         elif qiskitCircuit is not None:
             self.run_qiskit_circuit(qiskitCircuit)
-

@@ -24,7 +24,7 @@ from itertools import chain, combinations
 def powerset(iterable):
     "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3,) (1,2,3)"
     s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(len(s)+1))
+    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
 
 
 class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
@@ -33,6 +33,7 @@ class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
     Attributes:
         neuron(QrackNeuron): QrackNeuron backing this torch wrapper
     """
+
     def __init__(self, neuron: QrackNeuron):
         super().__init__()
         self.neuron = neuron
@@ -46,6 +47,7 @@ class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
 
 class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackTorchNeuron"""
+
     @staticmethod
     def forward(ctx, neuron):
         # Save for backward
@@ -56,7 +58,11 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
         final_prob = neuron.simulator.prob(neuron.target)
         ctx.delta = final_prob - init_prob
 
-        return torch.tensor([ctx.delta], dtype=torch.float32) if _IS_TORCH_AVAILABLE else ctx.delta
+        return (
+            torch.tensor([ctx.delta], dtype=torch.float32)
+            if _IS_TORCH_AVAILABLE
+            else ctx.delta
+        )
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -69,13 +75,22 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         grad = reverse_delta - ctx.delta
 
-        return torch.tensor([grad], dtype=torch.float32) if _IS_TORCH_AVAILABLE else grad
+        return (
+            torch.tensor([grad], dtype=torch.float32) if _IS_TORCH_AVAILABLE else grad
+        )
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
     """Torch layer wrapper for QrackNeuron (with power set of neurons between inputs and outputs)"""
-    def __init__(self, simulator, input_indices, output_indices,
-                 activation=int(NeuronActivationFn.Generalized_Logistic), parameters=None):
+
+    def __init__(
+        self,
+        simulator,
+        input_indices,
+        output_indices,
+        activation=int(NeuronActivationFn.Generalized_Logistic),
+        parameters=None,
+    ):
         """
         Initialize a QrackNeuron layer for PyTorch with a power set of neurons connecting inputs to outputs.
         The inputs and outputs must take the form of discrete, binary features (loaded manually into the backing QrackSimulator)
@@ -92,26 +107,40 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.input_indices = input_indices
         self.output_indices = output_indices
         self.activation = NeuronActivationFn(activation)
-        self.fn = QrackNeuronFunction.apply if _IS_TORCH_AVAILABLE else lambda x: QrackNeuronFunction.forward(object(), x)
+        self.fn = (
+            QrackNeuronFunction.apply
+            if _IS_TORCH_AVAILABLE
+            else lambda x: QrackNeuronFunction.forward(object(), x)
+        )
 
         # Create neurons from all powerset input combinations, projecting to coherent output qubits
-        self.neurons = nn.ModuleList([
-            QrackTorchNeuron(QrackNeuron(simulator, list(input_subset), output_id, activation))
-            for input_subset in powerset(input_indices)
-            for output_id in output_indices
-        ])
+        self.neurons = nn.ModuleList(
+            [
+                QrackTorchNeuron(
+                    QrackNeuron(simulator, list(input_subset), output_id, activation)
+                )
+                for input_subset in powerset(input_indices)
+                for output_id in output_indices
+            ]
+        )
 
         # Set Qrack's internal parameters:
         param_count = 0
         for neuron_wrapper in self.neurons:
             neuron = neuron_wrapper.neuron
             p_count = 1 << len(neuron.controls)
-            neuron.set_angles(parameters[param_count:(param_count+p_count+1)] if parameters else ([0.0] * p_count))
+            neuron.set_angles(
+                parameters[param_count : (param_count + p_count + 1)]
+                if parameters
+                else ([0.0] * p_count)
+            )
             param_count += p_count
 
         self.weights = nn.ParameterList()
         for pid in range(param_count):
-            self.weights.append(nn.Parameter(torch.tensor(parameters[pid] if parameters else 0.0)))
+            self.weights.append(
+                nn.Parameter(torch.tensor(parameters[pid] if parameters else 0.0))
+            )
 
     def forward(self, _):
         # Assume quantum outputs should overwrite the simulator state
@@ -125,7 +154,9 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         for neuron_wrapper in self.neurons:
             neuron = neuron_wrapper.neuron
             p_count = 1 << len(neuron.controls)
-            angles = [w.item() for w in self.weights[param_count:(param_count+p_count)]]
+            angles = [
+                w.item() for w in self.weights[param_count : (param_count + p_count)]
+            ]
             neuron.set_angles(angles)
             param_count += p_count
 
@@ -134,10 +165,6 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             self.fn(neuron_wrapper.neuron)
 
         # These are classical views over quantum state; simulator still maintains full coherence
-        outputs = [
-            self.simulator.prob(output_id)
-            for output_id in self.output_indices
-        ]
+        outputs = [self.simulator.prob(output_id) for output_id in self.output_indices]
 
         return torch.tensor(outputs, dtype=torch.float32)
-
