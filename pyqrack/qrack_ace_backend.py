@@ -218,7 +218,7 @@ class QrackAceBackend:
             hq1 = self._unpack(lq1)
             hq2 = self._unpack(lq2)
             gate([hq1[0]], hq2[0])
-            if self.alternating_codes:
+            if self.alternating_codes and ((lq2_col & 1) != (lq1_col & 1)):
                 shadow(hq1[1], hq2[1])
             else:
                 gate([hq1[1]], hq2[1])
