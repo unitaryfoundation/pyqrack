@@ -18,21 +18,21 @@ help:
 build-deps:
 ifneq ($(OS),Windows_NT)
 ifeq ($(QRACK_PRESENT),)
-	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout 87cf2078438f931afadd74d5f8abaaf933c01c6d; cd ..
+	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout 210176f4373041e76cc211e070d279c21a26213d; cd ..
 endif
 	mkdir -p qrack/build
 ifeq ($(UNAME_S),Linux)
 ifeq ($(UNAME_P),x86_64)
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make all
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke
 else
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make all
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke
 endif
 endif
 ifeq ($(UNAME_S),Darwin)
 ifeq ($(UNAME_P),x86_64)
-	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make all
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke
 else
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make all
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke
 endif
 endif
 endif
