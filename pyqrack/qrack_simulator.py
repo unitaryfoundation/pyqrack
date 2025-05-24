@@ -57,7 +57,9 @@ class QrackSimulator:
         isPaged=True,
         isCpuGpuHybrid=True,
         isOpenCL=True,
-        isHostPointer=True if os.environ.get('PYQRACK_HOST_POINTER_DEFAULT_ON') else False,
+        isHostPointer=(
+            True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False
+        ),
         noise=0,
         pyzxCircuit=None,
         qiskitCircuit=None,
@@ -96,7 +98,7 @@ class QrackSimulator:
                 (noise > 0),
                 isCpuGpuHybrid,
                 isOpenCL,
-                isHostPointer
+                isHostPointer,
             )
 
         self._throw_if_error()
@@ -340,7 +342,9 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         if len(m) < 4:
-            raise ValueError("2x2 matrix 'm' in QrackSimulator.mtrx() must contain at least 4 elements.")
+            raise ValueError(
+                "2x2 matrix 'm' in QrackSimulator.mtrx() must contain at least 4 elements."
+            )
         Qrack.qrack_lib.Mtrx(self.sid, self._complex_byref(m), q)
         self._throw_if_error()
 
@@ -558,7 +562,9 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         if len(m) < 4:
-            raise ValueError("2x2 matrix 'm' in QrackSimulator.mcmtrx() must contain at least 4 elements.")
+            raise ValueError(
+                "2x2 matrix 'm' in QrackSimulator.mcmtrx() must contain at least 4 elements."
+            )
         Qrack.qrack_lib.MCMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q
         )
@@ -734,7 +740,9 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         if len(m) < 4:
-            raise ValueError("2x2 matrix 'm' in QrackSimulator.macmtrx() must contain at least 4 elements.")
+            raise ValueError(
+                "2x2 matrix 'm' in QrackSimulator.macmtrx() must contain at least 4 elements."
+            )
         Qrack.qrack_lib.MACMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q
         )
@@ -757,7 +765,9 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         if len(m) < 4:
-            raise ValueError("2x2 matrix 'm' in QrackSimulator.ucmtrx() must contain at least 4 elements.")
+            raise ValueError(
+                "2x2 matrix 'm' in QrackSimulator.ucmtrx() must contain at least 4 elements."
+            )
         Qrack.qrack_lib.UCMtrx(
             self.sid, len(c), self._ulonglong_byref(c), self._complex_byref(m), q, p
         )
@@ -779,7 +789,9 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         if len(m) < ((1 << len(c)) * 4):
-            raise ValueError("Multiplex matrix 'm' in QrackSimulator.multiplex1_mtrx() must contain at least (4 * 2 ** len(c)) elements.")
+            raise ValueError(
+                "Multiplex matrix 'm' in QrackSimulator.multiplex1_mtrx() must contain at least (4 * 2 ** len(c)) elements."
+            )
         Qrack.qrack_lib.Multiplex1Mtrx(
             self.sid, len(c), self._ulonglong_byref(c), q, self._complex_byref(m)
         )
@@ -1249,9 +1261,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mul()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mul()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot mul()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot mul()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot mul()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1284,9 +1300,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot div()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot div()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot div()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot div()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot div()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1377,9 +1397,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot pown()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot pown()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot pown()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot pown()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot pown()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1466,9 +1490,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcmul()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcmul()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot mcmul()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot mcmul()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot mcmul()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1504,9 +1532,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcdiv()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcdiv()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot mcdiv()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot mcdiv()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot mcdiv()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1608,9 +1640,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcpown()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot mcpown()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot mcpown()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot mcpown()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot mcpown()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         if len(q) != len(o):
             raise RuntimeError("Lengths of list parameters are mismatched.")
@@ -1645,9 +1681,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot lda()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot lda()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot lda()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot lda()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot lda()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         Qrack.qrack_lib.LDA(
             self.sid,
@@ -1675,9 +1715,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot adc()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot adc()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot adc()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot adc()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot adc()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         Qrack.qrack_lib.ADC(
             self.sid,
@@ -1706,9 +1750,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot sbc()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot sbc()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot sbc()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot sbc()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot sbc()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         Qrack.qrack_lib.SBC(
             self.sid,
@@ -1738,9 +1786,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot hash()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot hash()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot hash()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot hash()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot hash()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         Qrack.qrack_lib.Hash(
             self.sid, len(q), self._ulonglong_byref(q), self._to_ubyte(len(q), t)
@@ -2049,7 +2101,9 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot compose()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot compose()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot compose()! (Turn off just this option, in the constructor.)"
+            )
 
         Qrack.qrack_lib.Compose(self.sid, other.sid, self._ulonglong_byref(q))
         self._throw_if_error()
@@ -2058,7 +2112,7 @@ class QrackSimulator:
         """Decompose system
 
         Decompose the given qubit out of the system.
-        Warning: The qubit subsystem state must be separable, or the behavior 
+        Warning: The qubit subsystem state must be separable, or the behavior
         of this method is undefined.
 
         Args:
@@ -2072,7 +2126,9 @@ class QrackSimulator:
             State of the systems.
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot decompose()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot decompose()! (Turn off just this option, in the constructor.)"
+            )
 
         other = QrackSimulator()
         Qrack.qrack_lib.destroy(other.sid)
@@ -2086,7 +2142,7 @@ class QrackSimulator:
 
         Minimally decompose a set of contiguous bits from the separably
         composed unit, and discard the separable bits.
-        Warning: The qubit subsystem state must be separable, or the behavior 
+        Warning: The qubit subsystem state must be separable, or the behavior
         of this method is undefined.
 
         Args:
@@ -2100,7 +2156,9 @@ class QrackSimulator:
             State of the systems.
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot dispose()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot dispose()! (Turn off just this option, in the constructor.)"
+            )
 
         l = len(q)
         Qrack.qrack_lib.Dispose(self.sid, l, self._ulonglong_byref(q))
@@ -2163,8 +2221,8 @@ class QrackSimulator:
     def in_ket(self, ket):
         """Set state vector
 
-        Set state vector for the selected simulator ID. 
-        Warning: State vector is not always the internal representation leading 
+        Set state vector for the selected simulator ID.
+        Warning: State vector is not always the internal representation leading
         to sub-optimal performance of the method.
 
         Args:
@@ -2180,7 +2238,7 @@ class QrackSimulator:
         """Get state vector
 
         Returns the raw state vector of the simulator.
-        Warning: State vector is not always the internal representation leading 
+        Warning: State vector is not always the internal representation leading
         to sub-optimal performance of the method.
 
         Raises:
@@ -2289,11 +2347,13 @@ class QrackSimulator:
 
         if len(q) != len(c):
             raise RuntimeError("prob_perm argument lengths do not match.")
-        result = Qrack.qrack_lib.PermutationProb(self.sid, len(q), self._ulonglong_byref(q), self._bool_byref(c));
+        result = Qrack.qrack_lib.PermutationProb(
+            self.sid, len(q), self._ulonglong_byref(q), self._bool_byref(c)
+        )
         self._throw_if_error()
         return result
 
-    def prob_perm_rdm(self, q, c, r = True):
+    def prob_perm_rdm(self, q, c, r=True):
         """Probability of permutation, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2315,7 +2375,9 @@ class QrackSimulator:
 
         if len(q) != len(c):
             raise RuntimeError("prob_perm argument lengths do not match.")
-        result = Qrack.qrack_lib.PermutationProbRdm(self.sid, len(q), self._ulonglong_byref(q), self._bool_byref(c), r);
+        result = Qrack.qrack_lib.PermutationProbRdm(
+            self.sid, len(q), self._ulonglong_byref(q), self._bool_byref(c), r
+        )
         self._throw_if_error()
         return result
 
@@ -2340,7 +2402,7 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def permutation_expectation_rdm(self, q, r = True):
+    def permutation_expectation_rdm(self, q, r=True):
         """Permutation expectation value, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2389,7 +2451,7 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def factorized_expectation_rdm(self, q, c, r = True):
+    def factorized_expectation_rdm(self, q, c, r=True):
         """Factorized expectation value, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2409,7 +2471,9 @@ class QrackSimulator:
             Expectation value
         """
         if (len(q) << 1) != len(c):
-            raise RuntimeError("factorized_expectation_rdm argument lengths do not match.")
+            raise RuntimeError(
+                "factorized_expectation_rdm argument lengths do not match."
+            )
         m = max([(x.bit_length() + 63) // 64 for x in c])
         result = Qrack.qrack_lib.FactorizedExpectationRdm(
             self.sid, len(q), self._ulonglong_byref(q), m, self._to_ulonglong(m, c), r
@@ -2435,14 +2499,16 @@ class QrackSimulator:
             Expectation value
         """
         if (len(q) << 1) != len(c):
-            raise RuntimeError("factorized_expectation_rdm argument lengths do not match.")
+            raise RuntimeError(
+                "factorized_expectation_rdm argument lengths do not match."
+            )
         result = Qrack.qrack_lib.FactorizedExpectationFp(
             self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c)
         )
         self._throw_if_error()
         return result
 
-    def factorized_expectation_fp_rdm(self, q, c, r = True):
+    def factorized_expectation_fp_rdm(self, q, c, r=True):
         """Factorized expectation value, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2462,7 +2528,9 @@ class QrackSimulator:
             Expectation value
         """
         if (len(q) << 1) != len(c):
-            raise RuntimeError("factorized_expectation_fp_rdm argument lengths do not match.")
+            raise RuntimeError(
+                "factorized_expectation_fp_rdm argument lengths do not match."
+            )
         result = Qrack.qrack_lib.FactorizedExpectationFpRdm(
             self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c), r
         )
@@ -2534,11 +2602,19 @@ class QrackSimulator:
             Expectation value
         """
         if (3 * len(q)) != len(b):
-            raise RuntimeError("unitary_expectation_eigenval qubit and basis argument lengths do not match.")
+            raise RuntimeError(
+                "unitary_expectation_eigenval qubit and basis argument lengths do not match."
+            )
         if (len(q) << 1) != len(e):
-            raise RuntimeError("unitary_expectation_eigenval qubit and eigenvalue argument lengths do not match.")
+            raise RuntimeError(
+                "unitary_expectation_eigenval qubit and eigenvalue argument lengths do not match."
+            )
         result = Qrack.qrack_lib.UnitaryExpectationEigenVal(
-            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b), self._real1_byref(e)
+            self.sid,
+            len(q),
+            self._ulonglong_byref(q),
+            self._real1_byref(b),
+            self._real1_byref(e),
         )
         self._throw_if_error()
         return result
@@ -2560,11 +2636,19 @@ class QrackSimulator:
             Expectation value
         """
         if (len(q) << 2) != len(b):
-            raise RuntimeError("matrix_expectation_eigenval qubit and basis argument lengths do not match.")
+            raise RuntimeError(
+                "matrix_expectation_eigenval qubit and basis argument lengths do not match."
+            )
         if (len(q) << 1) != len(e):
-            raise RuntimeError("matrix_expectation_eigenval qubit and eigenvalue argument lengths do not match.")
+            raise RuntimeError(
+                "matrix_expectation_eigenval qubit and eigenvalue argument lengths do not match."
+            )
         result = Qrack.qrack_lib.MatrixExpectationEigenVal(
-            self.sid, len(q), self._ulonglong_byref(q), self._complex_byref(b), self._real1_byref(e)
+            self.sid,
+            len(q),
+            self._ulonglong_byref(q),
+            self._complex_byref(b),
+            self._real1_byref(e),
         )
         self._throw_if_error()
         return result
@@ -2613,7 +2697,7 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def variance_rdm(self, q, r = True):
+    def variance_rdm(self, q, r=True):
         """Permutation variance, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2662,7 +2746,7 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def factorized_variance_rdm(self, q, c, r = True):
+    def factorized_variance_rdm(self, q, c, r=True):
         """Factorized variance, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2715,7 +2799,7 @@ class QrackSimulator:
         self._throw_if_error()
         return result
 
-    def factorized_variance_fp_rdm(self, q, c, r = True):
+    def factorized_variance_fp_rdm(self, q, c, r=True):
         """Factorized variance, (tracing out the reduced
         density matrix without stabilizer ancillary qubits)
 
@@ -2735,7 +2819,9 @@ class QrackSimulator:
             variance
         """
         if (len(q) << 1) != len(c):
-            raise RuntimeError("factorized_variance_fp_rdm argument lengths do not match.")
+            raise RuntimeError(
+                "factorized_variance_fp_rdm argument lengths do not match."
+            )
         result = Qrack.qrack_lib.FactorizedVarianceFpRdm(
             self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(c), r
         )
@@ -2807,11 +2893,19 @@ class QrackSimulator:
             variance
         """
         if (3 * len(q)) != len(b):
-            raise RuntimeError("unitary_variance_eigenval qubit and basis argument lengths do not match.")
+            raise RuntimeError(
+                "unitary_variance_eigenval qubit and basis argument lengths do not match."
+            )
         if (len(q) << 1) != len(e):
-            raise RuntimeError("unitary_variance_eigenval qubit and eigenvalue argument lengths do not match.")
+            raise RuntimeError(
+                "unitary_variance_eigenval qubit and eigenvalue argument lengths do not match."
+            )
         result = Qrack.qrack_lib.UnitaryVarianceEigenVal(
-            self.sid, len(q), self._ulonglong_byref(q), self._real1_byref(b), self._real1_byref(e)
+            self.sid,
+            len(q),
+            self._ulonglong_byref(q),
+            self._real1_byref(b),
+            self._real1_byref(e),
         )
         self._throw_if_error()
         return result
@@ -2833,11 +2927,19 @@ class QrackSimulator:
             variance
         """
         if (len(q) << 2) != len(b):
-            raise RuntimeError("matrix_variance_eigenval qubit and basis argument lengths do not match.")
+            raise RuntimeError(
+                "matrix_variance_eigenval qubit and basis argument lengths do not match."
+            )
         if (len(q) << 1) != len(e):
-            raise RuntimeError("matrix_variance_eigenval qubit and eigenvalue argument lengths do not match.")
+            raise RuntimeError(
+                "matrix_variance_eigenval qubit and eigenvalue argument lengths do not match."
+            )
         result = Qrack.qrack_lib.MatrixVarianceEigenVal(
-            self.sid, len(q), self._ulonglong_byref(q), self._complex_byref(b), self._real1_byref(e)
+            self.sid,
+            len(q),
+            self._ulonglong_byref(q),
+            self._complex_byref(b),
+            self._real1_byref(e),
         )
         self._throw_if_error()
         return result
@@ -2906,9 +3008,13 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot phase_parity()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot phase_parity()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot phase_parity()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot phase_parity()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot phase_parity()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
         Qrack.qrack_lib.PhaseParity(
             self.sid, ctypes.c_double(la), len(q), self._ulonglong_byref(q)
@@ -2929,13 +3035,15 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot phase_root_n()! (Turn off just this option, in the constructor.)
         """
         if self.is_tensor_network:
-            raise RuntimeError("QrackSimulator with isTensorNetwork=True option cannot phase_root_n()! (Turn off just this option, in the constructor.)")
+            raise RuntimeError(
+                "QrackSimulator with isTensorNetwork=True option cannot phase_root_n()! (Turn off just this option, in the constructor.)"
+            )
         if self.is_pure_stabilizer:
-            raise RuntimeError("QrackStabilizer cannot phase_root_n()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)")
+            raise RuntimeError(
+                "QrackStabilizer cannot phase_root_n()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+            )
 
-        Qrack.qrack_lib.PhaseRootN(
-            self.sid, n, len(q), self._ulonglong_byref(q)
-        )
+        Qrack.qrack_lib.PhaseRootN(self.sid, n, len(q), self._ulonglong_byref(q))
         self._throw_if_error()
 
     def try_separate_1qb(self, qi1):
@@ -3008,11 +3116,8 @@ class QrackSimulator:
         Raises:
             Runtimeerror: QrackSimulator raised an exception.
         """
-        result = Qrack.qrack_lib.Separate(
-            self.sid, len(qs), self._ulonglong_byref(qs)
-        )
+        result = Qrack.qrack_lib.Separate(self.sid, len(qs), self._ulonglong_byref(qs))
         self._throw_if_error()
-
 
     def get_unitary_fidelity(self):
         """Get fidelity estimate
@@ -3157,10 +3262,18 @@ class QrackSimulator:
         Args:
             filename: Name of file
         """
-        Qrack.qrack_lib.qstabilizer_out_to_file(self.sid, filename.encode('utf-8'))
+        Qrack.qrack_lib.qstabilizer_out_to_file(self.sid, filename.encode("utf-8"))
         self._throw_if_error()
 
-    def in_from_file(filename, is_binary_decision_tree = False, is_paged = True, is_cpu_gpu_hybrid = False, is_opencl = True, is_host_pointer = False, is_noisy = False):
+    def in_from_file(
+        filename,
+        is_binary_decision_tree=False,
+        is_paged=True,
+        is_cpu_gpu_hybrid=False,
+        is_opencl=True,
+        is_host_pointer=False,
+        is_noisy=False,
+    ):
         """Input state from file (stabilizer only!)
 
         Reads in a hybrid stabilizer state from file.
@@ -3182,9 +3295,9 @@ class QrackSimulator:
             isCpuGpuHybrid=is_cpu_gpu_hybrid,
             isOpenCL=is_opencl,
             isHostPointer=is_host_pointer,
-            isNoisy=is_noisy
+            isNoisy=is_noisy,
         )
-        Qrack.qrack_lib.qstabilizer_in_from_file(out.sid, filename.encode('utf-8'))
+        Qrack.qrack_lib.qstabilizer_in_from_file(out.sid, filename.encode("utf-8"))
         out._throw_if_error()
 
         return out
@@ -3209,7 +3322,7 @@ class QrackSimulator:
             )
 
         lines = []
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             lines = file.readlines()
 
         logical_qubits = int(lines[0])
@@ -3232,7 +3345,7 @@ class QrackSimulator:
             line_number += 1
             tableau = []
             row_count = shard_map_size << 1
-            for line in lines[line_number:(line_number + row_count)]:
+            for line in lines[line_number : (line_number + row_count)]:
                 bits = line.split()
                 if len(bits) != (row_count + 1):
                     raise QrackException("Invalid Qrack hybrid stabilizer file!")
@@ -3241,7 +3354,7 @@ class QrackSimulator:
                     row.append(bool(int(bits[b])))
                 row.append(bool((int(bits[-1]) >> 1) & 1))
                 tableau.append(row)
-            line_number += (shard_map_size << 1)
+            line_number += shard_map_size << 1
             tableau = np.array(tableau, bool)
 
             clifford = Clifford(tableau, validate=False, copy=False)
@@ -3253,11 +3366,11 @@ class QrackSimulator:
         for line in lines[line_number:]:
             i = 0
             tokens = line.split()
-            op = np.zeros((2,2), dtype=complex)
+            op = np.zeros((2, 2), dtype=complex)
             row = []
             for _ in range(2):
-                amp = tokens[i].replace("(","").replace(")","").split(',')
-                row.append(float(amp[0]) + float(amp[1])*1j)
+                amp = tokens[i].replace("(", "").replace(")", "").split(",")
+                row.append(float(amp[0]) + float(amp[1]) * 1j)
                 i = i + 1
             l = math.sqrt(np.real(row[0] * np.conj(row[0]) + row[1] * np.conj(row[1])))
             op[0][0] = row[0] / l
@@ -3270,8 +3383,8 @@ class QrackSimulator:
 
             row = []
             for _ in range(2):
-                amp = tokens[i].replace("(","").replace(")","").split(',')
-                row.append(float(amp[0]) + float(amp[1])*1j)
+                amp = tokens[i].replace("(", "").replace(")", "").split(",")
+                row.append(float(amp[0]) + float(amp[1]) * 1j)
                 i = i + 1
             l = math.sqrt(np.real(row[0] * np.conj(row[0]) + row[1] * np.conj(row[1])))
             op[1][0] = row[0] / l
@@ -3290,9 +3403,27 @@ class QrackSimulator:
             non_clifford_gates.append(op)
             g = g + 1
 
-        basis_gates = ["rz", "h", "x", "y", "z", "sx", "sxdg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
+        basis_gates = [
+            "rz",
+            "h",
+            "x",
+            "y",
+            "z",
+            "sx",
+            "sxdg",
+            "s",
+            "sdg",
+            "t",
+            "tdg",
+            "cx",
+            "cy",
+            "cz",
+            "swap",
+        ]
         try:
-            circ = transpile(clifford_circ, basis_gates=basis_gates, optimization_level=2)
+            circ = transpile(
+                clifford_circ, basis_gates=basis_gates, optimization_level=2
+            )
         except:
             circ = clifford_circ
 
@@ -3311,16 +3442,16 @@ class QrackSimulator:
         """
         Reorders qubits in the circuit according to the given mapping using SWAP gates.
         (Thanks to "Elara," an OpenAI GPT, for this implementation)
-        
+
         Parameters:
         - circuit (QuantumCircuit): The circuit to modify.
         - mapping (dict): Dictionary mapping internal qubit indices to logical qubit indices.
-        
+
         Returns:
         - QuantumCircuit: The modified circuit with qubits reordered.
         """
         swaps = []
-        
+
         # Determine swaps to fix the order
         for logical_index in sorted(mapping):
             internal_index = mapping[logical_index]
@@ -3329,11 +3460,11 @@ class QrackSimulator:
                 # Update the reverse mapping for subsequent swaps
                 mapping[logical_index] = logical_index
                 mapping[internal_index] = internal_index
-        
+
         # Apply the swaps to the circuit
         for qubit1, qubit2 in swaps:
             circuit.swap(qubit1, qubit2)
-        
+
         return circuit
 
     def file_to_optimized_qiskit_circuit(filename):
@@ -3353,7 +3484,7 @@ class QrackSimulator:
                 QrackCircuit, you must install Qiskit, numpy, and math!
         """
         circ = QrackSimulator.file_to_qiskit_circuit(filename)
-        
+
         width = 0
         with open(filename, "r", encoding="utf-8") as file:
             width = int(file.readline())
@@ -3373,40 +3504,104 @@ class QrackSimulator:
                 op = circ.data[j].operation
                 qubits = circ.data[j].qubits
                 if len(qubits) > 2:
-                    raise RuntimeError("Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits)")
+                    raise RuntimeError(
+                        "Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits)"
+                    )
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
                     if op.name == "unitary":
                         non_clifford = np.matmul(op.params[0], non_clifford)
                     elif op.name == "rz":
                         lm = float(op.params[0])
-                        non_clifford = np.matmul([[np.exp(-1j * lm / 2), 0], [0, np.exp(1j * lm / 2)]], non_clifford)
+                        non_clifford = np.matmul(
+                            [[np.exp(-1j * lm / 2), 0], [0, np.exp(1j * lm / 2)]],
+                            non_clifford,
+                        )
                     elif op.name == "h":
-                        non_clifford = np.matmul(np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array(
+                                [[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128
+                            ),
+                            non_clifford,
+                        )
                     elif op.name == "x":
-                        non_clifford = np.matmul(np.array([[0, 1], [1, 0]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array([[0, 1], [1, 0]], np.complex128), non_clifford
+                        )
                     elif op.name == "y":
-                        non_clifford = np.matmul(np.array([[0, -1j], [1j, 0]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array([[0, -1j], [1j, 0]], np.complex128), non_clifford
+                        )
                     elif op.name == "z":
-                        non_clifford = np.matmul(np.array([[1, 0], [0, -1]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array([[1, 0], [0, -1]], np.complex128), non_clifford
+                        )
                     elif op.name == "sx":
-                        non_clifford = np.matmul(np.array([[(1+1j)/2, (1-1j)/2], [(1-1j)/2, (1+1j)/2]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array(
+                                [
+                                    [(1 + 1j) / 2, (1 - 1j) / 2],
+                                    [(1 - 1j) / 2, (1 + 1j) / 2],
+                                ],
+                                np.complex128,
+                            ),
+                            non_clifford,
+                        )
                     elif op.name == "sxdg":
-                        non_clifford = np.matmul(np.array([[(1-1j)/2, (1+1j)/2], [(1+1j)/2, (1-1j)/2]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array(
+                                [
+                                    [(1 - 1j) / 2, (1 + 1j) / 2],
+                                    [(1 + 1j) / 2, (1 - 1j) / 2],
+                                ],
+                                np.complex128,
+                            ),
+                            non_clifford,
+                        )
                     elif op.name == "sy":
-                        non_clifford = np.matmul(np.array([[(1+1j)/2, -(1+1j)/2], [(1+1j)/2, (1+1j)/2]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array(
+                                [
+                                    [(1 + 1j) / 2, -(1 + 1j) / 2],
+                                    [(1 + 1j) / 2, (1 + 1j) / 2],
+                                ],
+                                np.complex128,
+                            ),
+                            non_clifford,
+                        )
                     elif op.name == "sydg":
-                        non_clifford = np.matmul(np.array([[(1-1j)/2, (1-1j)/2], [(-1+1j)/2, (1-1j)/2]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array(
+                                [
+                                    [(1 - 1j) / 2, (1 - 1j) / 2],
+                                    [(-1 + 1j) / 2, (1 - 1j) / 2],
+                                ],
+                                np.complex128,
+                            ),
+                            non_clifford,
+                        )
                     elif op.name == "s":
-                        non_clifford = np.matmul(np.array([[1, 0], [0, 1j]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array([[1, 0], [0, 1j]], np.complex128), non_clifford
+                        )
                     elif op.name == "sdg":
-                        non_clifford = np.matmul(np.array([[1, 0], [0, -1j]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array([[1, 0], [0, -1j]], np.complex128), non_clifford
+                        )
                     elif op.name == "t":
-                        non_clifford = np.matmul(np.array([[1, 0], [0, sqrt_pi]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array([[1, 0], [0, sqrt_pi]], np.complex128),
+                            non_clifford,
+                        )
                     elif op.name == "tdg":
-                        non_clifford = np.matmul(np.array([[1, 0], [0, sqrt_ni]], np.complex128), non_clifford)
+                        non_clifford = np.matmul(
+                            np.array([[1, 0], [0, sqrt_ni]], np.complex128),
+                            non_clifford,
+                        )
                     else:
-                        raise RuntimeError("Something went wrong while optimizing circuit! (Dropped a single-qubit gate.)")
+                        raise RuntimeError(
+                            "Something went wrong while optimizing circuit! (Dropped a single-qubit gate.)"
+                        )
 
                     del circ.data[j]
                     continue
@@ -3422,7 +3617,7 @@ class QrackSimulator:
                     continue
 
                 if op.name == "swap":
-                    i = (q2 if i == q1 else q1)
+                    i = q2 if i == q1 else q1
 
                     if circ.data[j] in passed_swaps:
                         passed_swaps.remove(circ.data[j])
@@ -3432,15 +3627,21 @@ class QrackSimulator:
                     passed_swaps.append(circ.data[j])
 
                     j += 1
-                    continue 
+                    continue
 
-                if (q1 == i) and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz")):
-                    if (np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
+                if (q1 == i) and (
+                    (op.name == "cx") or (op.name == "cy") or (op.name == "cz")
+                ):
+                    if np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(
+                        np.abs(non_clifford[1][0]), 0
+                    ):
                         # If we're not buffering anything but phase, the blocking gate has no effect, and we're safe to continue.
                         del circ.data[j]
                         continue
 
-                    if (np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(np.abs(non_clifford[1][1]), 0)):
+                    if np.isclose(np.abs(non_clifford[0][0]), 0) and np.isclose(
+                        np.abs(non_clifford[1][1]), 0
+                    ):
                         # If we're buffering full negation (plus phase), the control qubit can be dropped.
                         c = QuantumCircuit(circ.qubits)
                         if op.name == "cx":
@@ -3480,40 +3681,104 @@ class QrackSimulator:
                 op = circ.data[j].operation
                 qubits = circ.data[j].qubits
                 if len(qubits) > 2:
-                    raise RuntimeError("Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits.)")
+                    raise RuntimeError(
+                        "Something went wrong while optimizing circuit! (Found a gate with 3 or more qubits.)"
+                    )
                 q1 = circ.find_bit(qubits[0])[0]
                 if (len(qubits) < 2) and (q1 == i):
                     if op.name == "unitary":
                         non_clifford = np.matmul(non_clifford, op.params[0])
                     elif op.name == "rz":
                         lm = float(op.params[0])
-                        non_clifford = np.matmul(non_clifford, [[np.exp(-1j * lm / 2), 0], [0, np.exp(1j * lm / 2)]])
+                        non_clifford = np.matmul(
+                            non_clifford,
+                            [[np.exp(-1j * lm / 2), 0], [0, np.exp(1j * lm / 2)]],
+                        )
                     elif op.name == "h":
-                        non_clifford = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford,
+                            np.array(
+                                [[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128
+                            ),
+                        )
                     elif op.name == "x":
-                        non_clifford = np.matmul(non_clifford, np.array([[0, 1], [1, 0]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford, np.array([[0, 1], [1, 0]], np.complex128)
+                        )
                     elif op.name == "y":
-                        non_clifford = np.matmul(non_clifford, np.array([[0, -1j], [1j, 0]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford, np.array([[0, -1j], [1j, 0]], np.complex128)
+                        )
                     elif op.name == "z":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford, np.array([[1, 0], [0, -1]], np.complex128)
+                        )
                     elif op.name == "sx":
-                        non_clifford = np.matmul(non_clifford, np.array([[(1+1j)/2, (1-1j)/2], [(1-1j)/2, (1+1j)/2]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford,
+                            np.array(
+                                [
+                                    [(1 + 1j) / 2, (1 - 1j) / 2],
+                                    [(1 - 1j) / 2, (1 + 1j) / 2],
+                                ],
+                                np.complex128,
+                            ),
+                        )
                     elif op.name == "sxdg":
-                        non_clifford = np.matmul(non_clifford, np.array([[(1-1j)/2, (1+1j)/2], [(1+1j)/2, (1-1j)/2]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford,
+                            np.array(
+                                [
+                                    [(1 - 1j) / 2, (1 + 1j) / 2],
+                                    [(1 + 1j) / 2, (1 - 1j) / 2],
+                                ],
+                                np.complex128,
+                            ),
+                        )
                     elif op.name == "sy":
-                        non_clifford = np.matmul(non_clifford, np.array([[(1+1j)/2, -(1+1j)/2], [(1+1j)/2, (1+1j)/2]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford,
+                            np.array(
+                                [
+                                    [(1 + 1j) / 2, -(1 + 1j) / 2],
+                                    [(1 + 1j) / 2, (1 + 1j) / 2],
+                                ],
+                                np.complex128,
+                            ),
+                        )
                     elif op.name == "sydg":
-                        non_clifford = np.matmul(non_clifford, np.array([[(1-1j)/2, (1-1j)/2], [(-1+1j)/2, (1-1j)/2]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford,
+                            np.array(
+                                [
+                                    [(1 - 1j) / 2, (1 - 1j) / 2],
+                                    [(-1 + 1j) / 2, (1 - 1j) / 2],
+                                ],
+                                np.complex128,
+                            ),
+                        )
                     elif op.name == "s":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, 1j]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford, np.array([[1, 0], [0, 1j]], np.complex128)
+                        )
                     elif op.name == "sdg":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, -1j]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford, np.array([[1, 0], [0, -1j]], np.complex128)
+                        )
                     elif op.name == "t":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, sqrt_pi]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford,
+                            np.array([[1, 0], [0, sqrt_pi]], np.complex128),
+                        )
                     elif op.name == "tdg":
-                        non_clifford = np.matmul(non_clifford, np.array([[1, 0], [0, sqrt_ni]], np.complex128))
+                        non_clifford = np.matmul(
+                            non_clifford,
+                            np.array([[1, 0], [0, sqrt_ni]], np.complex128),
+                        )
                     else:
-                        raise RuntimeError("Something went wrong while optimizing circuit! (Dropped a single-qubit gate.)")
+                        raise RuntimeError(
+                            "Something went wrong while optimizing circuit! (Dropped a single-qubit gate.)"
+                        )
 
                     del circ.data[j]
                     j -= 1
@@ -3530,7 +3795,7 @@ class QrackSimulator:
                     continue
 
                 if (op.name == "swap") and (q1 >= width) and (q2 >= width):
-                    i = (q2 if i == q1 else q1)
+                    i = q2 if i == q1 else q1
                     if circ.data[j] in passed_swaps:
                         passed_swaps.remove(circ.data[j])
                         del circ.data[j]
@@ -3540,7 +3805,14 @@ class QrackSimulator:
                     j -= 1
                     continue
 
-                if (q1 == i) and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz")) and (np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(np.abs(non_clifford[1][0]), 0)):
+                if (
+                    (q1 == i)
+                    and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz"))
+                    and (
+                        np.isclose(np.abs(non_clifford[0][1]), 0)
+                        and np.isclose(np.abs(non_clifford[1][0]), 0)
+                    )
+                ):
                     # If we're not buffering anything but phase, this commutes with control, and we're safe to continue.
                     j -= 1
                     continue
@@ -3578,7 +3850,9 @@ class QrackSimulator:
                     break
 
                 # Re-injection branch (apply gadget to target)
-                to_inject = np.matmul(non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]]))
+                to_inject = np.matmul(
+                    non_clifford, np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]])
+                )
                 if np.allclose(to_inject, ident):
                     # No buffer content to write to circuit definition
                     del circ.data[j]
@@ -3590,18 +3864,41 @@ class QrackSimulator:
                 circ.data.insert(j, copy.deepcopy(c.data[0]))
                 j -= 1
 
-        basis_gates=["u", "rz", "h", "x", "y", "z", "sx", "sxdg", "s", "sdg", "t", "tdg", "cx", "cy", "cz", "swap"]
+        basis_gates = [
+            "u",
+            "rz",
+            "h",
+            "x",
+            "y",
+            "z",
+            "sx",
+            "sxdg",
+            "s",
+            "sdg",
+            "t",
+            "tdg",
+            "cx",
+            "cy",
+            "cz",
+            "swap",
+        ]
         circ = transpile(circ, basis_gates=basis_gates, optimization_level=2)
 
-        #Eliminate unused ancillae
+        # Eliminate unused ancillae
         try:
             qasm = qasm3.dumps(circ)
         except:
             qasm = circ.qasm()
-        qasm = qasm.replace("qreg q[" + str(circ.width()) + "];", "qreg q[" + str(width) + "];")
-        highest_index = max([int(x) for x in re.findall(r"\[(.*?)\]", qasm) if x.isdigit()])
+        qasm = qasm.replace(
+            "qreg q[" + str(circ.width()) + "];", "qreg q[" + str(width) + "];"
+        )
+        highest_index = max(
+            [int(x) for x in re.findall(r"\[(.*?)\]", qasm) if x.isdigit()]
+        )
         if highest_index != width:
-            qasm = qasm.replace("qreg q[" + str(width) + "];", "qreg q[" + str(highest_index) + "];")
+            qasm = qasm.replace(
+                "qreg q[" + str(width) + "];", "qreg q[" + str(highest_index) + "];"
+            )
 
         orig_circ = circ
         try:
@@ -3667,11 +3964,11 @@ class QrackSimulator:
     def _apply_op(self, operation):
         name = operation.name
 
-        if (name == 'id') or (name == 'barrier'):
+        if (name == "id") or (name == "barrier"):
             # Skip measurement logic
             return
 
-        conditional = getattr(operation, 'conditional', None)
+        conditional = getattr(operation, "conditional", None)
         if isinstance(conditional, int):
             conditional_bit_set = (self._classical_register >> conditional) & 1
             if not conditional_bit_set:
@@ -3686,68 +3983,78 @@ class QrackSimulator:
                 if value != int(conditional.val, 16):
                     return
 
-        if (name == 'u1') or (name == 'p'):
+        if (name == "u1") or (name == "p"):
             self._sim.u(operation.qubits[0]._index, 0, 0, float(operation.params[0]))
-        elif name == 'u2':
+        elif name == "u2":
             self._sim.u(
                 operation.qubits[0]._index,
                 math.pi / 2,
                 float(operation.params[0]),
                 float(operation.params[1]),
             )
-        elif (name == 'u3') or (name == 'u'):
+        elif (name == "u3") or (name == "u"):
             self._sim.u(
                 operation.qubits[0]._index,
                 float(operation.params[0]),
                 float(operation.params[1]),
                 float(operation.params[2]),
             )
-        elif (name == 'unitary') and (len(operation.qubits) == 1):
+        elif (name == "unitary") and (len(operation.qubits) == 1):
             self._sim.mtrx(operation.params[0].flatten(), operation.qubits[0]._index)
-        elif name == 'r':
+        elif name == "r":
             self._sim.u(
                 operation.qubits[0]._index,
                 float(operation.params[0]),
                 float(operation.params[1]) - math.pi / 2,
                 (-1 * float(operation.params[1])) + math.pi / 2,
             )
-        elif name == 'rx':
-            self._sim.r(Pauli.PauliX, float(operation.params[0]), operation.qubits[0]._index)
-        elif name == 'ry':
-            self._sim.r(Pauli.PauliY, float(operation.params[0]), operation.qubits[0]._index)
-        elif name == 'rz':
-            self._sim.r(Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index)
-        elif name == 'h':
+        elif name == "rx":
+            self._sim.r(
+                Pauli.PauliX, float(operation.params[0]), operation.qubits[0]._index
+            )
+        elif name == "ry":
+            self._sim.r(
+                Pauli.PauliY, float(operation.params[0]), operation.qubits[0]._index
+            )
+        elif name == "rz":
+            self._sim.r(
+                Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index
+            )
+        elif name == "h":
             self._sim.h(operation.qubits[0]._index)
-        elif name == 'x':
+        elif name == "x":
             self._sim.x(operation.qubits[0]._index)
-        elif name == 'y':
+        elif name == "y":
             self._sim.y(operation.qubits[0]._index)
-        elif name == 'z':
+        elif name == "z":
             self._sim.z(operation.qubits[0]._index)
-        elif name == 's':
+        elif name == "s":
             self._sim.s(operation.qubits[0]._index)
-        elif name == 'sdg':
+        elif name == "sdg":
             self._sim.adjs(operation.qubits[0]._index)
-        elif name == 'sx':
+        elif name == "sx":
             self._sim.mtrx(
                 [(1 + 1j) / 2, (1 - 1j) / 2, (1 - 1j) / 2, (1 + 1j) / 2],
                 operation.qubits[0]._index,
             )
-        elif name == 'sxdg':
+        elif name == "sxdg":
             self._sim.mtrx(
                 [(1 - 1j) / 2, (1 + 1j) / 2, (1 + 1j) / 2, (1 - 1j) / 2],
                 operation.qubits[0]._index,
             )
-        elif name == 't':
+        elif name == "t":
             self._sim.t(operation.qubits[0]._index)
-        elif name == 'tdg':
+        elif name == "tdg":
             self._sim.adjt(operation.qubits[0]._index)
-        elif name == 'cu1':
+        elif name == "cu1":
             self._sim.mcu(
-                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index, 0, 0, float(operation.params[0])
+                [q._index for q in operation.qubits[0:1]],
+                operation.qubits[1]._index,
+                0,
+                0,
+                float(operation.params[0]),
             )
-        elif name == 'cu2':
+        elif name == "cu2":
             self._sim.mcu(
                 [q._index for q in operation.qubits[0:1]],
                 operation.qubits[1]._index,
@@ -3755,7 +4062,7 @@ class QrackSimulator:
                 float(operation.params[0]),
                 float(operation.params[1]),
             )
-        elif (name == 'cu3') or (name == 'cu'):
+        elif (name == "cu3") or (name == "cu"):
             self._sim.mcu(
                 [q._index for q in operation.qubits[0:1]],
                 operation.qubits[1]._index,
@@ -3763,77 +4070,104 @@ class QrackSimulator:
                 float(operation.params[1]),
                 float(operation.params[2]),
             )
-        elif name == 'cx':
-            self._sim.mcx([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
-        elif name == 'cy':
-            self._sim.mcy([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
-        elif name == 'cz':
-            self._sim.mcz([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
-        elif name == 'ch':
-            self._sim.mch([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
-        elif name == 'cp':
+        elif name == "cx":
+            self._sim.mcx(
+                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
+            )
+        elif name == "cy":
+            self._sim.mcy(
+                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
+            )
+        elif name == "cz":
+            self._sim.mcz(
+                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
+            )
+        elif name == "ch":
+            self._sim.mch(
+                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
+            )
+        elif name == "cp":
             self._sim.mcmtrx(
                 [q._index for q in operation.qubits[0:1]],
                 [
                     1,
                     0,
                     0,
-                    math.cos(float(operation.params[0])) + 1j * math.sin(float(operation.params[0])),
+                    math.cos(float(operation.params[0]))
+                    + 1j * math.sin(float(operation.params[0])),
                 ],
                 operation.qubits[1]._index,
             )
-        elif name == 'csx':
+        elif name == "csx":
             self._sim.mcmtrx(
                 [q._index for q in operation.qubits[0:1]],
                 [(1 + 1j) / 2, (1 - 1j) / 2, (1 - 1j) / 2, (1 + 1j) / 2],
                 operation.qubits[1]._index,
             )
-        elif name == 'csxdg':
+        elif name == "csxdg":
             self._sim.mcmtrx(
                 [q._index for q in operation.qubits[0:1]],
                 [(1 - 1j) / 2, (1 + 1j) / 2, (1 + 1j) / 2, (1 - 1j) / 2],
                 operation.qubits[1]._index,
             )
-        elif name == 'dcx':
-            self._sim.mcx([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
+        elif name == "dcx":
+            self._sim.mcx(
+                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
+            )
             self._sim.mcx(operation.qubits[1:2]._index, operation.qubits[0]._index)
-        elif name == 'ccx':
-            self._sim.mcx([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
-        elif name == 'ccy':
-            self._sim.mcy([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
-        elif name == 'ccz':
-            self._sim.mcz([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
-        elif name == 'mcx':
-            self._sim.mcx([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
-        elif name == 'mcy':
-            self._sim.mcy([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
-        elif name == 'mcz':
-            self._sim.mcz([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
-        elif name == 'swap':
+        elif name == "ccx":
+            self._sim.mcx(
+                [q._index for q in operation.qubits[0:2]], operation.qubits[2]._index
+            )
+        elif name == "ccy":
+            self._sim.mcy(
+                [q._index for q in operation.qubits[0:2]], operation.qubits[2]._index
+            )
+        elif name == "ccz":
+            self._sim.mcz(
+                [q._index for q in operation.qubits[0:2]], operation.qubits[2]._index
+            )
+        elif name == "mcx":
+            self._sim.mcx(
+                [q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index
+            )
+        elif name == "mcy":
+            self._sim.mcy(
+                [q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index
+            )
+        elif name == "mcz":
+            self._sim.mcz(
+                [q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index
+            )
+        elif name == "swap":
             self._sim.swap(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'iswap':
+        elif name == "iswap":
             self._sim.iswap(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'iswap_dg':
+        elif name == "iswap_dg":
             self._sim.adjiswap(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'cswap':
+        elif name == "cswap":
             self._sim.cswap(
-                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index, operation.qubits[2]._index
+                [q._index for q in operation.qubits[0:1]],
+                operation.qubits[1]._index,
+                operation.qubits[2]._index,
             )
-        elif name == 'mcswap':
+        elif name == "mcswap":
             self._sim.cswap(
-                [q._index for q in operation.qubits[:-2]], operation.qubits[-2]._index, operation.qubits[-1]._index
+                [q._index for q in operation.qubits[:-2]],
+                operation.qubits[-2]._index,
+                operation.qubits[-1]._index,
             )
-        elif name == 'reset':
+        elif name == "reset":
             qubits = operation.qubits
             for qubit in qubits:
                 if self._sim.m(qubit._index):
                     self._sim.x(qubit._index)
-        elif name == 'measure':
+        elif name == "measure":
             qubits = operation.qubits
             clbits = operation.clbits
             cregbits = (
                 operation.register
-                if hasattr(operation, 'register')
+                if hasattr(operation, "register")
                 else len(operation.qubits) * [-1]
             )
 
@@ -3860,30 +4194,30 @@ class QrackSimulator:
                         self._classical_register & (~regbit)
                     ) | (qubit_outcome << cregbit)
 
-        elif name == 'bfunc':
+        elif name == "bfunc":
             mask = int(operation.mask, 16)
             relation = operation.relation
             val = int(operation.val, 16)
 
             cregbit = operation.register
-            cmembit = operation.memory if hasattr(operation, 'memory') else None
+            cmembit = operation.memory if hasattr(operation, "memory") else None
 
             compared = (self._classical_register & mask) - val
 
-            if relation == '==':
+            if relation == "==":
                 outcome = compared == 0
-            elif relation == '!=':
+            elif relation == "!=":
                 outcome = compared != 0
-            elif relation == '<':
+            elif relation == "<":
                 outcome = compared < 0
-            elif relation == '<=':
+            elif relation == "<=":
                 outcome = compared <= 0
-            elif relation == '>':
+            elif relation == ">":
                 outcome = compared > 0
-            elif relation == '>=':
+            elif relation == ">=":
                 outcome = compared >= 0
             else:
-                raise QrackError('Invalid boolean function relation.')
+                raise QrackError("Invalid boolean function relation.")
 
             # Store outcome in register and optionally memory slot
             regbit = 1 << cregbit
@@ -3926,7 +4260,9 @@ class QrackSimulator:
                 result |= qubit_outcome << index
             measure_results = [result]
         else:
-            measure_results = self._sim.measure_shots([q._index for q in measure_qubit], num_samples)
+            measure_results = self._sim.measure_shots(
+                [q._index for q in measure_qubit], num_samples
+            )
 
         data = []
         for sample in measure_results:
@@ -3968,21 +4304,21 @@ class QrackSimulator:
         for opcount in range(len(instructions)):
             operation = instructions[opcount]
 
-            if operation.name == 'id' or operation.name == 'barrier':
+            if operation.name == "id" or operation.name == "barrier":
                 continue
 
             if is_initializing and (
-                (operation.name == 'measure') or (operation.name == 'reset')
+                (operation.name == "measure") or (operation.name == "reset")
             ):
                 continue
 
             is_initializing = False
 
-            if (operation.name == 'measure') or (operation.name == 'reset'):
+            if (operation.name == "measure") or (operation.name == "reset"):
                 if boundary_start == -1:
                     boundary_start = opcount
 
-            if (boundary_start != -1) and (operation.name != 'measure'):
+            if (boundary_start != -1) and (operation.name != "measure"):
                 shotsPerLoop = 1
                 shotLoopMax = self._shots
                 self._sample_measure = False

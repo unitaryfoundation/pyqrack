@@ -26,11 +26,10 @@ class QrackAceBackend:
     This back end uses elided repetition code on a nearest-neighbor topology to emulate
     a utility-scale superconducting chip quantum computer in very little memory.4
 
-    The backend was originally designed assuming a 2D qubit grid like 2019 Sycamore.
-    However, it quickly became apparent that users can basically design their own
-    connectivity topologies, without breaking the concept. (Not all will work equally well.)
-    For maximum flexibility, set "alternating_codes=False". (For best performance on
-    Sycamore-like topologies, leave it "True.")
+    The backend was originally designed assuming an (orbifolded) 2D qubit grid like 2019 Sycamore.
+    However, it quickly became apparent that users can basically design their own connectivity topologies,
+    without breaking the concept. (Not all will work equally well.) For maximum flexibility, set
+    "alternating_codes=False". (For best performance on Sycamore-like topologies,leave it "True.")
 
     Attributes:
         sim(QrackSimulator): Corresponding simulator.
@@ -39,20 +38,14 @@ class QrackAceBackend:
         col_length(int): Qubits per column.
     """
 
-    def __init__(
-        self,
-        qubit_count=-1,
-        alternating_codes=True,
-        toClone=None
-    ):
+    def __init__(self, qubit_count=-1, alternating_codes=True, toClone=None):
         self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count)
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
 
-
     def _factor_width(self, width):
         col_len = math.floor(math.sqrt(width))
-        while (((width // col_len) * col_len) != width):
+        while ((width // col_len) * col_len) != width:
             col_len -= 1
         row_len = width // col_len
 
@@ -68,48 +61,44 @@ class QrackAceBackend:
 
         return p1, q2
 
-
     def _cz_shadow(self, q1, q2):
         prob_max, t = self._ct_pair_prob(q1, q2)
         if prob_max > 0.5:
             self.sim.z(t)
-
 
     def _anti_cz_shadow(self, q1, q2):
         self.sim.x(q1)
         self._cz_shadow(q1, q2)
         self.sim.x(q1)
 
-
     def _cx_shadow(self, c, t):
         self.sim.h(t)
         self._cz_shadow(c, t)
         self.sim.h(t)
-
 
     def _anti_cx_shadow(self, c, t):
         self.sim.x(t)
         self._cx_shadow(c, t)
         self.sim.x(t)
 
-
     def _cy_shadow(self, c, t):
         self.sim.adjs(t)
         self._cx_shadow(c, t)
         self.sim.s(t)
-
 
     def _anti_cy_shadow(self, c, t):
         self.sim.x(t)
         self._cy_shadow(c, t)
         self.sim.x(t)
 
+    def _unpack(self, lq, reverse=False):
+        return (
+            [3 * lq + 2, 3 * lq + 1, 3 * lq]
+            if reverse
+            else [3 * lq, 3 * lq + 1, 3 * lq + 2]
+        )
 
-    def _unpack(self, lq, reverse = False):
-        return [3 * lq + 2, 3 * lq + 1, 3 * lq] if reverse else [3 * lq, 3 * lq + 1, 3 * lq + 2]
-
-
-    def _encode(self, hq, reverse = False):
+    def _encode(self, hq, reverse=False):
         row = (hq[0] // 3) // self.row_length
         even_row = not (row & 1)
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
@@ -119,8 +108,7 @@ class QrackAceBackend:
             self.sim.mcx([hq[0]], hq[1])
             self._cx_shadow(hq[1], hq[2])
 
-
-    def _decode(self, hq, reverse = False):
+    def _decode(self, hq, reverse=False):
         row = (hq[0] // 3) // self.row_length
         even_row = not (row & 1)
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
@@ -129,7 +117,6 @@ class QrackAceBackend:
         else:
             self._cx_shadow(hq[1], hq[2])
             self.sim.mcx([hq[0]], hq[1])
-
 
     def u(self, th, ph, lm, lq):
         hq = self._unpack(lq)
@@ -137,13 +124,11 @@ class QrackAceBackend:
         self.sim.u(hq[0], th, ph, lm)
         self._encode(hq)
 
-
     def r(self, p, th, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.r(p, th, hq[0])
         self._encode(hq)
-
 
     def s(self, lq):
         hq = self._unpack(lq)
@@ -151,13 +136,11 @@ class QrackAceBackend:
         self.sim.s(hq[0])
         self._encode(hq)
 
-
     def adjs(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.adjs(hq[0])
         self._encode(hq)
-
 
     def x(self, lq):
         hq = self._unpack(lq)
@@ -165,13 +148,11 @@ class QrackAceBackend:
         self.sim.x(hq[0])
         self._encode(hq)
 
-
     def y(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.y(hq[0])
         self._encode(hq)
-
 
     def z(self, lq):
         hq = self._unpack(lq)
@@ -179,13 +160,11 @@ class QrackAceBackend:
         self.sim.z(hq[0])
         self._encode(hq)
 
-
     def h(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.h(hq[0])
         self._encode(hq)
-
 
     def t(self, lq):
         hq = self._unpack(lq)
@@ -193,13 +172,11 @@ class QrackAceBackend:
         self.sim.t(hq[0])
         self._encode(hq)
 
-
     def adjt(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.adjt(hq[0])
         self._encode(hq)
-
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         gate = None
@@ -216,7 +193,12 @@ class QrackAceBackend:
         else:
             return
 
-        if lq2 == (lq1 + 1):
+        lq1_col = lq1 // self.row_length
+        lq1_row = lq1 % self.row_length
+        lq2_col = lq2 // self.row_length
+        lq2_row = lq2 % self.row_length
+
+        if (lq2_col == lq1_col) and (((lq1_row + 1) % self.row_length) == lq2_row):
             hq1 = self._unpack(lq1, True)
             hq2 = self._unpack(lq2, False)
             self._decode(hq1, True)
@@ -224,7 +206,7 @@ class QrackAceBackend:
             gate([hq1[0]], hq2[0])
             self._encode(hq2, False)
             self._encode(hq1, True)
-        elif lq1 == (lq2 + 1):
+        elif (lq1_col == lq2_col) and (((lq2_row + 1) % self.row_length) == lq1_row):
             hq2 = self._unpack(lq2, True)
             hq1 = self._unpack(lq1, False)
             self._decode(hq2, True)
@@ -242,36 +224,28 @@ class QrackAceBackend:
                 gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
 
-
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
-
 
     def cy(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliY)
 
-
     def cz(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliZ)
-
 
     def acx(self, lq1, lq2):
         self._cpauli(lq1, lq2, True, Pauli.PauliX)
 
-
     def acy(self, lq1, lq2):
         self._cpauli(lq1, lq2, True, Pauli.PauliY)
 
-
     def acz(self, lq1, lq2):
         self._cpauli(lq1, lq2, True, Pauli.PauliZ)
-
 
     def swap(self, lq1, lq2):
         self.cx(lq1, lq2)
         self.cx(lq2, lq1)
         self.cx(lq1, lq2)
-
 
     def iswap(self, lq1, lq2):
         self.swap(lq1, lq2)
@@ -279,13 +253,11 @@ class QrackAceBackend:
         self.s(lq1)
         self.s(lq2)
 
-
     def adjiswap(self, lq1, lq2):
         self.adjs(lq2)
         self.adjs(lq1)
         self.cz(lq1, lq2)
         self.swap(lq1, lq2)
-
 
     def m(self, lq):
         hq = self._unpack(lq)
@@ -296,12 +268,11 @@ class QrackAceBackend:
             if bits[-1]:
                 syndrome += 1
         result = True if (syndrome > 1) else False
-        for i in range(len(hq)): 
+        for i in range(len(hq)):
             if bits[i] != result:
                 self.sim.x(hq[i])
 
         return result
-
 
     def m_all(self):
         result = 0
@@ -311,7 +282,6 @@ class QrackAceBackend:
                 result |= 1
 
         return result
-
 
     def measure_shots(self, q, s):
         _q = []
@@ -338,15 +308,14 @@ class QrackAceBackend:
 
         return results
 
-
     def _apply_op(self, operation):
         name = operation.name
 
-        if (name == 'id') or (name == 'barrier'):
+        if (name == "id") or (name == "barrier"):
             # Skip measurement logic
             return
 
-        conditional = getattr(operation, 'conditional', None)
+        conditional = getattr(operation, "conditional", None)
         if isinstance(conditional, int):
             conditional_bit_set = (self._classical_register >> conditional) & 1
             if not conditional_bit_set:
@@ -361,77 +330,83 @@ class QrackAceBackend:
                 if value != int(conditional.val, 16):
                     return
 
-        if (name == 'u1') or (name == 'p'):
+        if (name == "u1") or (name == "p"):
             self._sim.u(0, 0, float(operation.params[0]), operation.qubits[0]._index)
-        elif name == 'u2':
+        elif name == "u2":
             self._sim.u(
                 math.pi / 2,
                 float(operation.params[0]),
                 float(operation.params[1]),
-                operation.qubits[0]._index
+                operation.qubits[0]._index,
             )
-        elif (name == 'u3') or (name == 'u'):
+        elif (name == "u3") or (name == "u"):
             self._sim.u(
                 float(operation.params[0]),
                 float(operation.params[1]),
                 float(operation.params[2]),
-                operation.qubits[0]._index
+                operation.qubits[0]._index,
             )
-        elif name == 'r':
+        elif name == "r":
             self._sim.u(
                 float(operation.params[0]),
                 float(operation.params[1]) - math.pi / 2,
                 (-1 * float(operation.params[1])) + math.pi / 2,
-                operation.qubits[0]._index
+                operation.qubits[0]._index,
             )
-        elif name == 'rx':
-            self._sim.r(Pauli.PauliX, float(operation.params[0]), operation.qubits[0]._index)
-        elif name == 'ry':
-            self._sim.r(Pauli.PauliY, float(operation.params[0]), operation.qubits[0]._index)
-        elif name == 'rz':
-            self._sim.r(Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index)
-        elif name == 'h':
+        elif name == "rx":
+            self._sim.r(
+                Pauli.PauliX, float(operation.params[0]), operation.qubits[0]._index
+            )
+        elif name == "ry":
+            self._sim.r(
+                Pauli.PauliY, float(operation.params[0]), operation.qubits[0]._index
+            )
+        elif name == "rz":
+            self._sim.r(
+                Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index
+            )
+        elif name == "h":
             self._sim.h(operation.qubits[0]._index)
-        elif name == 'x':
+        elif name == "x":
             self._sim.x(operation.qubits[0]._index)
-        elif name == 'y':
+        elif name == "y":
             self._sim.y(operation.qubits[0]._index)
-        elif name == 'z':
+        elif name == "z":
             self._sim.z(operation.qubits[0]._index)
-        elif name == 's':
+        elif name == "s":
             self._sim.s(operation.qubits[0]._index)
-        elif name == 'sdg':
+        elif name == "sdg":
             self._sim.adjs(operation.qubits[0]._index)
-        elif name == 't':
+        elif name == "t":
             self._sim.t(operation.qubits[0]._index)
-        elif name == 'tdg':
+        elif name == "tdg":
             self._sim.adjt(operation.qubits[0]._index)
-        elif name == 'cx':
+        elif name == "cx":
             self._sim.cx(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'cy':
+        elif name == "cy":
             self._sim.cy(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'cz':
+        elif name == "cz":
             self._sim.cz(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'dcx':
+        elif name == "dcx":
             self._sim.mcx(operation.qubits[0]._index, operation.qubits[1]._index)
             self._sim.mcx(operation.qubits[1]._index, operation.qubits[0]._index)
-        elif name == 'swap':
+        elif name == "swap":
             self._sim.swap(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'iswap':
+        elif name == "iswap":
             self._sim.iswap(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'iswap_dg':
+        elif name == "iswap_dg":
             self._sim.adjiswap(operation.qubits[0]._index, operation.qubits[1]._index)
-        elif name == 'reset':
+        elif name == "reset":
             qubits = operation.qubits
             for qubit in qubits:
                 if self._sim.m(qubit._index):
                     self._sim.x(qubit._index)
-        elif name == 'measure':
+        elif name == "measure":
             qubits = operation.qubits
             clbits = operation.clbits
             cregbits = (
                 operation.register
-                if hasattr(operation, 'register')
+                if hasattr(operation, "register")
                 else len(operation.qubits) * [-1]
             )
 
@@ -458,30 +433,30 @@ class QrackAceBackend:
                         self._classical_register & (~regbit)
                     ) | (qubit_outcome << cregbit)
 
-        elif name == 'bfunc':
+        elif name == "bfunc":
             mask = int(operation.mask, 16)
             relation = operation.relation
             val = int(operation.val, 16)
 
             cregbit = operation.register
-            cmembit = operation.memory if hasattr(operation, 'memory') else None
+            cmembit = operation.memory if hasattr(operation, "memory") else None
 
             compared = (self._classical_register & mask) - val
 
-            if relation == '==':
+            if relation == "==":
                 outcome = compared == 0
-            elif relation == '!=':
+            elif relation == "!=":
                 outcome = compared != 0
-            elif relation == '<':
+            elif relation == "<":
                 outcome = compared < 0
-            elif relation == '<=':
+            elif relation == "<=":
                 outcome = compared <= 0
-            elif relation == '>':
+            elif relation == ">":
                 outcome = compared > 0
-            elif relation == '>=':
+            elif relation == ">=":
                 outcome = compared >= 0
             else:
-                raise QrackError('Invalid boolean function relation.')
+                raise QrackError("Invalid boolean function relation.")
 
             # Store outcome in register and optionally memory slot
             regbit = 1 << cregbit
@@ -524,7 +499,9 @@ class QrackAceBackend:
                 result |= qubit_outcome << index
             measure_results = [result]
         else:
-            measure_results = self._sim.measure_shots([q._index for q in measure_qubit], num_samples)
+            measure_results = self._sim.measure_shots(
+                [q._index for q in measure_qubit], num_samples
+            )
 
         data = []
         for sample in measure_results:
@@ -566,21 +543,21 @@ class QrackAceBackend:
         for opcount in range(len(instructions)):
             operation = instructions[opcount]
 
-            if operation.name == 'id' or operation.name == 'barrier':
+            if operation.name == "id" or operation.name == "barrier":
                 continue
 
             if is_initializing and (
-                (operation.name == 'measure') or (operation.name == 'reset')
+                (operation.name == "measure") or (operation.name == "reset")
             ):
                 continue
 
             is_initializing = False
 
-            if (operation.name == 'measure') or (operation.name == 'reset'):
+            if (operation.name == "measure") or (operation.name == "reset"):
                 if boundary_start == -1:
                     boundary_start = opcount
 
-            if (boundary_start != -1) and (operation.name != 'measure'):
+            if (boundary_start != -1) and (operation.name != "measure"):
                 shotsPerLoop = 1
                 shotLoopMax = self._shots
                 self._sample_measure = False

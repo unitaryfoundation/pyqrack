@@ -45,13 +45,22 @@ class QrackCircuit:
         cid(int): Qrack ID of this circuit
     """
 
-    def __init__(self, is_collapse = True, is_near_clifford = False, clone_cid = -1, is_inverse=False, past_light_cone = []):
+    def __init__(
+        self,
+        is_collapse=True,
+        is_near_clifford=False,
+        clone_cid=-1,
+        is_inverse=False,
+        past_light_cone=[],
+    ):
         if clone_cid < 0:
             self.cid = Qrack.qrack_lib.init_qcircuit(is_collapse, is_near_clifford)
         elif is_inverse:
             self.cid = Qrack.qrack_lib.qcircuit_inverse(clone_cid)
         elif len(past_light_cone) > 0:
-            self.cid = Qrack.qrack_lib.qcircuit_past_light_cone(clone_cid, len(past_light_cone), self._ulonglong_byref(past_light_cone))
+            self.cid = Qrack.qrack_lib.qcircuit_past_light_cone(
+                clone_cid, len(past_light_cone), self._ulonglong_byref(past_light_cone)
+            )
         else:
             self.cid = Qrack.qrack_lib.init_qcircuit_clone(clone_cid)
 
@@ -74,7 +83,7 @@ class QrackCircuit:
         nrm = abs(m[0])
         if (nrm * nrm) < sys.float_info.epsilon:
             phase = 1.0 + 0.0j
-            th = math.pi;
+            th = math.pi
         else:
             phase = m[0] / nrm
             if nrm > 1.0:
@@ -123,7 +132,7 @@ class QrackCircuit:
         Raises:
             RuntimeError: QrackCircuit C++ library raised an exception.
         """
-        return QrackCircuit(clone_cid = self.cid, is_inverse = False)
+        return QrackCircuit(clone_cid=self.cid, is_inverse=False)
 
     def inverse(self):
         """Make a new circuit that is the exact inverse of this circuit
@@ -131,7 +140,7 @@ class QrackCircuit:
         Raises:
             RuntimeError: QrackCircuit C++ library raised an exception.
         """
-        return QrackCircuit(clone_cid = self.cid, is_inverse = True)
+        return QrackCircuit(clone_cid=self.cid, is_inverse=True)
 
     def past_light_cone(self, q):
         """Make a new circuit with just this circuits' past light cone for certain qubits.
@@ -142,7 +151,7 @@ class QrackCircuit:
         Raises:
             RuntimeError: QrackCircuit C++ library raised an exception.
         """
-        return QrackCircuit(clone_cid = self.cid, is_inverse = False, past_light_cone = q)
+        return QrackCircuit(clone_cid=self.cid, is_inverse=False, past_light_cone=q)
 
     def get_qubit_count(self):
         """Get count of qubits in circuit
@@ -178,7 +187,9 @@ class QrackCircuit:
             RuntimeError: QrackSimulator raised an exception.
         """
         if len(m) < 4:
-            raise ValueError("2x2 matrix 'm' in QrackCircuit.mtrx() must contain at least 4 elements.")
+            raise ValueError(
+                "2x2 matrix 'm' in QrackCircuit.mtrx() must contain at least 4 elements."
+            )
         Qrack.qrack_lib.qcircuit_append_1qb(self.cid, self._complex_byref(m), q)
 
     def ucmtrx(self, c, m, q, p):
@@ -199,7 +210,9 @@ class QrackCircuit:
             RuntimeError: QrackSimulator raised an exception.
         """
         if len(m) < 4:
-            raise ValueError("2x2 matrix 'm' in QrackCircuit.ucmtrx() must contain at least 4 elements.")
+            raise ValueError(
+                "2x2 matrix 'm' in QrackCircuit.ucmtrx() must contain at least 4 elements."
+            )
         Qrack.qrack_lib.qcircuit_append_mc(
             self.cid, self._complex_byref(m), len(c), self._ulonglong_byref(c), q, p
         )
@@ -233,7 +246,7 @@ class QrackCircuit:
         Args:
             filename: Name of file
         """
-        Qrack.qrack_lib.qcircuit_out_to_file(self.cid, filename.encode('utf-8'))
+        Qrack.qrack_lib.qcircuit_out_to_file(self.cid, filename.encode("utf-8"))
 
     def in_from_file(filename):
         """Read in optimized circuit from file
@@ -245,7 +258,7 @@ class QrackCircuit:
             filename: Name of file
         """
         out = QrackCircuit()
-        Qrack.qrack_lib.qcircuit_in_from_file(out.cid, filename.encode('utf-8'))
+        Qrack.qrack_lib.qcircuit_in_from_file(out.cid, filename.encode("utf-8"))
 
         return out
 
@@ -269,7 +282,7 @@ class QrackCircuit:
             filename: Name of file
         """
         tokens = []
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             tokens = file.read().split()
         return int(tokens[1])
 
@@ -309,7 +322,7 @@ class QrackCircuit:
             )
 
         tokens = []
-        with open(filename, 'r') as file:
+        with open(filename, "r") as file:
             return QrackCircuit.string_to_qiskit_circuit(file.read())
 
     def string_to_qiskit_circuit(circ_string):
@@ -361,8 +374,8 @@ class QrackCircuit:
 
                 mtrx = []
                 for _ in range(4):
-                    amp = tokens[i].replace("(","").replace(")","").split(',')
-                    mtrx.append(float(amp[0]) + float(amp[1])*1j)
+                    amp = tokens[i].replace("(", "").replace(")", "").split(",")
+                    mtrx.append(float(amp[0]) + float(amp[1]) * 1j)
                     i += 1
 
                 mtrx = QrackCircuit._make_mtrx_unitary(mtrx)
@@ -375,7 +388,7 @@ class QrackCircuit:
 
                 payloads[key] = op
 
-            gate_list=[]
+            gate_list = []
             for j in range(1 << control_count):
                 if j in payloads:
                     gate_list.append(payloads[j])
@@ -421,7 +434,12 @@ class QrackCircuit:
             if o.name in ["x", "y", "z", "u"]:
                 out.mtrx(op, circ.find_bit(gate.qubits[0])[0])
             else:
-                out.ucmtrx([circ.find_bit(gate.qubits[0])[0]], op, circ.find_bit(gate.qubits[1])[0], 1)
+                out.ucmtrx(
+                    [circ.find_bit(gate.qubits[0])[0]],
+                    op,
+                    circ.find_bit(gate.qubits[1])[0],
+                    1,
+                )
 
         return out
 
@@ -431,9 +449,9 @@ class QrackCircuit:
         psi0=None,
         gate_opts=None,
         tags=None,
-        psi0_dtype='complex128',
-        psi0_tag='PSI0',
-        bra_site_ind_id='b{}'
+        psi0_dtype="complex128",
+        psi0_tag="PSI0",
+        bra_site_ind_id="b{}",
     ):
         """Convert an output file to a Quimb circuit
 
@@ -464,25 +482,32 @@ class QrackCircuit:
         basis_gates = ["u", "cx"]
         qcirc = transpile(qcirc, basis_gates=basis_gates, optimization_level=3)
 
-        tcirc = qtn.Circuit(
-            N=qcirc.num_qubits,
-            psi0=psi0,
-            gate_opts=gate_opts,
-            tags=tags,
-            psi0_dtype=psi0_dtype,
-            psi0_tag=psi0_tag,
-            bra_site_ind_id=bra_site_ind_id
-        ) if circuit_type == QuimbCircuitType.Circuit else (
-            qtn.CircuitDense(N=qcirc.num_qubits, psi0=psi0, gate_opts=gate_opts, tags=tags) if circuit_type == QuimbCircuitType.CircuitDense else
-                qtn.CircuitMPS(
+        tcirc = (
+            qtn.Circuit(
+                N=qcirc.num_qubits,
+                psi0=psi0,
+                gate_opts=gate_opts,
+                tags=tags,
+                psi0_dtype=psi0_dtype,
+                psi0_tag=psi0_tag,
+                bra_site_ind_id=bra_site_ind_id,
+            )
+            if circuit_type == QuimbCircuitType.Circuit
+            else (
+                qtn.CircuitDense(
+                    N=qcirc.num_qubits, psi0=psi0, gate_opts=gate_opts, tags=tags
+                )
+                if circuit_type == QuimbCircuitType.CircuitDense
+                else qtn.CircuitMPS(
                     N=qcirc.num_qubits,
                     psi0=psi0,
                     gate_opts=gate_opts,
                     tags=tags,
                     psi0_dtype=psi0_dtype,
                     psi0_tag=psi0_tag,
-                    bra_site_ind_id=bra_site_ind_id
+                    bra_site_ind_id=bra_site_ind_id,
                 )
+            )
         )
         for gate in qcirc.data:
             o = gate.operation
@@ -491,17 +516,18 @@ class QrackCircuit:
                 ph = float(o.params[1])
                 lm = float(o.params[2])
 
-                tcirc.apply_gate('U3', th, ph, lm, qcirc.find_bit(gate.qubits[0])[0])
+                tcirc.apply_gate("U3", th, ph, lm, qcirc.find_bit(gate.qubits[0])[0])
             else:
-                tcirc.apply_gate('CNOT', qcirc.find_bit(gate.qubits[0])[0], qcirc.find_bit(gate.qubits[1])[0])
+                tcirc.apply_gate(
+                    "CNOT",
+                    qcirc.find_bit(gate.qubits[0])[0],
+                    qcirc.find_bit(gate.qubits[1])[0],
+                )
 
         return tcirc
 
     def file_to_tensorcircuit(
-        filename,
-        inputs=None,
-        circuit_params=None,
-        binding_params=None
+        filename, inputs=None, circuit_params=None, binding_params=None
     ):
         """Convert an output file to a TensorCircuit circuit
 
@@ -528,9 +554,11 @@ class QrackCircuit:
         basis_gates = ["u", "cx"]
         qcirc = transpile(qcirc, basis_gates=basis_gates, optimization_level=3)
 
-        return tc.Circuit.from_qiskit(qcirc, qcirc.num_qubits, inputs, circuit_params, binding_params)
+        return tc.Circuit.from_qiskit(
+            qcirc, qcirc.num_qubits, inputs, circuit_params, binding_params
+        )
 
-    def in_from_tensorcircuit(tcirc, enable_instruction = False, enable_inputs = False):
+    def in_from_tensorcircuit(tcirc, enable_instruction=False, enable_inputs=False):
         """Convert a TensorCircuit circuit to a QrackCircuit
 
         Accepts a TensorCircuit circuit and outputs an equivalent QrackCircuit
