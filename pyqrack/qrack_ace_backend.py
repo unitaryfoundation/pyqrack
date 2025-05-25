@@ -39,7 +39,8 @@ class QrackAceBackend:
     """
 
     def __init__(self, qubit_count=-1, alternating_codes=True, toClone=None):
-        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count, isTensorNetwork=False)
+        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count + 1)
+        self._ancilla = 3 * qubit_count
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
 
@@ -118,66 +119,109 @@ class QrackAceBackend:
             self._cx_shadow(hq[1], hq[2])
             self.sim.mcx([hq[0]], hq[1])
 
+    def _correct(self, lq):
+        hq = self._unpack(lq)
+        shots = 1024
+        samples = self.sim.measure_shots(hq, shots)
+        syndrome = [0, 0, 0]
+        for sample in samples:
+            match sample:
+                case 1:
+                    syndrome[0] += 1
+                case 2:
+                    syndrome[1] += 1
+                case 4:
+                    syndrome[2] += 1
+                case 6:
+                    syndrome[0] += 1
+                case 5:
+                    syndrome[1] += 1
+                case 3:
+                    syndrome[2] += 1
+        max_syndrome = max(syndrome)
+        if (2 * max_syndrome) > shots:
+            error_bit = syndrome.index(max_syndrome)
+            row = (hq[0] // 3) // self.row_length
+            even_row = not (row & 1)
+            single_bit = 2 if (not self.alternating_codes or even_row) else 0
+            if error_bit == single_bit:
+                self.sim.x(hq[error_bit])
+            else:
+                self.sim.mcx([hq[1]], self._ancilla)
+                self.sim.mcx([hq[2]], self._ancilla)
+                self.sim.force_m(self._ancilla, True)
+                self.sim.x(hq[error_bit])
+
 
     def u(self, th, ph, lm, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.u(hq[0], th, ph, lm)
         self._encode(hq)
+        self._correct(lq)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.r(p, th, hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def s(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.s(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def adjs(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.adjs(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def x(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.x(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def y(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.y(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def z(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.z(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def h(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.h(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def t(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.t(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def adjt(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.adjt(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         gate = None
@@ -226,6 +270,9 @@ class QrackAceBackend:
             else:
                 gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
+
+        self._correct(lq1)
+        self._correct(lq2)
 
 
     def cx(self, lq1, lq2):
