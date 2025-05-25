@@ -143,13 +143,13 @@ class QrackAceBackend:
             error_bit = syndrome.index(max_syndrome)
             row = (hq[0] // 3) // self.row_length
             even_row = not (row & 1)
-            single_bit = 0 if (not self.alternating_codes or not even_row) else 2
+            single_bit = 2 if (not self.alternating_codes or even_row) else 0
             if error_bit == single_bit:
                 self.sim.x(hq[error_bit])
             else:
-                self.sim.mcx([hq[1]], self.ancilla)
-                self.sim.mcx([hq[2]], self.ancilla)
-                self.sim.force_m(self.ancilla, True)
+                self.sim.mcx([hq[1]], self._ancilla)
+                self.sim.mcx([hq[2]], self._ancilla)
+                self.sim.force_m(self._ancilla, True)
                 self.sim.x(hq[error_bit])
 
 
