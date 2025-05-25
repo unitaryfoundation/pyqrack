@@ -39,7 +39,7 @@ class QrackAceBackend:
     """
 
     def __init__(self, qubit_count=-1, alternating_codes=True, toClone=None):
-        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count + 2)
+        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count + 2, isTensorNetwork=False)
         self._ancilla0 = 3 * qubit_count
         self._ancilla1 = 3 * qubit_count + 1
         self._factor_width(qubit_count)
