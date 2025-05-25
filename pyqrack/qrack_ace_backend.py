@@ -39,9 +39,7 @@ class QrackAceBackend:
     """
 
     def __init__(self, qubit_count=-1, alternating_codes=True, toClone=None):
-        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count + 2, isTensorNetwork=False)
-        self._ancilla0 = 3 * qubit_count
-        self._ancilla1 = 3 * qubit_count + 1
+        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count, isTensorNetwork=False)
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
 
@@ -120,19 +118,6 @@ class QrackAceBackend:
             self._cx_shadow(hq[1], hq[2])
             self.sim.mcx([hq[0]], hq[1])
 
-    def _correct(self, hq):
-        self.sim.mcx([hq[0]], self._ancilla0)
-        self._cx_shadow(hq[1], self._ancilla0)
-        self._cx_shadow(hq[0], self._ancilla1)
-        self.sim.mcx([hq[2]], self._ancilla1)
-        s0 = self.sim.m(self._ancilla0)
-        s1 = self.sim.m(self._ancilla1)
-        if s0 and s1:
-            self.sim.x(hq[0])
-        elif s0:
-            self.sim.x(hq[1])
-        elif s1:
-            self.sim.x(hq[2])
 
     def u(self, th, ph, lm, lq):
         hq = self._unpack(lq)
@@ -242,8 +227,6 @@ class QrackAceBackend:
                 gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
 
-        self._correct(hq1)
-        self._correct(hq2)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
