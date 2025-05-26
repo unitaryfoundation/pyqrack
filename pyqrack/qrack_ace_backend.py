@@ -197,7 +197,16 @@ class QrackAceBackend:
         self._decode(hq)
         self.sim.u(hq[0], th, ph, lm)
         self._encode(hq)
-        self._correct_if_like_h(th, lq)
+        while ph > math.pi:
+            ph -= 2 * math.pi
+        while ph <= -math.pi:
+            ph += 2 * math.pi
+        while lm > math.pi:
+            lm -= 2 * math.pi
+        while lm <= -math.pi:
+            lm += 2 * math.pi
+        if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
+            self._correct_if_like_h(th, lq)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
