@@ -164,13 +164,13 @@ class QrackAceBackend:
                 self.sim.x(self._ancilla)
                 # Correct the bit flip.
                 self.sim.x(hq[error_bit])
-
-        # There is no error.
-        # Form the syndrome of the coherent bits.
-        self.sim.mcx([hq[1]], self._ancilla)
-        self.sim.mcx([hq[2]], self._ancilla)
-        # Force the syndrome non-pathological.
-        self.sim.force_m(self._ancilla, False)
+        elif error_bit != single_bit:
+            # There is no error.
+            # Form the syndrome of the coherent bits.
+            self.sim.mcx([hq[1]], self._ancilla)
+            self.sim.mcx([hq[2]], self._ancilla)
+            # Force the syndrome non-pathological.
+            self.sim.force_m(self._ancilla, False)
 
 
     def u(self, th, ph, lm, lq):
