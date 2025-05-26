@@ -293,8 +293,6 @@ class QrackAceBackend:
                 gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
 
-        self._correct(lq2)
-
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
