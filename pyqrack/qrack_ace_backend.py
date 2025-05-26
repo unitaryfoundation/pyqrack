@@ -230,6 +230,7 @@ class QrackAceBackend:
         self._decode(hq)
         self.sim.h(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def t(self, lq):
         hq = self._unpack(lq)
