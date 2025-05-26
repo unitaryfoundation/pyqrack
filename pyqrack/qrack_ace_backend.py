@@ -142,7 +142,7 @@ class QrackAceBackend:
                 case 3:
                     syndrome[2] += 1
 
-        row = (hq[0] // 3) // self.row_length
+        row = lq // self.row_length
         even_row = not (row & 1)
         single_bit = 0
         other_bits = []
@@ -155,7 +155,7 @@ class QrackAceBackend:
 
         max_syndrome = max(syndrome)
         force_syndrome = True
-        if (2 * max_syndrome) >= shots:
+        if (2 * max_syndrome) > shots:
             # There is an error.
             error_bit = syndrome.index(max_syndrome)
             if error_bit == single_bit:
@@ -209,42 +209,20 @@ class QrackAceBackend:
         self._encode(hq)
 
     def r(self, p, th, lq):
+        while th > math.pi:
+            th -= 2 * math.pi
+        while th <= -math.pi:
+            th += 2 * math.pi
         if p == Pauli.PauliY:
             self._correct_if_like_h(th, lq)
         hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.r(p, th, hq[0])
-        self._encode(hq)
-
-    def s(self, lq):
-        hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.s(hq[0])
-        self._encode(hq)
-
-    def adjs(self, lq):
-        hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.adjs(hq[0])
-        self._encode(hq)
-
-    def x(self, lq):
-        hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.x(hq[0])
-        self._encode(hq)
-
-    def y(self, lq):
-        hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.y(hq[0])
-        self._encode(hq)
-
-    def z(self, lq):
-        hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.z(hq[0])
-        self._encode(hq)
+        if (p == Pauli.PauliZ) or math.isclose(abs(th), math.pi):
+            for b in hq:
+                self.sim.r(p, th, b)
+        else:
+            self._decode(hq)
+            self.sim.r(p, th, hq[0])
+            self._encode(hq)
 
     def h(self, lq):
         self._correct(lq)
@@ -253,17 +231,40 @@ class QrackAceBackend:
         self.sim.h(hq[0])
         self._encode(hq)
 
+    def s(self, lq):
+        hq = self._unpack(lq)
+        for b in hq:
+            self.sim.s(b)
+
+    def adjs(self, lq):
+        hq = self._unpack(lq)
+        for b in hq:
+            self.sim.adjs(b)
+
+    def x(self, lq):
+        hq = self._unpack(lq)
+        for b in hq:
+            self.sim.x(b)
+
+    def y(self, lq):
+        hq = self._unpack(lq)
+        for b in hq:
+            self.sim.y(b)
+
+    def z(self, lq):
+        hq = self._unpack(lq)
+        for b in hq:
+            self.sim.z(b)
+
     def t(self, lq):
         hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.t(hq[0])
-        self._encode(hq)
+        for b in hq:
+            self.sim.t(b)
 
     def adjt(self, lq):
         hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.adjt(hq[0])
-        self._encode(hq)
+        for b in hq:
+            self.sim.adjt(b)
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         self._correct(lq1)
