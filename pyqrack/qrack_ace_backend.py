@@ -144,7 +144,14 @@ class QrackAceBackend:
 
         row = (hq[0] // 3) // self.row_length
         even_row = not (row & 1)
-        single_bit = 2 if (not self.alternating_codes or even_row) else 0
+        single_bit = 0
+        other_bits = []
+        if (not self.alternating_codes or even_row):
+            single_bit = 2
+            other_bits = [0, 1]
+        else:
+            single_bit = 0
+            other_bits = [1, 2]
 
         max_syndrome = max(syndrome)
         error_bit = syndrome.index(max_syndrome)
@@ -156,21 +163,21 @@ class QrackAceBackend:
             else:
                 # The coherent bits carry the error.
                 # Form their syndrome.
-                self.sim.mcx([hq[1]], self._ancilla)
-                self.sim.mcx([hq[2]], self._ancilla)
+                self.sim.mcx([hq[other_bits[0]]], self._ancilla)
+                self.sim.mcx([hq[other_bits[1]]], self._ancilla)
                 # Force the syndrome pathological
                 self.sim.force_m(self._ancilla, True)
                 # Reset the ancilla.
                 self.sim.x(self._ancilla)
                 # Correct the bit flip.
                 self.sim.x(hq[error_bit])
-        elif error_bit != single_bit:
-            # There is no error.
-            # Form the syndrome of the coherent bits.
-            self.sim.mcx([hq[1]], self._ancilla)
-            self.sim.mcx([hq[2]], self._ancilla)
-            # Force the syndrome non-pathological.
-            self.sim.force_m(self._ancilla, False)
+
+        # There is no error.
+        # Form the syndrome of the coherent bits.
+        self.sim.mcx([hq[other_bits[0]]], self._ancilla)
+        self.sim.mcx([hq[other_bits[1]]], self._ancilla)
+        # Force the syndrome non-pathological.
+        self.sim.force_m(self._ancilla, False)
 
 
     def u(self, th, ph, lm, lq):
