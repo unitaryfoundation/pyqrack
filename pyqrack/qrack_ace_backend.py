@@ -187,7 +187,8 @@ class QrackAceBackend:
             th -= 2 * math.pi
         while th <= -math.pi:
             th += 2 * math.pi
-        if abs(th) >= (math.pi / 4):
+        th = abs(th)
+        if (th >= (math.pi / 4)) and (th < (3 * math.pi / 4)):
             self._correct(lq)
 
 
