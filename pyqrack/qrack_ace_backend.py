@@ -155,6 +155,7 @@ class QrackAceBackend:
 
         max_syndrome = max(syndrome)
         error_bit = syndrome.index(max_syndrome)
+        force_syndrome = True
         if (2 * max_syndrome) >= shots:
             # There is an error.
             if error_bit == single_bit:
@@ -162,6 +163,7 @@ class QrackAceBackend:
                 self.sim.x(hq[error_bit])
             else:
                 # The coherent bits carry the error.
+                force_syndrome = False
                 # Form their syndrome.
                 self.sim.mcx([hq[other_bits[0]]], self._ancilla)
                 self.sim.mcx([hq[other_bits[1]]], self._ancilla)
@@ -173,11 +175,12 @@ class QrackAceBackend:
                 self.sim.x(hq[error_bit])
 
         # There is no error.
-        # Form the syndrome of the coherent bits.
-        self.sim.mcx([hq[other_bits[0]]], self._ancilla)
-        self.sim.mcx([hq[other_bits[1]]], self._ancilla)
-        # Force the syndrome non-pathological.
-        self.sim.force_m(self._ancilla, False)
+        if force_syndrome:
+            # Form the syndrome of the coherent bits.
+            self.sim.mcx([hq[other_bits[0]]], self._ancilla)
+            self.sim.mcx([hq[other_bits[1]]], self._ancilla)
+            # Force the syndrome non-pathological.
+            self.sim.force_m(self._ancilla, False)
 
 
     def u(self, th, ph, lm, lq):
@@ -185,72 +188,64 @@ class QrackAceBackend:
         self._decode(hq)
         self.sim.u(hq[0], th, ph, lm)
         self._encode(hq)
-        self._correct(lq)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.r(p, th, hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def s(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.s(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def adjs(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.adjs(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def x(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.x(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def y(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.y(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def z(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.z(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def h(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.h(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def t(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.t(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def adjt(self, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.adjt(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def _cpauli(self, lq1, lq2, anti, pauli):
+        self._correct(lq1)
+
         gate = None
         shadow = None
         if pauli == Pauli.PauliX:
@@ -298,7 +293,6 @@ class QrackAceBackend:
                 gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
 
-        self._correct(lq1)
         self._correct(lq2)
 
 
