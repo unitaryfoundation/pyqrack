@@ -38,8 +38,8 @@ class QrackAceBackend:
         col_length(int): Qubits per column.
     """
 
-    def __init__(self, qubit_count=-1, alternating_codes=True, toClone=None):
-        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count + 1)
+    def __init__(self, qubit_count=-1, alternating_codes=True, isTensorNetwork=False, toClone=None):
+        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork)
         self._ancilla = 3 * qubit_count
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
