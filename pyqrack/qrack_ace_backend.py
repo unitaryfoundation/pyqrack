@@ -182,18 +182,30 @@ class QrackAceBackend:
             # Force the syndrome non-pathological.
             self.sim.force_m(self._ancilla, False)
 
+    def _correct_if_h(self, th, lq):
+        while th > math.pi:
+            th -= math.pi
+        while th <= -math.pi:
+            th += math.pi
+        i = abs(2 * th / math.pi)
+        if math.isclose(i, 1):
+            self._correct(lq)
+
 
     def u(self, th, ph, lm, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.u(hq[0], th, ph, lm)
         self._encode(hq)
+        self._correct_if_h(th, lq)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.r(p, th, hq[0])
         self._encode(hq)
+        if p == Pauli.PauliY:
+            self._correct_if_h(th, lq)
 
     def s(self, lq):
         hq = self._unpack(lq)
