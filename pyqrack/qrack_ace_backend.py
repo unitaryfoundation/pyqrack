@@ -150,6 +150,7 @@ class QrackAceBackend:
                 self.sim.mcx([hq[1]], self._ancilla)
                 self.sim.mcx([hq[2]], self._ancilla)
                 self.sim.force_m(self._ancilla, True)
+                self.sim.x(self._ancilla)
                 self.sim.x(hq[error_bit])
 
 
