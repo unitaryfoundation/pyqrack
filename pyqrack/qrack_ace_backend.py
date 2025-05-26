@@ -193,10 +193,6 @@ class QrackAceBackend:
 
 
     def u(self, th, ph, lm, lq):
-        hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.u(hq[0], th, ph, lm)
-        self._encode(hq)
         while ph > math.pi:
             ph -= 2 * math.pi
         while ph <= -math.pi:
@@ -207,14 +203,18 @@ class QrackAceBackend:
             lm += 2 * math.pi
         if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
             self._correct_if_like_h(th, lq)
+        hq = self._unpack(lq)
+        self._decode(hq)
+        self.sim.u(hq[0], th, ph, lm)
+        self._encode(hq)
 
     def r(self, p, th, lq):
+        if p == Pauli.PauliY:
+            self._correct_if_like_h(th, lq)
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.r(p, th, hq[0])
         self._encode(hq)
-        if p == Pauli.PauliY:
-            self._correct_if_like_h(th, lq)
 
     def s(self, lq):
         hq = self._unpack(lq)
@@ -247,11 +247,11 @@ class QrackAceBackend:
         self._encode(hq)
 
     def h(self, lq):
+        self._correct(lq)
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.h(hq[0])
         self._encode(hq)
-        self._correct(lq)
 
     def t(self, lq):
         hq = self._unpack(lq)
