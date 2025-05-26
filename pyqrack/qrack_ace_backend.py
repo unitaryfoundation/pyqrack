@@ -201,12 +201,15 @@ class QrackAceBackend:
             lm -= 2 * math.pi
         while lm <= -math.pi:
             lm += 2 * math.pi
+        hq = self._unpack(lq)
         if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
             self._correct_if_like_h(th, lq)
-        hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.u(hq[0], th, ph, lm)
-        self._encode(hq)
+            self._decode(hq)
+            self.sim.u(hq[0], th, ph, lm)
+            self._encode(hq)
+        else:
+            for b in hq:
+                self.sim.u(b, th, ph, lm)
 
     def r(self, p, th, lq):
         while th > math.pi:
