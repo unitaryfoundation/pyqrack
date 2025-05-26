@@ -154,10 +154,10 @@ class QrackAceBackend:
             other_bits = [1, 2]
 
         max_syndrome = max(syndrome)
-        error_bit = syndrome.index(max_syndrome)
         force_syndrome = True
         if (2 * max_syndrome) >= shots:
             # There is an error.
+            error_bit = syndrome.index(max_syndrome)
             if error_bit == single_bit:
                 # The stand-alone bit carries the error.
                 self.sim.x(hq[error_bit])
@@ -230,6 +230,7 @@ class QrackAceBackend:
         self._decode(hq)
         self.sim.h(hq[0])
         self._encode(hq)
+        self._correct(lq)
 
     def t(self, lq):
         hq = self._unpack(lq)
