@@ -120,6 +120,9 @@ class QrackAceBackend:
             self.sim.mcx([hq[0]], hq[1])
 
     def _correct(self, lq):
+        # We can't use true syndrome-based error correction,
+        # because one of the qubits in the code is separated.
+        # However, we can get pretty close!
         hq = self._unpack(lq)
         shots = 1024
         samples = self.sim.measure_shots(hq, shots)
@@ -138,20 +141,36 @@ class QrackAceBackend:
                     syndrome[1] += 1
                 case 3:
                     syndrome[2] += 1
+
+        row = (hq[0] // 3) // self.row_length
+        even_row = not (row & 1)
+        single_bit = 2 if (not self.alternating_codes or even_row) else 0
+
         max_syndrome = max(syndrome)
-        if (2 * max_syndrome) > shots:
-            error_bit = syndrome.index(max_syndrome)
-            row = (hq[0] // 3) // self.row_length
-            even_row = not (row & 1)
-            single_bit = 2 if (not self.alternating_codes or even_row) else 0
+        error_bit = syndrome.index(max_syndrome)
+        if (2 * max_syndrome) >= shots:
+            # There is an error.
             if error_bit == single_bit:
+                # The stand-alone bit carries the error.
                 self.sim.x(hq[error_bit])
             else:
+                # The coherent bits carry the error.
+                # Form their syndrome.
                 self.sim.mcx([hq[1]], self._ancilla)
                 self.sim.mcx([hq[2]], self._ancilla)
+                # Force the syndrome pathological
                 self.sim.force_m(self._ancilla, True)
+                # Reset the ancilla.
                 self.sim.x(self._ancilla)
+                # Correct the bit flip.
                 self.sim.x(hq[error_bit])
+        elif error_bit != single_bit:
+            # There is no error.
+            # Form the syndrome of the coherent bits.
+            self.sim.mcx([hq[1]], self._ancilla)
+            self.sim.mcx([hq[2]], self._ancilla)
+            # Force the syndrome non-pathological.
+            self.sim.force_m(self._ancilla, False)
 
 
     def u(self, th, ph, lm, lq):
