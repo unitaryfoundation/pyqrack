@@ -43,7 +43,7 @@ class QrackAceBackend:
         self._ancilla = 3 * qubit_count
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
-        self._epsilon = 0.5
+        self._is_init = [False] * qubit_count
 
     def _factor_width(self, width):
         col_len = math.floor(math.sqrt(width))
@@ -101,26 +101,24 @@ class QrackAceBackend:
         )
 
     def _encode(self, hq, reverse=False):
-        row = (hq[0] // 3) // self.row_length
+        lq = hq[0] // 3
+        row = lq // self.row_length
         even_row = not (row & 1)
-        dummy_init = abs(1.0 - 2 * self.sim.prob(hq[0])) <= self._epsilon
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
-            dummy_init &= abs(1.0 - 2.0 * self.sim.prob(hq[1])) >= self._epsilon
-            if dummy_init:
-                self.sim.h(hq[1])
-            else:
+            if self._is_init[lq]:
                 self._cx_shadow(hq[0], hq[1])
             self.sim.mcx([hq[1]], hq[2])
         else:
-            dummy_init &= abs(1.0 - 2.0 * self.sim.prob(hq[2])) >= self._epsilon
             self.sim.mcx([hq[0]], hq[1])
-            if dummy_init:
-                self.sim.h(hq[2])
-            else:
+            if self._is_init[lq]:
                 self._cx_shadow(hq[1], hq[2])
+        self._is_init[lq] = True
 
     def _decode(self, hq, reverse=False):
-        row = (hq[0] // 3) // self.row_length
+        lq = hq[0] // 3
+        if not self._is_init[lq]:
+            return
+        row = lq // self.row_length
         even_row = not (row & 1)
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             self.sim.mcx([hq[1]], hq[2])
@@ -216,6 +214,8 @@ class QrackAceBackend:
             self._correct_if_like_h(th, lq)
             self._decode(hq)
             self.sim.u(hq[0], th, ph, lm)
+            if not self._is_init[lq]:
+                self.sim.u(hq[2], th, ph, lm)
             self._encode(hq)
         else:
             for b in hq:
@@ -235,6 +235,8 @@ class QrackAceBackend:
         else:
             self._decode(hq)
             self.sim.r(p, th, hq[0])
+            if not self._is_init[lq]:
+                self.sim.r(p, th, hq[2])
             self._encode(hq)
 
     def h(self, lq):
@@ -242,6 +244,8 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         self._decode(hq)
         self.sim.h(hq[0])
+        if not self._is_init[lq]:
+            self.sim.h(hq[2])
         self._encode(hq)
 
     def s(self, lq):
@@ -293,6 +297,13 @@ class QrackAceBackend:
             gate = self.sim.macz if anti else self.sim.mcz
             shadow = self._anti_cz_shadow if anti else self._cz_shadow
         else:
+            return
+
+        if not self._is_init[lq1]:
+            gate([hq1[0]], hq2[0])
+            gate([hq1[1]], hq2[1])
+            gate([hq1[2]], hq2[2])
+
             return
 
         lq1_col = lq1 // self.row_length
@@ -378,6 +389,8 @@ class QrackAceBackend:
         for i in range(len(hq)):
             if bits[i] != result:
                 self.sim.x(hq[i])
+
+        self._is_init[lq] = False
 
         return result
 
