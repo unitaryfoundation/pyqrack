@@ -38,8 +38,18 @@ class QrackAceBackend:
         col_length(int): Qubits per column.
     """
 
-    def __init__(self, qubit_count=-1, alternating_codes=True, isTensorNetwork=False, toClone=None):
-        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork)
+    def __init__(
+        self,
+        qubit_count=-1,
+        alternating_codes=True,
+        isTensorNetwork=False,
+        toClone=None,
+    ):
+        self.sim = (
+            toClone.sim.clone()
+            if toClone
+            else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork)
+        )
         self._ancilla = 3 * qubit_count
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
@@ -156,7 +166,7 @@ class QrackAceBackend:
         even_row = not (row & 1)
         single_bit = 0
         other_bits = []
-        if (not self.alternating_codes or even_row):
+        if not self.alternating_codes or even_row:
             single_bit = 2
             other_bits = [0, 1]
         else:
@@ -200,7 +210,6 @@ class QrackAceBackend:
         th = abs(th)
         if not math.isclose(th, 0):
             self._correct(lq)
-
 
     def u(self, th, ph, lm, lq):
         while ph > math.pi:
@@ -302,6 +311,8 @@ class QrackAceBackend:
             return
 
         if not self._is_init[lq1]:
+            hq1 = self._unpack(lq1)
+            hq2 = self._unpack(lq2)
             gate([hq1[0]], hq2[0])
             gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
@@ -342,7 +353,6 @@ class QrackAceBackend:
             else:
                 gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
-
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
