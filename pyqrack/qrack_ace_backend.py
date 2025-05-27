@@ -229,7 +229,7 @@ class QrackAceBackend:
             self._correct_if_like_h(th, lq)
             self._decode(hq)
             self.sim.u(hq[0], th, ph, lm)
-            if not self._is_init[lq]
+            if not self._is_init[lq]:
                 self.sim.u(hq[2], th, ph, lm)
             self._encode(hq)
         else:
@@ -250,7 +250,7 @@ class QrackAceBackend:
         else:
             self._decode(hq)
             self.sim.r(p, th, hq[0])
-            if not self._is_init[lq]
+            if not self._is_init[lq]:
                 self.sim.r(p, th, hq[2])
             self._encode(hq)
 
