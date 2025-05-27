@@ -43,6 +43,7 @@ class QrackAceBackend:
         self._ancilla = 3 * qubit_count
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
+        self._epsilon = 0.5
 
     def _factor_width(self, width):
         col_len = math.floor(math.sqrt(width))
@@ -102,12 +103,19 @@ class QrackAceBackend:
     def _encode(self, hq, reverse=False):
         row = (hq[0] // 3) // self.row_length
         even_row = not (row & 1)
+        dummy_init = abs(1.0 - 2 * self.sim.prob(hq[0])) <= self._epsilon
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
-            self._cx_shadow(hq[0], hq[1])
+            if dummy_init:
+                self.sim.h(hq[1])
+            else:
+                self._cx_shadow(hq[0], hq[1])
             self.sim.mcx([hq[1]], hq[2])
         else:
             self.sim.mcx([hq[0]], hq[1])
-            self._cx_shadow(hq[1], hq[2])
+            if dummy_init:
+                self.sim.h(hq[2])
+            else:
+                self._cx_shadow(hq[1], hq[2])
 
     def _decode(self, hq, reverse=False):
         row = (hq[0] // 3) // self.row_length
@@ -271,7 +279,6 @@ class QrackAceBackend:
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         self._correct(lq1)
-
         gate = None
         shadow = None
         if pauli == Pauli.PauliX:
