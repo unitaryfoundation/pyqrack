@@ -157,23 +157,20 @@ class QrackAceBackend:
             single_bit = 0
             other_bits = [1, 2]
         hq = self._unpack(lq)
-        single_bit_value = self.sim.prob(hq[single_bit]) >= 0.5
+        single_bit_value = self.sim.prob(hq[single_bit])
         samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
         syndrome = [0, 0, 0]
         syndrome_indices = [other_bits[1], other_bits[0]] if single_bit_value else [other_bits[0], other_bits[1]]
-        zero_syndrome = True if single_bit_value else False
         for sample in samples:
             match sample:
                 case 0:
-                    if zero_syndrome:
-                        syndrome[single_bit] += 1
+                    syndrome[single_bit] += single_bit_value
                 case 1:
                     syndrome[syndrome_indices[0]] += 1
                 case 2:
                     syndrome[syndrome_indices[1]] += 1
                 case 3:
-                    if not zero_syndrome:
-                        syndrome[single_bit] += 1
+                    syndrome[single_bit] += 1 - single_bit_value
 
         max_syndrome = max(syndrome)
         force_syndrome = True
