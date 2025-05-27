@@ -294,6 +294,7 @@ class QrackAceBackend:
         hq1 = None
         hq2 = None
         if (lq2_col == lq1_col) and (((lq1_row + 1) % self.row_length) == lq2_row):
+            self._correct(lq2)
             hq1 = self._unpack(lq1, True)
             hq2 = self._unpack(lq2, False)
             self._decode(hq1, True)
@@ -302,6 +303,7 @@ class QrackAceBackend:
             self._encode(hq2, False)
             self._encode(hq1, True)
         elif (lq1_col == lq2_col) and (((lq2_row + 1) % self.row_length) == lq1_row):
+            self._correct(lq2)
             hq2 = self._unpack(lq2, True)
             hq1 = self._unpack(lq1, False)
             self._decode(hq2, True)
