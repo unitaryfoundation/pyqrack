@@ -107,7 +107,9 @@ class QrackAceBackend:
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             if self._is_init[lq]:
                 self._cx_shadow(hq[0], hq[1])
-            self.sim.mcx([hq[1]], hq[2])
+                self.sim.mcx([hq[1]], hq[2])
+            else:
+                self.sim.mcx([hq[2]], hq[1])
         else:
             self.sim.mcx([hq[0]], hq[1])
             if self._is_init[lq]:
