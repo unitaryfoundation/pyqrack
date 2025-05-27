@@ -160,7 +160,7 @@ class QrackAceBackend:
         single_bit_value = self.sim.prob(hq[single_bit])
         samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
         syndrome = [0, 0, 0]
-        syndrome_indices = [other_bits[1], other_bits[0]] if single_bit_value else [other_bits[0], other_bits[1]]
+        syndrome_indices = [other_bits[1], other_bits[0]] if (single_bit_value >= 0.5) else [other_bits[0], other_bits[1]]
         for sample in samples:
             match sample:
                 case 0:
