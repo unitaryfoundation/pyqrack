@@ -40,7 +40,7 @@ class QrackAceBackend:
 
     def __init__(
         self,
-        qubit_count=-1,
+        qubit_count=1,
         alternating_codes=True,
         isTensorNetwork=False,
         toClone=None,
@@ -145,25 +145,7 @@ class QrackAceBackend:
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
         # However, we can get pretty close!
-        hq = self._unpack(lq)
         shots = 1024
-        samples = self.sim.measure_shots(hq, shots)
-        syndrome = [0, 0, 0]
-        for sample in samples:
-            match sample:
-                case 1:
-                    syndrome[0] += 1
-                case 2:
-                    syndrome[1] += 1
-                case 4:
-                    syndrome[2] += 1
-                case 6:
-                    syndrome[0] += 1
-                case 5:
-                    syndrome[1] += 1
-                case 3:
-                    syndrome[2] += 1
-
         row = lq // self.row_length
         even_row = not (row & 1)
         single_bit = 0
@@ -174,6 +156,24 @@ class QrackAceBackend:
         else:
             single_bit = 0
             other_bits = [1, 2]
+        hq = self._unpack(lq)
+        single_bit_value = self.sim.prob(hq[single_bit]) >= 0.5
+        samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
+        syndrome = [0, 0, 0]
+        syndrome_indices = [other_bits[1], other_bits[0]] if single_bit_value else [other_bits[0], other_bits[1]]
+        zero_syndrome = True if single_bit_value else False
+        for sample in samples:
+            match sample:
+                case 0:
+                    if zero_syndrome:
+                        syndrome[single_bit] += 1
+                case 1:
+                    syndrome[syndrome_indices[0]] += 1
+                case 2:
+                    syndrome[syndrome_indices[1]] += 1
+                case 3:
+                    if not zero_syndrome:
+                        syndrome[single_bit] += 1
 
         max_syndrome = max(syndrome)
         force_syndrome = True
