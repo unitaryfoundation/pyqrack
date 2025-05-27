@@ -38,8 +38,18 @@ class QrackAceBackend:
         col_length(int): Qubits per column.
     """
 
-    def __init__(self, qubit_count=-1, alternating_codes=True, isTensorNetwork=False, toClone=None):
-        self.sim = toClone.sim.clone() if toClone else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork)
+    def __init__(
+        self,
+        qubit_count=-1,
+        alternating_codes=True,
+        isTensorNetwork=False,
+        toClone=None,
+    ):
+        self.sim = (
+            toClone.sim.clone()
+            if toClone
+            else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork)
+        )
         self._ancilla = 3 * qubit_count
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
@@ -130,6 +140,8 @@ class QrackAceBackend:
             self.sim.mcx([hq[0]], hq[1])
 
     def _correct(self, lq):
+        if not self._is_init[lq]:
+            return
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
         # However, we can get pretty close!
@@ -156,7 +168,7 @@ class QrackAceBackend:
         even_row = not (row & 1)
         single_bit = 0
         other_bits = []
-        if (not self.alternating_codes or even_row):
+        if not self.alternating_codes or even_row:
             single_bit = 2
             other_bits = [0, 1]
         else:
@@ -193,6 +205,8 @@ class QrackAceBackend:
             self.sim.force_m(self._ancilla, False)
 
     def _correct_if_like_h(self, th, lq):
+        if not self._is_init[lq]:
+            return
         while th > math.pi:
             th -= 2 * math.pi
         while th <= -math.pi:
@@ -200,7 +214,6 @@ class QrackAceBackend:
         th = abs(th)
         if not math.isclose(th, 0):
             self._correct(lq)
-
 
     def u(self, th, ph, lm, lq):
         while ph > math.pi:
@@ -212,13 +225,14 @@ class QrackAceBackend:
         while lm <= -math.pi:
             lm += 2 * math.pi
         hq = self._unpack(lq)
-        if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
+        if self._is_init[lq] and not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
             self._correct_if_like_h(th, lq)
-            self._decode(hq)
-            self.sim.u(hq[0], th, ph, lm)
-            if not self._is_init[lq]:
+            for b in hq:
+                self.sim.u(b, th, ph, lm)
+        elif not self._is_init[lq]:
+                self.sim.u(hq[0], th, ph, lm)
                 self.sim.u(hq[2], th, ph, lm)
-            self._encode(hq)
+                self._encode(hq)
         else:
             for b in hq:
                 self.sim.u(b, th, ph, lm)
@@ -228,27 +242,27 @@ class QrackAceBackend:
             th -= 2 * math.pi
         while th <= -math.pi:
             th += 2 * math.pi
-        if p == Pauli.PauliY:
+        if self._is_init[lq] and (p == Pauli.PauliY):
             self._correct_if_like_h(th, lq)
         hq = self._unpack(lq)
-        if (p == Pauli.PauliZ) or math.isclose(abs(th), math.pi):
+        if not self._is_init[lq] and not ((p == Pauli.PauliZ) or math.isclose(abs(th), math.pi)):
+            self.sim.r(p, th, hq[0])
+            self.sim.r(p, th, hq[2])
+            self._encode(hq)
+        else:
             for b in hq:
                 self.sim.r(p, th, b)
-        else:
-            self._decode(hq)
-            self.sim.r(p, th, hq[0])
-            if not self._is_init[lq]:
-                self.sim.r(p, th, hq[2])
-            self._encode(hq)
 
     def h(self, lq):
-        self._correct(lq)
         hq = self._unpack(lq)
-        self._decode(hq)
-        self.sim.h(hq[0])
         if not self._is_init[lq]:
+            self.sim.h(hq[0])
             self.sim.h(hq[2])
-        self._encode(hq)
+            self._encode(hq)
+        else:
+           self._correct(lq)
+           for b in hq:
+                self.sim.h(hq[0])
 
     def s(self, lq):
         hq = self._unpack(lq)
@@ -302,6 +316,8 @@ class QrackAceBackend:
             return
 
         if not self._is_init[lq1]:
+            hq1 = self._unpack(lq1)
+            hq2 = self._unpack(lq2)
             gate([hq1[0]], hq2[0])
             gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
@@ -342,7 +358,6 @@ class QrackAceBackend:
             else:
                 gate([hq1[1]], hq2[1])
             gate([hq1[2]], hq2[2])
-
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
