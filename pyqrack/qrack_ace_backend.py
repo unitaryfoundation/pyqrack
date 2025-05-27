@@ -150,8 +150,7 @@ class QrackAceBackend:
         # because one of the qubits in the code is separated.
         # However, we can get pretty close!
         shots = 1024
-        row = lq // self.row_length
-        even_row = not (row & 1)
+        even_row = not ((lq // self.row_length) & 1)
         single_bit = 0
         other_bits = []
         if not self.alternating_codes or even_row:
@@ -162,25 +161,26 @@ class QrackAceBackend:
             other_bits = [1, 2]
         hq = self._unpack(lq)
         single_bit_value = self.sim.prob(hq[single_bit])
+        single_bit_polarization = max(single_bit_value, 1 - single_bit_value)
         samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
-        syndrome = [0, 0, 0]
         syndrome_indices = [other_bits[1], other_bits[0]] if (single_bit_value >= 0.5) else [other_bits[0], other_bits[1]]
+        syndrome = [0, 0, 0]
         for sample in samples:
             match sample:
                 case 0:
                     syndrome[single_bit] += single_bit_value
                 case 1:
-                    syndrome[syndrome_indices[0]] += 1
+                    syndrome[syndrome_indices[0]] += single_bit_polarization
                 case 2:
-                    syndrome[syndrome_indices[1]] += 1
+                    syndrome[syndrome_indices[1]] += single_bit_polarization
                 case 3:
                     syndrome[single_bit] += 1 - single_bit_value
 
-        max_syndrome = max(syndrome)
+        sum_syndrome = sum(syndrome)
         force_syndrome = True
-        if (2 * max_syndrome) > shots:
+        if (2 * sum_syndrome) > shots:
             # There is an error.
-            error_bit = syndrome.index(max_syndrome)
+            error_bit = syndrome.index(max(syndrome))
             if error_bit == single_bit:
                 # The stand-alone bit carries the error.
                 self.sim.x(hq[error_bit])
