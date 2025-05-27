@@ -105,12 +105,14 @@ class QrackAceBackend:
         even_row = not (row & 1)
         dummy_init = abs(1.0 - 2 * self.sim.prob(hq[0])) <= self._epsilon
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
+            dummy_init &= abs(1.0 - 2.0 * self.sim.prob(hq[1])) >= self._epsilon
             if dummy_init:
                 self.sim.h(hq[1])
             else:
                 self._cx_shadow(hq[0], hq[1])
             self.sim.mcx([hq[1]], hq[2])
         else:
+            dummy_init &= abs(1.0 - 2.0 * self.sim.prob(hq[2])) >= self._epsilon
             self.sim.mcx([hq[0]], hq[1])
             if dummy_init:
                 self.sim.h(hq[2])
