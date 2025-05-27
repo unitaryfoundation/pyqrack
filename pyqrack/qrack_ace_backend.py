@@ -225,14 +225,13 @@ class QrackAceBackend:
         while lm <= -math.pi:
             lm += 2 * math.pi
         hq = self._unpack(lq)
-        if self._is_init[lq] and not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
+        if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
             self._correct_if_like_h(th, lq)
-            for b in hq:
-                self.sim.u(b, th, ph, lm)
-        elif not self._is_init[lq]:
-                self.sim.u(hq[0], th, ph, lm)
+            self._decode(hq)
+            self.sim.u(hq[0], th, ph, lm)
+            if not self._is_init[lq]
                 self.sim.u(hq[2], th, ph, lm)
-                self._encode(hq)
+            self._encode(hq)
         else:
             for b in hq:
                 self.sim.u(b, th, ph, lm)
@@ -242,27 +241,26 @@ class QrackAceBackend:
             th -= 2 * math.pi
         while th <= -math.pi:
             th += 2 * math.pi
-        if self._is_init[lq] and (p == Pauli.PauliY):
+        if p == Pauli.PauliY:
             self._correct_if_like_h(th, lq)
         hq = self._unpack(lq)
-        if not self._is_init[lq] and not ((p == Pauli.PauliZ) or math.isclose(abs(th), math.pi)):
-            self.sim.r(p, th, hq[0])
-            self.sim.r(p, th, hq[2])
-            self._encode(hq)
-        else:
+        if (p == Pauli.PauliZ) or math.isclose(abs(th), math.pi):
             for b in hq:
                 self.sim.r(p, th, b)
+        else:
+            self._decode(hq)
+            self.sim.r(p, th, hq[0])
+            if not self._is_init[lq]
+                self.sim.r(p, th, hq[2])
+            self._encode(hq)
 
     def h(self, lq):
         hq = self._unpack(lq)
+        self._decode(hq)
+        self.sim.h(hq[0])
         if not self._is_init[lq]:
-            self.sim.h(hq[0])
             self.sim.h(hq[2])
-            self._encode(hq)
-        else:
-           self._correct(lq)
-           for b in hq:
-                self.sim.h(hq[0])
+        self._encode(hq)
 
     def s(self, lq):
         hq = self._unpack(lq)
