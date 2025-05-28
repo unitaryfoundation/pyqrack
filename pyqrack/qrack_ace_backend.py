@@ -176,9 +176,14 @@ class QrackAceBackend:
                 case 3:
                     syndrome[single_bit] += 1 - single_bit_value
 
-        sum_syndrome = sum(syndrome)
+        # Suggestion from Elara (custom OpenAI GPT):
+        # Assume binomial statistics and compute the standard deviation.
+        # Only correct if we're outside a confidence interval.
+        # (This helps avoid limit-point over-correction.)
+        syndrome_std_dev = (sum(syndrome) - shots / 2) / math.sqrt(shots)
         force_syndrome = True
-        if (2 * sum_syndrome) > shots:
+        # (~68% confidence interval, but this is the margin for average sampling error.)
+        if syndrome_std_dev > 1:
             # There is an error.
             error_bit = syndrome.index(max(syndrome))
             if error_bit == single_bit:
