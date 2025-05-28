@@ -190,7 +190,7 @@ class QrackAceBackend:
 
         z_score_numer = sum(syndrome) - shots / 2
         z_score_denom = math.sqrt(syndrome_variance)
-        z_score = (1 if syndrome_dev_numer > 0 else 0) if math.isclose(syndrome_dev_denom, 0) else (syndrome_dev_numer / syndrome_dev_denom)
+        z_score = (1 if z_score_numer > 0 else 0) if math.isclose(z_score_denom, 0) else (z_score_numer / z_score_denom)
 
         force_syndrome = True
         # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
