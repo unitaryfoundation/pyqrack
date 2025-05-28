@@ -182,8 +182,8 @@ class QrackAceBackend:
         # (This helps avoid limit-point over-correction.)
         syndrome_std_dev = (sum(syndrome) - shots / 2) / math.sqrt(shots)
         force_syndrome = True
-        # (~68% confidence interval, but this is the margin for average sampling error.)
-        if syndrome_std_dev > 1:
+        # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
+        if syndrome_std_dev > (497/999):
             # There is an error.
             error_bit = syndrome.index(max(syndrome))
             if error_bit == single_bit:
