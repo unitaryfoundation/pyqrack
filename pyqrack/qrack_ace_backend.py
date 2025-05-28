@@ -193,11 +193,11 @@ class QrackAceBackend:
         z_score_numer = syndrome_sum - shots / 2
         z_score = 0
         if z_score_numer > 0:
-            syndrome_mean = syndrome_sum / shots
-            syndrome_variance = (
-                sum((value - syndrome_mean) ** 2 for value in values) / shots
+            syndrome_component_mean = syndrome_sum / shots
+            syndrome_total_variance = sum(
+                (value - syndrome_component_mean) ** 2 for value in values
             )
-            z_score_denom = math.sqrt(syndrome_variance)
+            z_score_denom = math.sqrt(syndrome_total_variance)
             z_score = (
                 math.inf
                 if math.isclose(z_score_denom, 0)
