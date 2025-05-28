@@ -165,25 +165,36 @@ class QrackAceBackend:
         samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
         syndrome_indices = [other_bits[1], other_bits[0]] if (single_bit_value >= 0.5) else [other_bits[0], other_bits[1]]
         syndrome = [0, 0, 0]
+        values = []
         for sample in samples:
             match sample:
                 case 0:
-                    syndrome[single_bit] += single_bit_value
+                    value = single_bit_value
+                    syndrome[single_bit] += value
                 case 1:
-                    syndrome[syndrome_indices[0]] += single_bit_polarization
+                    value = single_bit_polarization
+                    syndrome[syndrome_indices[0]] += value
                 case 2:
-                    syndrome[syndrome_indices[1]] += single_bit_polarization
+                    value = single_bit_polarization
+                    syndrome[syndrome_indices[1]] += value
                 case 3:
-                    syndrome[single_bit] += 1 - single_bit_value
+                    value = 1 - single_bit_value
+                    syndrome[single_bit] += value
+            values.append(value)
 
         # Suggestion from Elara (custom OpenAI GPT):
-        # Assume modified binomial statistics and compute the standard deviation.
-        # Only correct if we're outside a confidence interval.
+        # Compute the standard deviation and only correct if we're outside a confidence interval.
         # (This helps avoid limit-point over-correction.)
-        syndrome_dev = (sum(syndrome) - shots / 2) / (math.sqrt(shots) * abs(single_bit_polarization - 0.5))
+        syndrome_mean = sum(values) / shots
+        syndrome_variance = sum((value - syndrome_mean) ** 2 for value in values) / shots
+
+        z_score_numer = sum(syndrome) - shots / 2
+        z_score_denom = math.sqrt(variance)
+        z_score = (1 if syndrome_dev_numer > 0 else 0) if math.isclose(syndrome_dev_denom, 0) else (syndrome_dev_numer / syndrome_dev_denom)
+
         force_syndrome = True
         # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
-        if syndrome_dev > (497/999):
+        if z_score >= (497/999):
             # There is an error.
             error_bit = syndrome.index(max(syndrome))
             if error_bit == single_bit:
