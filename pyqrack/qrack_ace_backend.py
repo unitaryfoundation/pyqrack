@@ -180,7 +180,7 @@ class QrackAceBackend:
         # Assume binomial statistics and compute the standard deviation.
         # Only correct if we're outside a confidence interval.
         # (This helps avoid limit-point over-correction.)
-        syndrome_std_dev = (sum(syndrome) - shots / 2) / math.sqrt(shots)
+        syndrome_std_dev = (sum(syndrome) - shots / 2) / math.sqrt(single_bit_polarization * (1 - single_bit_polarization))
         force_syndrome = True
         # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
         if syndrome_std_dev > (497/999):
