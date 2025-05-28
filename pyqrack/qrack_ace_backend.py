@@ -165,28 +165,22 @@ class QrackAceBackend:
         samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
         syndrome_indices = [other_bits[1], other_bits[0]] if (single_bit_value >= 0.5) else [other_bits[0], other_bits[1]]
         syndrome = [0, 0, 0]
-        variance_accum = 0.0
         for sample in samples:
             match sample:
                 case 0:
-                    contrib = single_bit_value
-                    syndrome[single_bit] += contrib
+                    syndrome[single_bit] += single_bit_value
                 case 1:
-                    contrib = single_bit_polarization
-                    syndrome[syndrome_indices[0]] += contrib
+                    syndrome[syndrome_indices[0]] += single_bit_polarization
                 case 2:
-                    contrib = single_bit_polarization
-                    syndrome[syndrome_indices[1]] += contrib
+                    syndrome[syndrome_indices[1]] += single_bit_polarization
                 case 3:
-                    contrib = 1 - single_bit_value
-                    syndrome[single_bit] += contrib
-            variance_accum += contrib * (1 - contrib)
+                    syndrome[single_bit] += 1 - single_bit_value
 
         # Suggestion from Elara (custom OpenAI GPT):
         # Assume binomial statistics and compute the standard deviation.
         # Only correct if we're outside a confidence interval.
         # (This helps avoid limit-point over-correction.)
-        syndrome_std_dev = (sum(syndrome) - shots / 2) / math.sqrt(variance_accum)
+        syndrome_std_dev = (sum(syndrome) - shots / 2) / math.sqrt(single_bit_polarization * (1 - single_bit_polarization))
         force_syndrome = True
         # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
         if syndrome_std_dev > (497/999):
