@@ -163,7 +163,11 @@ class QrackAceBackend:
         single_bit_value = self.sim.prob(hq[single_bit])
         single_bit_polarization = max(single_bit_value, 1 - single_bit_value)
         samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
-        syndrome_indices = [other_bits[1], other_bits[0]] if (single_bit_value >= 0.5) else [other_bits[0], other_bits[1]]
+        syndrome_indices = (
+            [other_bits[1], other_bits[0]]
+            if (single_bit_value >= 0.5)
+            else [other_bits[0], other_bits[1]]
+        )
         syndrome = [0, 0, 0]
         values = []
         for sample in samples:
@@ -185,16 +189,24 @@ class QrackAceBackend:
         # Suggestion from Elara (custom OpenAI GPT):
         # Compute the standard deviation and only correct if we're outside a confidence interval.
         # (This helps avoid limit-point over-correction.)
-        syndrome_mean = sum(syndrome) / shots
-        syndrome_variance = sum((value - syndrome_mean) ** 2 for value in values) / shots
-
-        z_score_numer = sum(syndrome) - shots / 2
-        z_score_denom = math.sqrt(syndrome_variance)
-        z_score = (1 if z_score_numer > 0 else 0) if math.isclose(z_score_denom, 0) else (z_score_numer / z_score_denom)
+        syndrome_sum = sum(syndrome)
+        z_score_numer = syndrome_sum - shots / 2
+        z_score = 0
+        if z_score_numer > 0:
+            syndrome_mean = syndrome_sum / shots
+            syndrome_variance = (
+                sum((value - syndrome_mean) ** 2 for value in values) / shots
+            )
+            z_score_denom = math.sqrt(syndrome_variance)
+            z_score = (
+                math.inf
+                if math.isclose(z_score_denom, 0)
+                else (z_score_numer / z_score_denom)
+            )
 
         force_syndrome = True
         # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
-        if z_score >= (497/999):
+        if z_score >= (497 / 999):
             # There is an error.
             error_bit = syndrome.index(max(syndrome))
             if error_bit == single_bit:
