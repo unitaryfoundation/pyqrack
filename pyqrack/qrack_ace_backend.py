@@ -183,7 +183,7 @@ class QrackAceBackend:
         syndrome_dev = (sum(syndrome) - shots / 2) / (math.sqrt(shots) * abs(single_bit_polarization - 0.5))
         force_syndrome = True
         # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
-        if syndrome_std_dev > (497/999):
+        if syndrome_dev > (497/999):
             # There is an error.
             error_bit = syndrome.index(max(syndrome))
             if error_bit == single_bit:
