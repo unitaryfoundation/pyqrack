@@ -177,12 +177,10 @@ class QrackAceBackend:
                     syndrome[single_bit] += 1 - single_bit_value
 
         # Suggestion from Elara (custom OpenAI GPT):
-        # Assume binomial statistics and compute the standard deviation.
+        # Assume modified binomial statistics and compute the standard deviation.
         # Only correct if we're outside a confidence interval.
         # (This helps avoid limit-point over-correction.)
-        analytical_std_dev = math.sqrt(shots * single_bit_polarization * (1 - single_bit_polarization))
-        syndrome_value = sum(syndrome) - shots / 2
-        syndrome_std_dev = (1 if syndrome > 0 else 0) if math.isclose(analytical_std_dev, 0) else syndrome_value / analytical_std_dev
+        syndrome_dev = (sum(syndrome) - shots / 2) / (math.sqrt(shots) * abs(single_bit_polarization - 0.5))
         force_syndrome = True
         # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
         if syndrome_std_dev > (497/999):
