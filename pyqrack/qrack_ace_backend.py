@@ -185,7 +185,7 @@ class QrackAceBackend:
         # Suggestion from Elara (custom OpenAI GPT):
         # Compute the standard deviation and only correct if we're outside a confidence interval.
         # (This helps avoid limit-point over-correction.)
-        syndrome_mean = sum(values) / shots
+        syndrome_mean = sum(syndrome) / shots
         syndrome_variance = sum((value - syndrome_mean) ** 2 for value in values) / shots
 
         z_score_numer = sum(syndrome) - shots / 2
