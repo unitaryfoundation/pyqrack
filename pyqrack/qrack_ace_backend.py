@@ -437,7 +437,7 @@ class QrackAceBackend:
             syndrome += self.sim.m(hq[q])
         # The two separable parts of the code are correlated,
         # but not non-locally, via entanglement.
-        # Prefer to collapse the analytical part toward agreement.
+        # Prefer to collapse the third toward agreement.
         if syndrome == 0:
             self.sim.force_m(hq[single_bit], False)
         elif syndrome == 2:
