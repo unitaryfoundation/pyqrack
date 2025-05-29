@@ -453,7 +453,8 @@ class QrackAceBackend:
         # Whenever a nonzero syndrome occurs (so the code has an error),
         # we insert the more-probable results and collapse towards it.
         # Randomize the order of post-selection to amortize error.
-        lqubits = random.shuffle(list(range(self.sim.num_qubits() // 3)))
+        lqubits = list(range(self.sim.num_qubits() // 3))
+        random.shuffle(lqubits)
         for lq in lqubits:
             if self.m(lq):
                 result |= 1 << lq
@@ -463,12 +464,14 @@ class QrackAceBackend:
     def measure_shots(self, q, s, high_accuracy=True):
         if high_accuracy:
             samples = []
+            _q = q.copy()
             for _ in range(s):
                 clone = self.sim.clone()
                 sample = 0
-                for i in range(len(q)):
-                    if clone.m(q[i]):
-                        sample |= 1 << i
+                random.shuffle(_q)
+                for b in _q:
+                    if clone.m(b):
+                        sample |= 1 << q.index(b)
                 samples.append(sample)
 
             return samples
