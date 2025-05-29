@@ -423,17 +423,30 @@ class QrackAceBackend:
 
     def m(self, lq):
         hq = self._unpack(lq)
+        even_row = not ((lq // self.row_length) & 1)
+        if not self.alternating_codes or even_row:
+            single_bit = 2
+            other_bits = [0, 1]
+        else:
+            single_bit = 0
+            other_bits = [1, 2]
         syndrome = 0
         bits = []
-        for q in hq:
-            bits.append(self.sim.m(q))
+        for q in other_bits:
+            bits.append(self.sim.m(hq[q]))
             if bits[-1]:
                 syndrome += 1
-        result = True if (syndrome > 1) else False
-        for i in range(len(hq)):
+        # single_bit is always separable.
+        # In the ideal, it should simply duplicate other_bits.
+        # So get more precision by using it analytically.
+        syndrome += self.sim.prob(hq[single_bit])
+        bits.append(self.sim.m(hq[single_bit]))
+        result = True if (syndrome >= 1.5) else False
+        for i in range(2):
             if bits[i] != result:
-                self.sim.x(hq[i])
-
+                self.sim.x(hq[other_bits[i]])
+        if bits[2] != result:
+            self.sim.x(hq[single_bit])
         self._is_init[lq] = False
 
         return result
@@ -447,7 +460,19 @@ class QrackAceBackend:
 
         return result
 
-    def measure_shots(self, q, s):
+    def measure_shots(self, q, s, high_accuracy=False):
+        if high_accuracy:
+            samples = []
+            for _ in range(s):
+                clone = self.sim.clone()
+                sample = 0
+                for i in range(len(q)):
+                    if clone.m(q[i]):
+                        sample |= 1 << i
+                samples.append(sample)
+
+            return samples
+
         _q = []
         for i in q:
             _q.append(3 * i)
