@@ -434,19 +434,17 @@ class QrackAceBackend:
         bits = []
         for q in other_bits:
             bits.append(self.sim.m(hq[q]))
-            if bits[-1]:
-                syndrome += 1
+            syndrome += bits[-1]
         # The two separable parts of the code are correlated,
         # but not non-locally, via entanglement.
         # Prefer to collapse the analytical part toward agreement.
         if syndrome == 0:
             self.sim.force_m(hq[single_bit], False)
         elif syndrome == 2:
-            self.sim.force_m(hq[single_bit], True)
-            syndrome += 1
+            syndrome += self.sim.force_m(hq[single_bit], True)
         else:
             syndrome += self.sim.m(hq[single_bit])
-        result = True if (syndrome >= 1.5) else False
+        result = True if (syndrome > 1) else False
         for i in range(2):
             if bits[i] != result:
                 self.sim.x(hq[other_bits[i]])
