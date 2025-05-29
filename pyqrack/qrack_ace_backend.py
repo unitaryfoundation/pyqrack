@@ -436,21 +436,20 @@ class QrackAceBackend:
             bits.append(self.sim.m(hq[q]))
             if bits[-1]:
                 syndrome += 1
-        # single_bit never shares entanglement with other_bits.
-        # In the ideal, it should simply duplicate other_bits.
-        # So get more precision by using it analytically.
-        analytical = self.sim.prob(hq[single_bit])
-        syndrome += analytical
-        result = True if (syndrome >= 1.5) else False
         # The two separable parts of the code are correlated,
         # but not non-locally, via entanglement.
         # Prefer to collapse the analytical part toward agreement.
-        bits.append(self.sim.m(hq[single_bit]) if math.isclose(analytical, 0 if result else 1) else self.sim.force_m(hq[single_bit], result))
+        if syndrome == 0:
+            self.sim.force_m(hq[single_bit], False)
+        elif syndrome == 2:
+            self.sim.force_m(hq[single_bit], True)
+            syndrome += 1
+        else:
+            syndrome += self.sim.m(hq[single_bit])
+        result = True if (syndrome >= 1.5) else False
         for i in range(2):
             if bits[i] != result:
                 self.sim.x(hq[other_bits[i]])
-        if bits[2] != result:
-            self.sim.x(hq[single_bit])
         self._is_init[lq] = False
 
         return result
