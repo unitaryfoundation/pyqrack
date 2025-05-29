@@ -464,7 +464,7 @@ class QrackAceBackend:
 
         return result
 
-    def measure_shots(self, q, s, high_accuracy=False):
+    def measure_shots(self, q, s, high_accuracy=True):
         if high_accuracy:
             samples = []
             for _ in range(s):
