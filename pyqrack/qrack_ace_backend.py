@@ -457,10 +457,13 @@ class QrackAceBackend:
 
     def m_all(self):
         result = 0
-        for lq in range(self.sim.num_qubits() // 3):
-            result <<= 1
+        # Whenever a nonzero syndrome occurs (so the code has an error),
+        # we insert the more-probable results and collapse towards it.
+        # Randomize the order of post-selection to amortize error.
+        lqubits = random.shuffle(list(range(self.sim.num_qubits() // 3)))
+        for lq in lqubits:
             if self.m(lq):
-                result |= 1
+                result |= 1 << lq
 
         return result
 
