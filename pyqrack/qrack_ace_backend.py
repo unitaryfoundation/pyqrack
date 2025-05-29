@@ -436,7 +436,7 @@ class QrackAceBackend:
             bits.append(self.sim.m(hq[q]))
             if bits[-1]:
                 syndrome += 1
-        # single_bit is always separable.
+        # single_bit never shares entanglement with other_bits.
         # In the ideal, it should simply duplicate other_bits.
         # So get more precision by using it analytically.
         syndrome += self.sim.prob(hq[single_bit])
