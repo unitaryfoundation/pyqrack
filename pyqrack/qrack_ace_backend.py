@@ -568,9 +568,9 @@ class QrackAceBackend:
             other_bits = [0, 1]
         else:
             other_bits = [1, 2]
-        self.sim.mcx([other_bits[0]], other_bits[1])
-        result = self.sim.prob(other_bits[0])
-        self.sim.mcx([other_bits[0]], other_bits[1])
+        self.sim.mcx([hq[other_bits[0]]], hq[other_bits[1]])
+        result = self.sim.prob(hq[other_bits[0]])
+        self.sim.mcx([hq[other_bits[0]]], hq[other_bits[1]])
 
         return result
 
