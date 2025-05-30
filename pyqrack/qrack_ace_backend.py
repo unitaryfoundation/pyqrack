@@ -141,14 +141,14 @@ class QrackAceBackend:
         even_row = not ((lq // self.row_length) & 1)
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             # Encode shadow-first
-            self._cx_shadow(hq[2], hq[0])
             if self._is_init[lq]:
-                self.sim.mcx([hq[1]], hq[0])
+                 self._cx_shadow(hq[2], hq[0])
+            self.sim.mcx([hq[2]], hq[1])
         else:
             # Encode shadow-first
-            self._cx_shadow(hq[0], hq[2])
             if self._is_init[lq]:
-                self.sim.mcx([hq[0]], hq[1])
+                self._cx_shadow(hq[0], hq[2])
+            self.sim.mcx([hq[0]], hq[1])
         self._is_init[lq] = True
 
     def _decode(self, hq, reverse=False):
@@ -159,10 +159,14 @@ class QrackAceBackend:
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             # Decode entangled-first
             self.sim.mcx([hq[2]], hq[1])
+            if self.sim.m(hq[1]):
+                self.sim.x(hq[1])
             self._cx_shadow(hq[2], hq[0])
         else:
             # Decode entangled-first
             self.sim.mcx([hq[0]], hq[1])
+            if self.sim.m(hq[1]):
+                self.sim.x(hq[1])
             self._cx_shadow(hq[0], hq[2])
 
     def _correct(self, lq):
