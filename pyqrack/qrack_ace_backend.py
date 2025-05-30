@@ -173,7 +173,7 @@ class QrackAceBackend:
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
         # However, we can get pretty close!
-        shots = 512
+        shots = 2048
 
         single_bit = 0
         other_bits = []
@@ -382,14 +382,14 @@ class QrackAceBackend:
 
             return
 
-        lq1_col = lq1 // self.row_length
-        lq1_row = lq1 % self.row_length
+        lq1_row = lq1 // self.row_length
+        lq1_col = lq1 % self.row_length
         lq2_col = lq2 // self.row_length
         lq2_row = lq2 % self.row_length
 
         hq1 = None
         hq2 = None
-        if (lq2_col == lq1_col) and (((lq1_row + 1) % self.row_length) == lq2_row):
+        if (lq2_row == lq1_row) and (((lq1_col + 1) % self.row_length) == lq2_col):
             self._correct(lq2)
             hq1 = self._unpack(lq1, True)
             hq2 = self._unpack(lq2, False)
@@ -398,7 +398,7 @@ class QrackAceBackend:
             gate([hq1[0]], hq2[0])
             self._encode(hq2, False)
             self._encode(hq1, True)
-        elif (lq1_col == lq2_col) and (((lq2_row + 1) % self.row_length) == lq1_row):
+        elif (lq1_row == lq2_row) and (((lq2_col + 1) % self.row_length) == lq1_col):
             self._correct(lq2)
             hq2 = self._unpack(lq2, True)
             hq1 = self._unpack(lq1, False)
