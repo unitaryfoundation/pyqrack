@@ -54,6 +54,10 @@ class QrackAceBackend:
         if recursive_stack_depth < 1:
             recursive_stack_depth = 1
         self.recursive_stack_depth = recursive_stack_depth
+        self._ancilla = 3 * qubit_count
+        self._factor_width(qubit_count)
+        self.alternating_codes = alternating_codes
+        self._is_init = [False] * qubit_count
         if recursive_stack_depth > 1:
             recursive_stack_depth -= 1
             self.sim = (
@@ -61,16 +65,15 @@ class QrackAceBackend:
                 if toClone
                 else QrackAceBackend(3 * qubit_count + 1, recursive_stack_depth=recursive_stack_depth, alternating_codes=alternating_codes, isTensorNetwork=isTensorNetwork, isStabilizerHybrid=isStabilizerHybrid, isBinaryDecisionTree=isBinaryDecisionTree)
             )
+            # This leaves an "odd-man-out" ancillary qubit.
+            self.sim.row_length = 3 * self.row_length
+            self.sim.col_length = self.col_length
         else:
             self.sim = (
                 toClone.sim.clone()
                 if toClone
                 else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork, isStabilizerHybrid=isStabilizerHybrid, isBinaryDecisionTree=isBinaryDecisionTree)
             )
-        self._ancilla = 3 * qubit_count
-        self._factor_width(qubit_count)
-        self.alternating_codes = alternating_codes
-        self._is_init = [False] * qubit_count
 
     def clone(self):
         return QrackAceBackend(toClone=self)
@@ -135,8 +138,7 @@ class QrackAceBackend:
 
     def _encode(self, hq, reverse=False):
         lq = hq[0] // 3
-        row = lq // self.row_length
-        even_row = not (row & 1)
+        even_row = not ((lq // self.row_length) & 1)
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             if self._is_init[lq]:
                 # Encode shadow-first
@@ -155,8 +157,7 @@ class QrackAceBackend:
         lq = hq[0] // 3
         if not self._is_init[lq]:
             return
-        row = lq // self.row_length
-        even_row = not (row & 1)
+        even_row = not ((lq // self.row_length) & 1)
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             # Decode entangled-first
             self.sim.mcx([hq[1]], hq[2])
@@ -172,20 +173,23 @@ class QrackAceBackend:
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
         # However, we can get pretty close!
-        shots = 1024
-        even_row = not ((lq // self.row_length) & 1)
+        shots = 2048
+
         single_bit = 0
         other_bits = []
-        if not self.alternating_codes or even_row:
+        if not self.alternating_codes or not ((lq // self.row_length) & 1):
             single_bit = 2
             other_bits = [0, 1]
         else:
             single_bit = 0
             other_bits = [1, 2]
+
         hq = self._unpack(lq)
+
         single_bit_value = self.sim.prob(hq[single_bit])
         single_bit_polarization = max(single_bit_value, 1 - single_bit_value)
         samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
+
         syndrome_indices = (
             [other_bits[1], other_bits[0]]
             if (single_bit_value >= 0.5)
@@ -278,6 +282,7 @@ class QrackAceBackend:
             lm += 2 * math.pi
         hq = self._unpack(lq)
         if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
+            # Produces/destroys superposition
             self._correct_if_like_h(th, lq)
             self._decode(hq)
             self.sim.u(hq[0], th, ph, lm)
@@ -285,6 +290,7 @@ class QrackAceBackend:
                 self.sim.u(hq[2], th, ph, lm)
             self._encode(hq)
         else:
+            # Shouldn't produce/destroy superposition
             for b in hq:
                 self.sim.u(b, th, ph, lm)
 
@@ -297,9 +303,11 @@ class QrackAceBackend:
             self._correct_if_like_h(th, lq)
         hq = self._unpack(lq)
         if (p == Pauli.PauliZ) or math.isclose(abs(th), math.pi):
+            # Doesn't produce/destroy superposition
             for b in hq:
                 self.sim.r(p, th, b)
         else:
+            # Produces/destroys superposition
             self._decode(hq)
             self.sim.r(p, th, hq[0])
             if not self._is_init[lq]:
@@ -403,7 +411,7 @@ class QrackAceBackend:
             hq1 = self._unpack(lq1)
             hq2 = self._unpack(lq2)
             gate([hq1[0]], hq2[0])
-            if self.alternating_codes and ((lq2_col & 1) != (lq1_col & 1)):
+            if self.alternating_codes and ((lq2_row & 1) != (lq1_row & 1)):
                 shadow(hq1[1], hq2[1])
             else:
                 gate([hq1[1]], hq2[1])
@@ -476,8 +484,7 @@ class QrackAceBackend:
 
     def m(self, lq):
         hq = self._unpack(lq)
-        even_row = not ((lq // self.row_length) & 1)
-        if not self.alternating_codes or even_row:
+        if not self.alternating_codes or not ((lq // self.row_length) & 1):
             single_bit = 2
             other_bits = [0, 1]
         else:
@@ -563,8 +570,7 @@ class QrackAceBackend:
     def prob(self, lq):
         self._correct(lq)
         hq = self._unpack(lq)
-        even_row = not ((lq // self.row_length) & 1)
-        if not self.alternating_codes or even_row:
+        if not self.alternating_codes or not ((lq // self.row_length) & 1):
             other_bits = [0, 1]
         else:
             other_bits = [1, 2]
