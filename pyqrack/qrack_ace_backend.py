@@ -159,8 +159,6 @@ class QrackAceBackend:
         else:
             # Decode entangled-first
             self.sim.mcx([hq[0]], hq[1])
-        if self.sim.m(hq[1]):
-            self.sim.x(hq[1])
         self._cx_shadow(hq[0], hq[2])
 
     def _correct(self, lq):
