@@ -532,7 +532,7 @@ class QrackAceBackend:
         if high_accuracy:
             samples = []
             for _ in range(s):
-                clone = self.sim.clone()
+                clone = self.clone()
                 _sample = clone.m_all()
                 sample = 0
                 for i in range(len(q)):
