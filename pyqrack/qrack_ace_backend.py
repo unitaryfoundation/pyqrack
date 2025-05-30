@@ -515,19 +515,27 @@ class QrackAceBackend:
         # Randomize the order of measurement to amortize error.
         # However, locality of collapse matters:
         # always measure across rows, and by consecutive rows.
-        lqubits = list(range(self.sim.num_qubits() // 3))
-        row = rand.randint(0, self.col_length - 1)
-        index = row * self.row_length
-        lqubits = lqubits[index:] + lqubits[:index]
-        col = rand.randint(0, self.row_length - 1)
-        if random.randint(0, 1):
-            lqubits.reverse()
-        for lq in lqubits:
-            lq_row = i // self.row_length
-            lq_col = (i + col) % self.row_length
-            lq = lq_row * self.row_length + lq_col
-            if self.m(lq):
-                result |= 1 << lq
+        row_offset = rand.randint(0, self.col_length - 1)
+        row_reverse = bool(random.randint(0, 1))
+        row_alternate = bool(random.randint(0, 1))
+        for row in range(self.col_length):
+            r = row
+            if row_alternate:
+                half_row = row >> 1
+                r = (self.col_length // 2) + (half_row if row & 1 else -half_row)
+            lq_row = (((self.col_length - r) if row_reverse else r) + row_offset) % self.col_length
+            col_offset = rand.randint(0, self.row_length - 1)
+            col_reverse = bool(random.randint(0, 1))
+            col_alternate = bool(random.randint(0, 1))
+            for col in range(self.row_length):
+                c = col
+                if col_alternate:
+                    half_col = col >> 1
+                    c = (self.col_length // 2) + (half_col if col & 1 else -half_col)
+                lq_col = (((self.row_length - c) if col_reverse else c) + col_offset) % self.row_length
+                lq = lq_row * self.row_length + lq_col
+                if self.m(lq):
+                    result |= 1 << lq
 
         return result
 
