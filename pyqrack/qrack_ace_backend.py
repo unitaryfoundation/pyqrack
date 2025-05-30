@@ -561,9 +561,9 @@ class QrackAceBackend:
         return results
 
     def prob(self, lq):
-        shots = 1024
-        samples = self.measure_shots([lq], shots)
-        return sum(samples) / shots
+        self._correct(lq)
+        hq = self._unpack(lq)
+        return self.sim.prob(hq[1])
 
     def _apply_op(self, operation):
         name = operation.name
