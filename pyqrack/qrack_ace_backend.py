@@ -512,12 +512,20 @@ class QrackAceBackend:
 
     def m_all(self):
         result = 0
-        # Whenever a nonzero syndrome occurs (so the code has an error),
-        # we insert the more-probable results and collapse towards it.
-        # Randomize the order of post-selection to amortize error.
+        # Randomize the order of measurement to amortize error.
+        # However, locality of collapse matters:
+        # always measure across rows, and by consecutive rows.
         lqubits = list(range(self.sim.num_qubits() // 3))
-        random.shuffle(lqubits)
+        row = rand.randint(0, self.col_length - 1)
+        index = row * self.row_length
+        lqubits = lqubits[index:] + lqubits[:index]
+        col = rand.randint(0, self.row_length - 1)
+        if random.randint(0, 1):
+            lqubits.reverse()
         for lq in lqubits:
+            lq_row = i // self.row_length
+            lq_col = (i + col) % self.row_length
+            lq = lq_row * self.row_length + lq_col
             if self.m(lq):
                 result |= 1 << lq
 
@@ -526,14 +534,13 @@ class QrackAceBackend:
     def measure_shots(self, q, s, high_accuracy=True):
         if high_accuracy:
             samples = []
-            _q = q.copy()
             for _ in range(s):
                 clone = self.sim.clone()
+                _sample = clone.m_all()
                 sample = 0
-                random.shuffle(_q)
-                for b in _q:
-                    if clone.m(b):
-                        sample |= 1 << q.index(b)
+                for i in range(len(q)):
+                    if (_sample >> q[i]) & 1:
+                        sample |= 1 << i
                 samples.append(sample)
 
             return samples
