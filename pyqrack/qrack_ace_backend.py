@@ -380,8 +380,8 @@ class QrackAceBackend:
 
         lq1_row = lq1 // self.row_length
         lq1_col = lq1 % self.row_length
-        lq2_col = lq2 // self.row_length
-        lq2_row = lq2 % self.row_length
+        lq2_row = lq2 // self.row_length
+        lq2_col = lq2 % self.row_length
 
         hq1 = None
         hq2 = None
