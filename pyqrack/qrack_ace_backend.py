@@ -485,18 +485,12 @@ class QrackAceBackend:
             other_bits = [1, 2]
         # The syndrome of "other_bits" is guaranteed to be fixed, after this.
         self._correct(lq)
-        syndrome = 0
-        for q in other_bits:
-            syndrome += self.sim.m(hq[q])
+        syndrome = self.sim.m(hq[other_bits[0]])
+        syndrome += self.sim.force_m(hq[other_bits[1]], bool(syndrome))
         # The two separable parts of the code are correlated,
         # but not non-locally, via entanglement.
         # Collapse the other separable part toward agreement.
-        if syndrome == 0:
-            self.sim.force_m(hq[single_bit], False)
-        elif syndrome == 2:
-            syndrome += self.sim.force_m(hq[single_bit], True)
-        else:
-            raise RuntimeError("Unexpected syndrome in m()!")
+        syndrome += self.sim.force_m(hq[single_bit], bool(syndrome))
         self._is_init[lq] = False
 
         return True if (syndrome > 1) else False
