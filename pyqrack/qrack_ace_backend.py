@@ -518,7 +518,7 @@ class QrackAceBackend:
         rows = list(range(self.col_length))
         random.shuffle(rows)
         for lq_row in rows:
-            col_offset = rand.randint(0, self.row_length - 1)
+            col_offset = random.randint(0, self.row_length - 1)
             col_reverse = self.alternating_codes and (lq_row & 1)
             for c in range(self.row_length):
                 lq_col = (((self.row_length - (c + 1)) if col_reverse else c) + col_offset) % self.row_length
