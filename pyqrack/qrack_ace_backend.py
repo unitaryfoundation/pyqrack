@@ -514,7 +514,7 @@ class QrackAceBackend:
         result = 0
         # Randomize the order of measurement to amortize error.
         # However, locality of collapse matters:
-        # always measure across rows, and by consecutive rows.
+        # always measure across rows, and by row directionality.
         rows = list(range(range(self.col_length)))
         random.shuffle(rows)
         for lq_row in rows:
