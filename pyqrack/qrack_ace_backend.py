@@ -525,13 +525,8 @@ class QrackAceBackend:
                 r = (self.col_length // 2) + (half_row if row & 1 else -half_row)
             lq_row = (((self.col_length - r) if row_reverse else r) + row_offset) % self.col_length
             col_offset = rand.randint(0, self.row_length - 1)
-            col_reverse = bool(random.randint(0, 1))
-            col_alternate = bool(random.randint(0, 1))
-            for col in range(self.row_length):
-                c = col
-                if col_alternate:
-                    half_col = col >> 1
-                    c = (self.col_length // 2) + (half_col if col & 1 else -half_col)
+            col_reverse = self.alternating_codes and (r & 1)
+            for c in range(self.row_length):
                 lq_col = (((self.row_length - c) if col_reverse else c) + col_offset) % self.row_length
                 lq = lq_row * self.row_length + lq_col
                 if self.m(lq):
