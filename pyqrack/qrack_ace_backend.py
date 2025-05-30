@@ -140,17 +140,15 @@ class QrackAceBackend:
         lq = hq[0] // 3
         even_row = not ((lq // self.row_length) & 1)
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
+            # Encode shadow-first
+            self._cx_shadow(hq[2], hq[0])
             if self._is_init[lq]:
-                # Encode shadow-first
-                self._cx_shadow(hq[0], hq[1])
-                self.sim.mcx([hq[1]], hq[2])
-            else:
-                self.sim.mcx([hq[2]], hq[1])
+                self.sim.mcx([hq[1]], hq[0])
         else:
+            # Encode shadow-first
+            self._cx_shadow(hq[0], hq[2])
             if self._is_init[lq]:
-                # Encode shadow-first
-                self._cx_shadow(hq[0], hq[2])
-            self.sim.mcx([hq[0]], hq[1])
+                self.sim.mcx([hq[0]], hq[1])
         self._is_init[lq] = True
 
     def _decode(self, hq, reverse=False):
@@ -160,8 +158,8 @@ class QrackAceBackend:
         even_row = not ((lq // self.row_length) & 1)
         if ((not self.alternating_codes) and reverse) or (even_row == reverse):
             # Decode entangled-first
-            self.sim.mcx([hq[1]], hq[2])
-            self._cx_shadow(hq[0], hq[1])
+            self.sim.mcx([hq[2]], hq[1])
+            self._cx_shadow(hq[2], hq[0])
         else:
             # Decode entangled-first
             self.sim.mcx([hq[0]], hq[1])
@@ -173,7 +171,7 @@ class QrackAceBackend:
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
         # However, we can get pretty close!
-        shots = 2048
+        shots = 512
 
         single_bit = 0
         other_bits = []
