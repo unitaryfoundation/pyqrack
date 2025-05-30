@@ -516,6 +516,7 @@ class QrackAceBackend:
         # However, locality of collapse matters:
         # always measure across rows, and by consecutive rows.
         rows = list(range(range(self.col_length)))
+        random.shuffle(rows)
         for lq_row in rows:
             col_offset = rand.randint(0, self.row_length - 1)
             col_reverse = self.alternating_codes and (lq_row & 1)
