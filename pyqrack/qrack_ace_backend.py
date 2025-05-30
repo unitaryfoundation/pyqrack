@@ -515,19 +515,13 @@ class QrackAceBackend:
         # Randomize the order of measurement to amortize error.
         # However, locality of collapse matters:
         # always measure across rows, and by consecutive rows.
-        row_offset = rand.randint(0, self.col_length - 1)
-        row_reverse = bool(random.randint(0, 1))
-        row_alternate = bool(random.randint(0, 1))
-        for row in range(self.col_length):
-            r = row
-            if row_alternate:
-                half_row = row >> 1
-                r = (self.col_length // 2) + (half_row if row & 1 else -half_row)
-            lq_row = (((self.col_length - r) if row_reverse else r) + row_offset) % self.col_length
+        rows = list(range(self.col_length))
+        random.shuffle(rows)
+        for lq_row in rows:
             col_offset = rand.randint(0, self.row_length - 1)
             col_reverse = self.alternating_codes and (r & 1)
-            for c in range(self.row_length):
-                lq_col = (((self.row_length - c) if col_reverse else c) + col_offset) % self.row_length
+            for col in range(self.row_length):
+                lq_col = (((self.row_length - (col + 1)) if col_reverse else col) + col_offset) % self.row_length
                 lq = lq_row * self.row_length + lq_col
                 if self.m(lq):
                     result |= 1 << lq
