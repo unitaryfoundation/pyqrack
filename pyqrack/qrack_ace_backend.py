@@ -48,11 +48,12 @@ class QrackAceBackend:
         isBinaryDecisionTree=False,
         toClone=None,
     ):
+        if toClone:
+            qubit_count = toClone.num_qubits()
+            recursive_stack_depth = toClone.recursive_stack_depth
         if recursive_stack_depth < 1:
             recursive_stack_depth = 1
         self.recursive_stack_depth = recursive_stack_depth
-        if toClone:
-            qubit_count = toClone.num_qubits()
         if recursive_stack_depth > 1:
             recursive_stack_depth -= 1
             self.sim = (
@@ -72,7 +73,7 @@ class QrackAceBackend:
         self._is_init = [False] * qubit_count
 
     def clone(self):
-        return QrackAceBackend(toClone=self, recursive_stack_depth=self.recursive_stack_depth)
+        return QrackAceBackend(toClone=self)
 
     def num_qubits(self):
         return self.sim.num_qubits() // 3
