@@ -519,7 +519,7 @@ class QrackAceBackend:
         row = rand.randint(0, self.col_length - 1)
         index = row * self.row_length
         lqubits = lqubits[index:] + lqubits[:index]
-        col = rand.randint(0, self.col_length - 1)
+        col = rand.randint(0, self.row_length - 1)
         if random.randint(0, 1):
             lqubits.reverse()
         for lq in lqubits:
