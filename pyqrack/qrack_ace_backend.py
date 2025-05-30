@@ -41,19 +41,40 @@ class QrackAceBackend:
     def __init__(
         self,
         qubit_count=1,
+        recursive_stack_depth=1,
         alternating_codes=True,
         isTensorNetwork=False,
+        isStabilizerHybrid=False,
+        isBinaryDecisionTree=False,
         toClone=None,
     ):
-        self.sim = (
-            toClone.sim.clone()
-            if toClone
-            else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork)
-        )
+        if recursive_stack_depth < 1:
+            recursive_stack_depth = 1
+        if toClone:
+            qubit_count = toClone.num_qubits()
+        if recursive_stack_depth > 1:
+            recursive_stack_depth -= 1
+            self.sim = (
+                toClone.sim
+                if toClone
+                else QrackAceBackend(3 * qubit_count + 1, recursive_stack_depth=recursive_stack_depth, alternating_codes=alternating_codes, isTensorNetwork=isTensorNetwork, isStabilizerHybrid=isStabilizerHybrid, isBinaryDecisionTree=isBinaryDecisionTree)
+            )
+        else:
+            self.sim = (
+                toClone.sim.clone()
+                if toClone
+                else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork, isStabilizerHybrid=isStabilizerHybrid, isBinaryDecisionTree=isBinaryDecisionTree)
+            )
         self._ancilla = 3 * qubit_count
         self._factor_width(qubit_count)
         self.alternating_codes = alternating_codes
         self._is_init = [False] * qubit_count
+
+    def clone(self):
+        return QrackAceBackend(toClone=self)
+
+    def num_qubits(self):
+        return self.sim.num_qubits() // 3
 
     def _factor_width(self, width):
         col_len = math.floor(math.sqrt(width))
@@ -244,7 +265,7 @@ class QrackAceBackend:
         if not math.isclose(th, 0):
             self._correct(lq)
 
-    def u(self, th, ph, lm, lq):
+    def u(self, lq, th, ph, lm):
         while ph > math.pi:
             ph -= 2 * math.pi
         while ph <= -math.pi:
@@ -404,6 +425,36 @@ class QrackAceBackend:
     def acz(self, lq1, lq2):
         self._cpauli(lq1, lq2, True, Pauli.PauliZ)
 
+    def mcx(self, lq1, lq2):
+        if len(lq1) > 1:
+            raise RuntimeError("QrackAceBackend.mcx() is provided for syntax convenience and only supports 1 control qubit!")
+        self._cpauli(lq1[0], lq2, False, Pauli.PauliX)
+
+    def mcy(self, lq1, lq2):
+        if len(lq1) > 1:
+            raise RuntimeError("QrackAceBackend.mcy() is provided for syntax convenience and only supports 1 control qubit!")
+        self._cpauli(lq1[0], lq2, False, Pauli.PauliY)
+
+    def mcz(self, lq1, lq2):
+        if len(lq1) > 1:
+            raise RuntimeError("QrackAceBackend.mcz() is provided for syntax convenience and only supports 1 control qubit!")
+        self._cpauli(lq1[0], lq2, False, Pauli.PauliZ)
+
+    def macx(self, lq1, lq2):
+        if len(lq1) > 1:
+            raise RuntimeError("QrackAceBackend.macx() is provided for syntax convenience and only supports 1 control qubit!")
+        self._cpauli(lq1[0], lq2, True, Pauli.PauliX)
+
+    def macy(self, lq1, lq2):
+        if len(lq1) > 1:
+            raise RuntimeError("QrackAceBackend.macy() is provided for syntax convenience and only supports 1 control qubit!")
+        self._cpauli(lq1[0], lq2, True, Pauli.PauliY)
+
+    def macz(self, lq1, lq2):
+        if len(lq1) > 1:
+            raise RuntimeError("QrackAceBackend.macz() is provided for syntax convenience and only supports 1 control qubit!")
+        self._cpauli(lq1[0], lq2, True, Pauli.PauliZ)
+
     def swap(self, lq1, lq2):
         self.cx(lq1, lq2)
         self.cx(lq2, lq1)
@@ -437,7 +488,7 @@ class QrackAceBackend:
             syndrome += self.sim.m(hq[q])
         # The two separable parts of the code are correlated,
         # but not non-locally, via entanglement.
-        # Prefer to collapse the third toward agreement.
+        # Collapse the other separable part toward agreement.
         if syndrome == 0:
             self.sim.force_m(hq[single_bit], False)
         elif syndrome == 2:
@@ -447,6 +498,15 @@ class QrackAceBackend:
         self._is_init[lq] = False
 
         return True if (syndrome > 1) else False
+
+    def force_m(self, lq, c):
+        hq = self._unpack(lq)
+        self._correct(lq)
+        for q in hq:
+            self.sim.force_m(q, c)
+        self._is_init[lq] = False
+
+        return c
 
     def m_all(self):
         result = 0
@@ -500,6 +560,11 @@ class QrackAceBackend:
 
         return results
 
+    def prob(self, lq):
+        shots = 1024
+        samples = self.measure_shots([lq], shots)
+        return sum(samples) / shots
+
     def _apply_op(self, operation):
         name = operation.name
 
@@ -523,27 +588,27 @@ class QrackAceBackend:
                     return
 
         if (name == "u1") or (name == "p"):
-            self._sim.u(0, 0, float(operation.params[0]), operation.qubits[0]._index)
+            self._sim.u(operation.qubits[0]._index, 0, 0, float(operation.params[0]))
         elif name == "u2":
             self._sim.u(
+                operation.qubits[0]._index,
                 math.pi / 2,
                 float(operation.params[0]),
                 float(operation.params[1]),
-                operation.qubits[0]._index,
             )
         elif (name == "u3") or (name == "u"):
             self._sim.u(
+                operation.qubits[0]._index,
                 float(operation.params[0]),
                 float(operation.params[1]),
                 float(operation.params[2]),
-                operation.qubits[0]._index,
             )
         elif name == "r":
             self._sim.u(
+                operation.qubits[0]._index,
                 float(operation.params[0]),
                 float(operation.params[1]) - math.pi / 2,
                 (-1 * float(operation.params[1])) + math.pi / 2,
-                operation.qubits[0]._index,
             )
         elif name == "rx":
             self._sim.r(
