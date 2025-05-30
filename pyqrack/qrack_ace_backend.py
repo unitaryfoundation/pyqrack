@@ -561,9 +561,18 @@ class QrackAceBackend:
         return results
 
     def prob(self, lq):
-        shots = 1024
-        samples = self.measure_shots([lq], shots)
-        return sum(samples) / shots
+        self._correct(lq)
+        hq = self._unpack(lq)
+        even_row = not ((lq // self.row_length) & 1)
+        if not self.alternating_codes or even_row:
+            other_bits = [0, 1]
+        else:
+            other_bits = [1, 2]
+        self.sim.mcx([other_bits[0]], other_bits[1])
+        result = self.sim.prob(hq[1])
+        self.sim.mcx([other_bits[0]], other_bits[1])
+
+        return result
 
     def _apply_op(self, operation):
         name = operation.name
