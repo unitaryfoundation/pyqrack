@@ -173,7 +173,7 @@ class QrackAceBackend:
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
         # However, we can get pretty close!
-        shots = 2048
+        shots = 512
 
         single_bit = 0
         other_bits = []
