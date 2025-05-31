@@ -439,7 +439,7 @@ class QrackAceBackend:
                 self._decode(lq2, hq2)
                 gate(hq1, hq2[0])
                 self._encode(lq2, hq2)
-            elif lq1_lr:
+            elif lq2_lr:
                 self._decode(lq1, hq1)
                 gate([hq1[0]], hq2[0])
                 self._encode(lq1, hq1)
