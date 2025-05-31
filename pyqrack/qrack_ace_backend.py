@@ -142,6 +142,26 @@ class QrackAceBackend:
         self._cy_shadow(c, t)
         self.sim.x(t)
 
+    def _ccz_shadow(self, c1, q2, q3):
+        self.sim.mcx([q2], q3)
+        self.sim.adjt(q3)
+        self._cx_shadow(c1, q3)
+        self.sim.t(q3)
+        self.sim.mcx([q2], q3)
+        self.sim.adjt(q3)
+        self._cx_shadow(c1, q3)
+        self.sim.t(q3)
+        self.sim.t(q2)
+        self._cx_shadow(c1, q2)
+        self.sim.adjt(q2)
+        self.sim.t(c1)
+        self._cx_shadow(c1, q2)
+
+    def _ccx_shadow(self, c1, q2, q3):
+        self.sim.h(q3)
+        self._ccz_shadow(c1, q2, q3)
+        self.sim.h(q3)
+
     def _unpack(self, lq, reverse=False):
         offset = self._hardware_offset[lq]
 
@@ -198,6 +218,13 @@ class QrackAceBackend:
 
         single_bit_value = self.sim.prob(hq[single_bit])
         single_bit_polarization = max(single_bit_value, 1 - single_bit_value)
+
+        # Suggestion from Elara (the custom OpenAI GPT):
+        # Create phase parity tie before measurement.
+        self._ccx_shadow(hq[single_bit], hq[other_bits[0]], self._ancilla)
+        self.sim.mcx([hq[other_bits[1]]], self._ancilla)
+        self.sim.force_m(self._ancilla, False)
+
         samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
 
         syndrome_indices = (
