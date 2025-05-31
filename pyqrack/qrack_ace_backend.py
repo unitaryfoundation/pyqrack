@@ -34,6 +34,7 @@ class QrackAceBackend:
     Attributes:
         sim(QrackSimulator): Corresponding simulator.
         alternating_codes(bool): Alternate repetition code elision by index?
+        recursive_stack_depth(int): How many recursive nestings?
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
     """
@@ -43,6 +44,7 @@ class QrackAceBackend:
         qubit_count=1,
         recursive_stack_depth=1,
         alternating_codes=True,
+        reverse_row_and_col=False,
         isTensorNetwork=False,
         isStabilizerHybrid=False,
         isBinaryDecisionTree=False,
@@ -55,7 +57,7 @@ class QrackAceBackend:
             recursive_stack_depth = 1
         self.recursive_stack_depth = recursive_stack_depth
         self._ancilla = 3 * qubit_count
-        self._factor_width(qubit_count)
+        self._factor_width(qubit_count, reverse_row_and_col)
         self.alternating_codes = alternating_codes
         self._is_init = [False] * qubit_count
         if recursive_stack_depth > 1:
@@ -63,7 +65,15 @@ class QrackAceBackend:
             self.sim = (
                 toClone.sim
                 if toClone
-                else QrackAceBackend(3 * qubit_count + 1, recursive_stack_depth=recursive_stack_depth, alternating_codes=alternating_codes, isTensorNetwork=isTensorNetwork, isStabilizerHybrid=isStabilizerHybrid, isBinaryDecisionTree=isBinaryDecisionTree)
+                else QrackAceBackend(
+                    3 * qubit_count + 1,
+                    recursive_stack_depth,
+                    alternating_codes,
+                    reverse_row_and_col,
+                    isTensorNetwork,
+                    isStabilizerHybrid,
+                    isBinaryDecisionTree,
+                )
             )
             # This leaves an "odd-man-out" ancillary qubit.
             self.sim.row_length = 3 * self.row_length
@@ -72,7 +82,12 @@ class QrackAceBackend:
             self.sim = (
                 toClone.sim.clone()
                 if toClone
-                else QrackSimulator(3 * qubit_count + 1, isTensorNetwork=isTensorNetwork, isStabilizerHybrid=isStabilizerHybrid, isBinaryDecisionTree=isBinaryDecisionTree)
+                else QrackSimulator(
+                    3 * qubit_count + 1,
+                    isTensorNetwork=isTensorNetwork,
+                    isStabilizerHybrid=isStabilizerHybrid,
+                    isBinaryDecisionTree=isBinaryDecisionTree,
+                )
             )
 
     def clone(self):
@@ -81,14 +96,14 @@ class QrackAceBackend:
     def num_qubits(self):
         return self.sim.num_qubits() // 3
 
-    def _factor_width(self, width):
-        col_len = math.floor(math.sqrt(width))
-        while ((width // col_len) * col_len) != width:
-            col_len -= 1
-        row_len = width // col_len
+    def _factor_width(self, width, reverse=False):
+        row_len = math.floor(math.sqrt(width))
+        while ((width // row_len) * row_len) != width:
+            row_len -= 1
+        col_len = width // row_len
 
-        self.col_length = col_len
-        self.row_length = row_len
+        self.row_length = col_len if reverse else row_len
+        self.col_length = row_len if reverse else col_len
 
     def _ct_pair_prob(self, q1, q2):
         p1 = self.sim.prob(q1)
@@ -431,32 +446,44 @@ class QrackAceBackend:
 
     def mcx(self, lq1, lq2):
         if len(lq1) > 1:
-            raise RuntimeError("QrackAceBackend.mcx() is provided for syntax convenience and only supports 1 control qubit!")
+            raise RuntimeError(
+                "QrackAceBackend.mcx() is provided for syntax convenience and only supports 1 control qubit!"
+            )
         self._cpauli(lq1[0], lq2, False, Pauli.PauliX)
 
     def mcy(self, lq1, lq2):
         if len(lq1) > 1:
-            raise RuntimeError("QrackAceBackend.mcy() is provided for syntax convenience and only supports 1 control qubit!")
+            raise RuntimeError(
+                "QrackAceBackend.mcy() is provided for syntax convenience and only supports 1 control qubit!"
+            )
         self._cpauli(lq1[0], lq2, False, Pauli.PauliY)
 
     def mcz(self, lq1, lq2):
         if len(lq1) > 1:
-            raise RuntimeError("QrackAceBackend.mcz() is provided for syntax convenience and only supports 1 control qubit!")
+            raise RuntimeError(
+                "QrackAceBackend.mcz() is provided for syntax convenience and only supports 1 control qubit!"
+            )
         self._cpauli(lq1[0], lq2, False, Pauli.PauliZ)
 
     def macx(self, lq1, lq2):
         if len(lq1) > 1:
-            raise RuntimeError("QrackAceBackend.macx() is provided for syntax convenience and only supports 1 control qubit!")
+            raise RuntimeError(
+                "QrackAceBackend.macx() is provided for syntax convenience and only supports 1 control qubit!"
+            )
         self._cpauli(lq1[0], lq2, True, Pauli.PauliX)
 
     def macy(self, lq1, lq2):
         if len(lq1) > 1:
-            raise RuntimeError("QrackAceBackend.macy() is provided for syntax convenience and only supports 1 control qubit!")
+            raise RuntimeError(
+                "QrackAceBackend.macy() is provided for syntax convenience and only supports 1 control qubit!"
+            )
         self._cpauli(lq1[0], lq2, True, Pauli.PauliY)
 
     def macz(self, lq1, lq2):
         if len(lq1) > 1:
-            raise RuntimeError("QrackAceBackend.macz() is provided for syntax convenience and only supports 1 control qubit!")
+            raise RuntimeError(
+                "QrackAceBackend.macz() is provided for syntax convenience and only supports 1 control qubit!"
+            )
         self._cpauli(lq1[0], lq2, True, Pauli.PauliZ)
 
     def swap(self, lq1, lq2):
@@ -516,7 +543,9 @@ class QrackAceBackend:
             col_offset = random.randint(0, self.row_length - 1)
             col_reverse = self.alternating_codes and (lq_row & 1)
             for c in range(self.row_length):
-                lq_col = (((self.row_length - (c + 1)) if col_reverse else c) + col_offset) % self.row_length
+                lq_col = (
+                    ((self.row_length - (c + 1)) if col_reverse else c) + col_offset
+                ) % self.row_length
                 lq = lq_row * self.row_length + lq_col
                 if self.m(lq):
                     result |= 1 << lq
