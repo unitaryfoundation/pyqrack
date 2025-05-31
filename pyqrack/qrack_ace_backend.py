@@ -51,13 +51,15 @@ class QrackAceBackend:
         isBinaryDecisionTree=False,
         toClone=None,
     ):
+        if long_range_rows < 0:
+            long_range_rows = 0
+        if qubit_count < 0:
+            qubit_count = 0
         if toClone:
             qubit_count = toClone.num_qubits()
             recursive_stack_depth = toClone.recursive_stack_depth
         if recursive_stack_depth < 1:
             recursive_stack_depth = 1
-        if long_range_rows < 0:
-            long_range_rows = 0
 
         self.recursive_stack_depth = recursive_stack_depth
         self._factor_width(qubit_count, reverse_row_and_col)
@@ -65,13 +67,11 @@ class QrackAceBackend:
         self._is_init = [False] * qubit_count
 
         col_seq = [False] + [True] * long_range_rows
-        self._is_col_long_range = col_seq * (self.row_length // len(col_seq))
-        self._is_col_long_range += [True] * (
-            self.row_length - len(self._is_col_long_range)
-        )
+        len_col_seq = len(col_seq)
+        self._is_col_long_range = (col_seq * ((self.row_length + len_col_seq - 1) // len_col_seq))[:self.row_length]
         self._hardware_offset = []
         tot_qubits = 0
-        for _ in range(self.row_length):
+        for _ in range(self.col_length):
             for c in self._is_col_long_range:
                 self._hardware_offset.append(tot_qubits)
                 tot_qubits += 1 if c else 3
@@ -621,6 +621,7 @@ class QrackAceBackend:
         self.swap(lq1, lq2)
 
     def m(self, lq):
+        self._is_init[lq] = False
         hq = self._unpack(lq)
         if self._is_col_long_range[lq % self.row_length]:
             return self.sim.m(hq[0])
@@ -639,19 +640,18 @@ class QrackAceBackend:
         # but not non-locally, via entanglement.
         # Collapse the other separable part toward agreement.
         syndrome += self.sim.force_m(hq[single_bit], bool(syndrome))
-        self._is_init[lq] = False
 
         return True if (syndrome > 1) else False
 
     def force_m(self, lq, c):
         hq = self._unpack(lq)
+        self._is_init[lq] = False
         if self._is_col_long_range[lq % self.row_length]:
             return self.sim.force_m(hq[0])
 
         self._correct(lq)
         for q in hq:
             self.sim.force_m(q, c)
-        self._is_init[lq] = False
 
         return c
 
