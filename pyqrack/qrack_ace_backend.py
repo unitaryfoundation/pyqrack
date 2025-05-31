@@ -34,7 +34,6 @@ class QrackAceBackend:
     Attributes:
         sim(QrackSimulator): Corresponding simulator.
         alternating_codes(bool): Alternate repetition code elision by index?
-        recursive_stack_depth(int): How many recursive nestings?
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
     """
@@ -43,7 +42,6 @@ class QrackAceBackend:
         self,
         qubit_count=1,
         long_range_rows=0,
-        recursive_stack_depth=1,
         alternating_codes=True,
         reverse_row_and_col=False,
         isTensorNetwork=False,
@@ -57,11 +55,7 @@ class QrackAceBackend:
             qubit_count = 0
         if toClone:
             qubit_count = toClone.num_qubits()
-            recursive_stack_depth = toClone.recursive_stack_depth
-        if recursive_stack_depth < 1:
-            recursive_stack_depth = 1
 
-        self.recursive_stack_depth = recursive_stack_depth
         self._factor_width(qubit_count, reverse_row_and_col)
         self.alternating_codes = alternating_codes
         self._is_init = [False] * qubit_count
@@ -78,35 +72,16 @@ class QrackAceBackend:
         self._ancilla = tot_qubits
         tot_qubits += 1
 
-        if recursive_stack_depth > 1:
-            recursive_stack_depth -= 1
-            self.sim = (
-                toClone.sim
-                if toClone
-                else QrackAceBackend(
-                    tot_qubits,
-                    recursive_stack_depth,
-                    alternating_codes,
-                    reverse_row_and_col,
-                    isTensorNetwork,
-                    isStabilizerHybrid,
-                    isBinaryDecisionTree,
-                )
+        self.sim = (
+            toClone.sim.clone()
+            if toClone
+            else QrackSimulator(
+                tot_qubits,
+                isTensorNetwork=isTensorNetwork,
+                isStabilizerHybrid=isStabilizerHybrid,
+                isBinaryDecisionTree=isBinaryDecisionTree,
             )
-            # This leaves an "odd-man-out" ancillary qubit.
-            self.sim.row_length = 3 * self.row_length
-            self.sim.col_length = self.col_length
-        else:
-            self.sim = (
-                toClone.sim.clone()
-                if toClone
-                else QrackSimulator(
-                    tot_qubits,
-                    isTensorNetwork=isTensorNetwork,
-                    isStabilizerHybrid=isStabilizerHybrid,
-                    isBinaryDecisionTree=isBinaryDecisionTree,
-                )
-            )
+        )
 
     def clone(self):
         return QrackAceBackend(toClone=self)
