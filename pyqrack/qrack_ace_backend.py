@@ -42,7 +42,7 @@ class QrackAceBackend:
     def __init__(
         self,
         qubit_count=1,
-        long_range_columns=0,
+        long_range_columns=2,
         alternating_codes=True,
         reverse_row_and_col=False,
         isTensorNetwork=False,
@@ -63,7 +63,7 @@ class QrackAceBackend:
         self.long_range_columns = long_range_columns
         self._is_init = [False] * qubit_count
 
-        col_seq = [False] + [True] * long_range_columns
+        col_seq = [True] * long_range_columns + [False]
         len_col_seq = len(col_seq)
         self._is_col_long_range = (col_seq * ((self.row_length + len_col_seq - 1) // len_col_seq))[:self.row_length]
         self._hardware_offset = []
