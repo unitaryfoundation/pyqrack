@@ -97,13 +97,13 @@ class QrackAceBackend:
         return self.sim.num_qubits() // 3
 
     def _factor_width(self, width, reverse=False):
-        row_len = math.floor(math.sqrt(width))
-        while ((width // row_len) * row_len) != width:
-            row_len -= 1
-        col_len = width // row_len
+        col_len = math.floor(math.sqrt(width))
+        while ((width // col_len) * col_len) != width:
+            col_len -= 1
+        row_len = width // col_len
 
-        self.row_length = col_len if reverse else row_len
         self.col_length = row_len if reverse else col_len
+        self.row_length = col_len if reverse else row_len
 
     def _ct_pair_prob(self, q1, q2):
         p1 = self.sim.prob(q1)
