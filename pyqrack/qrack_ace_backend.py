@@ -36,6 +36,7 @@ class QrackAceBackend:
         alternating_codes(bool): Alternate repetition code elision by index?
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
+        long_range_rows(int): How many ideal rows between QEC boundary rows?
     """
 
     def __init__(
@@ -55,9 +56,11 @@ class QrackAceBackend:
             qubit_count = 0
         if toClone:
             qubit_count = toClone.num_qubits()
+            long_range_rows = toClone.long_range_rows
 
         self._factor_width(qubit_count, reverse_row_and_col)
         self.alternating_codes = alternating_codes
+        self.long_range_rows = long_range_rows
         self._is_init = [False] * qubit_count
 
         col_seq = [False] + [True] * long_range_rows
