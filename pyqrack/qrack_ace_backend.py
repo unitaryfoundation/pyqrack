@@ -36,13 +36,13 @@ class QrackAceBackend:
         alternating_codes(bool): Alternate repetition code elision by index?
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
-        long_range_rows(int): How many ideal rows between QEC boundary rows?
+        long_range_columns(int): How many ideal rows between QEC boundary rows?
     """
 
     def __init__(
         self,
         qubit_count=1,
-        long_range_rows=0,
+        long_range_columns=0,
         alternating_codes=True,
         reverse_row_and_col=False,
         isTensorNetwork=False,
@@ -50,20 +50,20 @@ class QrackAceBackend:
         isBinaryDecisionTree=False,
         toClone=None,
     ):
-        if long_range_rows < 0:
-            long_range_rows = 0
+        if long_range_columns < 0:
+            long_range_columns = 0
         if qubit_count < 0:
             qubit_count = 0
         if toClone:
             qubit_count = toClone.num_qubits()
-            long_range_rows = toClone.long_range_rows
+            long_range_columns = toClone.long_range_columns
 
         self._factor_width(qubit_count, reverse_row_and_col)
         self.alternating_codes = alternating_codes
-        self.long_range_rows = long_range_rows
+        self.long_range_columns = long_range_columns
         self._is_init = [False] * qubit_count
 
-        col_seq = [False] + [True] * long_range_rows
+        col_seq = [False] + [True] * long_range_columns
         len_col_seq = len(col_seq)
         self._is_col_long_range = (col_seq * ((self.row_length + len_col_seq - 1) // len_col_seq))[:self.row_length]
         self._hardware_offset = []
