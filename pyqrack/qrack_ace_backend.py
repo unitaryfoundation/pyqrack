@@ -340,12 +340,15 @@ class QrackAceBackend:
 
         if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
             # Produces/destroys superposition
-            self._correct_if_like_h(th, lq)
-            self._decode(lq, hq)
+            if self._is_init[lq]:
+                self._correct_if_like_h(th, lq)
+                self.sim.mcx([hq[0]], hq[1])
             self.sim.u(hq[0], th, ph, lm)
-            if not self._is_init[lq]:
-                self.sim.u(hq[2], th, ph, lm)
-            self._encode(lq, hq)
+            self.sim.u(hq[2], th, ph, lm)
+            if self._is_init[lq]:
+                self.sim.mcx([hq[0]], hq[1])
+            else:
+                self._encode(lq, hq)
         else:
             # Shouldn't produce/destroy superposition
             for b in hq:
@@ -361,7 +364,7 @@ class QrackAceBackend:
             th -= 2 * math.pi
         while th <= -math.pi:
             th += 2 * math.pi
-        if p == Pauli.PauliY:
+        if self._is_init[lq] and (p == Pauli.PauliY):
             self._correct_if_like_h(th, lq)
 
         if (p == Pauli.PauliZ) or math.isclose(abs(th), math.pi):
@@ -370,11 +373,14 @@ class QrackAceBackend:
                 self.sim.r(p, th, b)
         else:
             # Produces/destroys superposition
-            self._decode(lq, hq)
+            if self._is_init[lq]:
+                self.sim.mcx([hq[0]], hq[1])
             self.sim.r(p, th, hq[0])
-            if not self._is_init[lq]:
-                self.sim.r(p, th, hq[2])
-            self._encode(lq, hq)
+            self.sim.r(p, th, hq[2])
+            if self._is_init[lq]:
+                self.sim.mcx([hq[0]], hq[1])
+            else:
+                self._encode(lq, hq)
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -382,11 +388,15 @@ class QrackAceBackend:
             self.sim.h(hq[0])
             return
 
-        self._decode(lq, hq)
+        self._correct(lq)
+        if self._is_init[lq]:
+            self.sim.mcx([hq[0]], hq[1])
         self.sim.h(hq[0])
-        if not self._is_init[lq]:
-            self.sim.h(hq[2])
-        self._encode(lq, hq)
+        self.sim.h(hq[2])
+        if self._is_init[lq]:
+            self.sim.mcx([hq[0]], hq[1])
+        else:
+            self._encode(lq, hq)
 
     def s(self, lq):
         hq = self._unpack(lq)
