@@ -484,9 +484,23 @@ class QrackAceBackend:
         lq2_row = lq2 // self.row_length
         lq2_col = lq2 % self.row_length
 
+        connected_cols = []
+        c = (lq1_col - 1) % cols
+        while self._is_col_long_range[c]:
+            connected_cols.append(c)
+            c = (c - 1) % cols
+        connected_cols.append(c)
+        c = (lq1_col + 1) % cols
+        while self._is_col_long_range[c]:
+            connected_cols.append(c)
+            c = (c + 1) % cols
+        connected_cols.append(c)
+
         hq1 = None
         hq2 = None
-        if ((lq1_col + 1) % self.row_length) == lq2_col:
+        if (lq2_col in connected_cols) and (
+            connected_cols.index(lq2_col) < (len(connected_col_len) >> 1)
+        ):
             if lq1_lr:
                 self._correct(lq2)
                 hq1 = self._unpack(lq1)
@@ -509,7 +523,7 @@ class QrackAceBackend:
                 gate([hq1[0]], hq2[0])
                 self._encode(lq2, hq2, False)
                 self._encode(lq1, hq1, True)
-        elif ((lq2_col + 1) % self.row_length) == lq1_col:
+        elif lq2_col in connected_cols:
             if lq1_lr:
                 self._correct(lq2)
                 hq2 = self._unpack(lq2, True)
@@ -1084,16 +1098,7 @@ class QrackAceBackend:
             else:
                 for row in range(rows):
                     a = logical_index(row, col)
-
-                    b = logical_index((row - 1) % rows, col)
-                    coupling_map.add((a, b))
-                    b = logical_index((row + 1) % rows, col)
-                    coupling_map.add((a, b))
-
                     for c in connected_cols:
-                        if c == col:
-                            # Nearest-neighbor
-                            continue
                         for r in range(0, rows):
                             b = logical_index(r, c)
                             coupling_map.add((a, b))
