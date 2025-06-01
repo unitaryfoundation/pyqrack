@@ -470,13 +470,15 @@ class QrackAceBackend:
         while self._is_col_long_range[c] and (len(connected_cols) < (self.row_length - 1)):
             connected_cols.append(c)
             c = (c - 1) % self.row_length
-        connected_cols.append(c)
+        if len(connected_cols) < self._row_length:
+            connected_cols.append(c)
         boundary = len(connected_cols)
         c = (lq1_col + 1) % self.row_length
         while self._is_col_long_range[c] and (len(connected_cols) < (self.row_length - 1)):
             connected_cols.append(c)
             c = (c + 1) % self.row_length
-        connected_cols.append(c)
+        if len(connected_cols) < self._row_length:
+            connected_cols.append(c)
 
         if lq1_lr and lq2_lr:
             if lq2_col in connected_cols:
@@ -1102,12 +1104,14 @@ class QrackAceBackend:
             while self._is_col_long_range[c] and (len(connected_cols) < self.row_length):
                 connected_cols.append(c)
                 c = (c - 1) % cols
-            connected_cols.append(c)
+            if len(connected_cols) < self._row_length:
+                connected_cols.append(c)
             c = (col + 1) % cols
             while self._is_col_long_range[c] and (len(connected_cols) < self.row_length):
                 connected_cols.append(c)
                 c = (c + 1) % cols
-            connected_cols.append(c)
+            if len(connected_cols) < self._row_length:
+                connected_cols.append(c)
 
             for row in range(rows):
                 a = logical_index(row, col)
