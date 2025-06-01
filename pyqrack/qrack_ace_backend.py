@@ -65,9 +65,11 @@ class QrackAceBackend:
 
         col_seq = [True] * long_range_columns + [False]
         len_col_seq = len(col_seq)
-        self._is_col_long_range = (col_seq * ((self.row_length + len_col_seq - 1) // len_col_seq))[:self.row_length]
+        self._is_col_long_range = (
+            col_seq * ((self.row_length + len_col_seq - 1) // len_col_seq)
+        )[: self.row_length]
         if long_range_columns < self.row_length:
-             self._is_col_long_range[-1] = False
+            self._is_col_long_range[-1] = False
         self._hardware_offset = []
         tot_qubits = 0
         for _ in range(self.col_length):
@@ -1016,3 +1018,49 @@ class QrackAceBackend:
         del self._sim
 
         return _data
+
+    def get_qiskit_basis_gates():
+        return [
+            "id",
+            "u",
+            "u1",
+            "u2",
+            "u3",
+            "r",
+            "rx",
+            "ry",
+            "rz",
+            "h",
+            "x",
+            "y",
+            "z",
+            "s",
+            "sdg",
+            "sx",
+            "sxdg",
+            "p",
+            "t",
+            "tdg",
+            "cx",
+            "cy",
+            "cz",
+            "swap",
+            "iswap",
+            "reset",
+            "measure",
+        ]
+
+    # Provided by Elara (custom OpenAI GPT)
+    def generate_logical_coupling_map(self):
+        coupling_map = []
+        for y in range(self._col_length):
+            for x in range(self._row_length):
+                q = y * self._row_length + x
+                # Define neighbors with orbifolding
+                neighbors = []
+                neighbors.append((x + 1) % self._row_length + y * self._row_length)
+                neighbors.append(x + ((y + 1) % self._col_length) * self._row_length)
+                for nq in neighbors:
+                    coupling_map.append([q, nq])
+
+        return coupling_map
