@@ -463,13 +463,13 @@ class QrackAceBackend:
 
         connected_cols = []
         c = (lq1_col - 1) % self.row_length
-        while self._is_col_long_range[c] and (len(connected_cols) < self.row_length):
+        while self._is_col_long_range[c] and (len(connected_cols) < (self.row_length - 1)):
             connected_cols.append(c)
             c = (c - 1) % self.row_length
         connected_cols.append(c)
         boundary = len(connected_cols)
         c = (lq1_col + 1) % self.row_length
-        while self._is_col_long_range[c] and (len(connected_cols) < self.row_length):
+        while self._is_col_long_range[c] and (len(connected_cols) < (self.row_length - 1)):
             connected_cols.append(c)
             c = (c + 1) % self.row_length
         connected_cols.append(c)
