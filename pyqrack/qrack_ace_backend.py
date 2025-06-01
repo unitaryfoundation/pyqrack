@@ -19,6 +19,12 @@ try:
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
 
+_IS_QISKIT_AER_AVAILABLE = True
+try:
+    from qiskit_aer.noise import NoiseModel, depolarizing_error
+except ImportError:
+    _IS_QISKIT_AER_AVAILABLE = False
+
 
 class QrackAceBackend:
     """A back end for elided quantum error correction
@@ -62,6 +68,7 @@ class QrackAceBackend:
         self.alternating_codes = alternating_codes
         self.long_range_columns = long_range_columns
         self._is_init = [False] * qubit_count
+        self._coupling_map = None
 
         # If there's only one or zero "False" columns,
         # the entire simulator is connected, anyway.
@@ -1093,7 +1100,10 @@ class QrackAceBackend:
 
     # Mostly written by Dan, but with a little help from Elara (custom OpenAI GPT)
     def get_logical_coupling_map(self):
-        coupling_map = set()
+        if self._coupling_map:
+            return self._coupling_map
+
+        coupling_map = []
         rows, cols = self.row_length, self.col_length
 
         # Map each column index to its full list of logical qubit indices
@@ -1121,6 +1131,55 @@ class QrackAceBackend:
                     for r in range(0, rows):
                         b = logical_index(r, c)
                         if a != b:
-                            coupling_map.add((a, b))
+                            coupling_map.append((a, b))
 
-        return sorted(coupling_map)
+        self._coupling_map = sorted(coupling_map)
+
+        return self._coupling_map
+
+    # Designed by Dan, and implemented by Elara:
+    def create_noise_model(self, x=0.25, y=0.25):
+        if not _IS_QISKIT_AER_AVAILABLE:
+            raise RuntimeError(
+                "Before trying to run_qiskit_circuit() with QrackAceBackend, you must install Qiskit Aer!"
+            )
+        noise_model = NoiseModel()
+
+        for a, b in self.get_logical_coupling_map():
+            col_a, col_b = a % self.row_length, b % self.row_length
+            row_a, row_b = a // self.row_length, b // self.row_length
+            is_long_a = self._is_col_long_range[col_a]
+            is_long_b = self._is_col_long_range[col_b]
+
+            if is_long_a and is_long_b:
+                continue  # No noise on long-to-long
+
+            same_col = col_a == col_b
+            even_odd = (row_a % 2) != (row_b % 2)
+
+            if same_col and not even_odd:
+                continue  # No noise for even-even or odd-odd within a boundary column
+
+            if same_col:
+                x_cy = 1 - (1 - x)**2
+                x_swap = 1 - (1 - x)**3
+                noise_model.add_quantum_error(depolarizing_error(x, 2), 'cx', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(x_cy, 2), 'cy', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(x_cy, 2), 'cz', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(x_swap, 2), 'swap', [a, b])
+            elif is_long_a or is_long_b:
+                y_cy = 1 - (1 - y)**2
+                y_swap = 1 - (1 - y)**3
+                noise_model.add_quantum_error(depolarizing_error(y, 2), 'cx', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cy', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cz', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_swap, 2), 'swap', [a, b])
+            else:
+                y_cy = 1 - (1 - y)**2
+                y_swap = 1 - (1 - y)**3
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cx', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cy', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cz', [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_swap, 2), 'swap', [a, b])
+
+        return noise_model
