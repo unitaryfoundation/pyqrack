@@ -63,7 +63,9 @@ class QrackAceBackend:
         self.long_range_columns = long_range_columns
         self._is_init = [False] * qubit_count
 
-        if long_range_columns >= self.row_length:
+        # If there's only one or zero "False" columns,
+        # the entire simulator is connected, anyway.
+        if (long_range_columns + 1) >= self.row_length:
             self._is_col_long_range = [True] * long_range_columns
         else:
             col_seq = [True] * long_range_columns + [False]
@@ -470,14 +472,14 @@ class QrackAceBackend:
         while self._is_col_long_range[c] and (len(connected_cols) < (self.row_length - 1)):
             connected_cols.append(c)
             c = (c - 1) % self.row_length
-        if len(connected_cols) < self._row_length:
+        if len(connected_cols) < self.row_length:
             connected_cols.append(c)
         boundary = len(connected_cols)
         c = (lq1_col + 1) % self.row_length
         while self._is_col_long_range[c] and (len(connected_cols) < (self.row_length - 1)):
             connected_cols.append(c)
             c = (c + 1) % self.row_length
-        if len(connected_cols) < self._row_length:
+        if len(connected_cols) < self.row_length:
             connected_cols.append(c)
 
         if lq1_lr and lq2_lr:
