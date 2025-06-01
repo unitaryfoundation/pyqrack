@@ -509,7 +509,7 @@ class QrackAceBackend:
                 gate([hq1[0]], hq2[0])
                 self._encode(lq2, hq2, False)
                 self._encode(lq1, hq1, True)
-        elif (lq1_row == lq2_row) and (((lq2_col + 1) % self.row_length) == lq1_col):
+        elif ((lq2_col + 1) % self.row_length) == lq1_col:
             if lq1_lr:
                 self._correct(lq2)
                 hq2 = self._unpack(lq2, True)
