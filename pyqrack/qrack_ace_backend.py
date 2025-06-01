@@ -66,7 +66,7 @@ class QrackAceBackend:
         # If there's only one or zero "False" columns,
         # the entire simulator is connected, anyway.
         if (long_range_columns + 1) >= self.row_length:
-            self._is_col_long_range = [True] * long_range_columns
+            self._is_col_long_range = [True] * self.row_length
         else:
             col_seq = [True] * long_range_columns + [False]
             len_col_seq = len(col_seq)
