@@ -490,6 +490,7 @@ class QrackAceBackend:
             connected_cols.append(c)
             c = (c - 1) % cols
         connected_cols.append(c)
+        boundary = len(connected_cols)
         c = (lq1_col + 1) % cols
         while self._is_col_long_range[c]:
             connected_cols.append(c)
@@ -498,9 +499,7 @@ class QrackAceBackend:
 
         hq1 = None
         hq2 = None
-        if (lq2_col in connected_cols) and (
-            connected_cols.index(lq2_col) < (len(connected_col_len) >> 1)
-        ):
+        if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             if lq1_lr:
                 self._correct(lq2)
                 hq1 = self._unpack(lq1)
