@@ -456,6 +456,30 @@ class QrackAceBackend:
         lq1_lr = self._is_col_long_range[lq1 % self.row_length]
         lq2_lr = self._is_col_long_range[lq2 % self.row_length]
 
+        lq1_row = lq1 // self.row_length
+        lq1_col = lq1 % self.row_length
+        lq2_row = lq2 // self.row_length
+        lq2_col = lq2 % self.row_length
+
+        connected_cols = []
+        c = (lq1_col - 1) % self.row_length
+        while self._is_col_long_range[c]:
+            connected_cols.append(c)
+            c = (c - 1) % self.row_length
+        connected_cols.append(c)
+        boundary = len(connected_cols)
+        c = (lq1_col + 1) % self.row_length
+        while self._is_col_long_range[c]:
+            connected_cols.append(c)
+            c = (c + 1) % self.row_length
+        connected_cols.append(c)
+
+        if lq1_lr and lq2_lr:
+            if lq2_col in connected_cols:
+                gate(self._unpack(lq1), self._unpack(lq2)[0])
+            else:
+                shadow(self._unpack(lq1)[0], self._unpack(lq2)[0])
+
         self._correct(lq1)
 
         if not self._is_init[lq1]:
@@ -476,32 +500,9 @@ class QrackAceBackend:
 
             return
 
-        lq1_row = lq1 // self.row_length
-        lq1_col = lq1 % self.row_length
-        lq2_row = lq2 // self.row_length
-        lq2_col = lq2 % self.row_length
-
-        connected_cols = []
-        c = (lq1_col - 1) % cols
-        while self._is_col_long_range[c]:
-            connected_cols.append(c)
-            c = (c - 1) % cols
-        connected_cols.append(c)
-        boundary = len(connected_cols)
-        c = (lq1_col + 1) % cols
-        while self._is_col_long_range[c]:
-            connected_cols.append(c)
-            c = (c + 1) % cols
-        connected_cols.append(c)
-
         hq1 = None
         hq2 = None
-        if lq1_lr and lq2_lr:
-            if lq2_col in connected_cols:
-                gate(self._unpack(lq1), self._unpack(lq2)[0])
-            else:
-                shadow(self._unpack(lq1)[0], self._unpack(lq2)[0])
-        elif (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
+        if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             if lq1_lr:
                 self._correct(lq2)
                 hq1 = self._unpack(lq1)
