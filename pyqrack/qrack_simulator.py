@@ -4374,3 +4374,43 @@ class QrackSimulator:
         del self._sim
 
         return _data
+
+    def get_qiskit_basis_gates():
+        return [
+            "id",
+            "u",
+            "u1",
+            "u2",
+            "u3",
+            "r",
+            "rx",
+            "ry",
+            "rz",
+            "h",
+            "x",
+            "y",
+            "z",
+            "s",
+            "sdg",
+            "sx",
+            "sxdg",
+            "p",
+            "t",
+            "tdg",
+            "cu",
+            "cu1",
+            "cu3",
+            "cx",
+            "cy",
+            "cz",
+            "ch",
+            "cp",
+            "csx",
+            "ccx",
+            "ccz",
+            "swap",
+            "iswap",
+            "cswap",
+            "reset",
+            "measure",
+        ]
