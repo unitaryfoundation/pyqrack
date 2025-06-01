@@ -1103,7 +1103,7 @@ class QrackAceBackend:
         if self._coupling_map:
             return self._coupling_map
 
-        coupling_map = []
+        coupling_map = set()
         rows, cols = self.row_length, self.col_length
 
         # Map each column index to its full list of logical qubit indices
@@ -1131,7 +1131,7 @@ class QrackAceBackend:
                     for r in range(0, rows):
                         b = logical_index(r, c)
                         if a != b:
-                            coupling_map.append((a, b))
+                            coupling_map.add((a, b))
 
         self._coupling_map = sorted(coupling_map)
 
