@@ -1050,17 +1050,52 @@ class QrackAceBackend:
             "measure",
         ]
 
-    # Provided by Elara (custom OpenAI GPT)
-    def generate_logical_coupling_map(self):
-        coupling_map = []
-        for y in range(self._col_length):
-            for x in range(self._row_length):
-                q = y * self._row_length + x
-                # Define neighbors with orbifolding
-                neighbors = []
-                neighbors.append((x + 1) % self._row_length + y * self._row_length)
-                neighbors.append(x + ((y + 1) % self._col_length) * self._row_length)
-                for nq in neighbors:
-                    coupling_map.append([q, nq])
+    # Mostly written by Dan, but with a little help from Elara (custom OpenAI GPT)
+    def get_logical_coupling_map(self):
+        coupling_map = set()
+        rows, cols = self.row_length, self.col_length
 
-        return coupling_map
+        # Map each column index to its full list of logical qubit indices
+        def logical_index(row, col):
+            return row * cols + col
+
+        for col in range(cols):
+            connected_cols = [col]
+            c = (col - 1) % cols
+            while self._is_col_long_range[c]:
+                connected_cols.append(c)
+                c = (c - 1) % cols
+            connected_cols.append(c)
+            c = (col + 1) % cols
+            while self._is_col_long_range[c]:
+                connected_cols.append(c)
+                c = (c + 1) % cols
+            connected_cols.append(c)
+
+            is_long = self._is_col_long_range[col]
+            if is_long:
+                for row in range(rows):
+                    a = logical_index(row, col)
+                    for c in connected_cols:
+                        for r in range(0, rows):
+                            b = logical_index(r, c)
+                            if a != b:
+                                coupling_map.add((a, b))
+            else:
+                for row in range(rows):
+                    a = logical_index(row, col)
+
+                    b = logical_index((row - 1) % rows, col)
+                    coupling_map.add((a, b))
+                    b = logical_index((row + 1) % rows, col)
+                    coupling_map.add((a, b))
+
+                    for c in connected_cols:
+                        if c == col:
+                            # Nearest-neighbor
+                            continue
+                        for r in range(0, rows):
+                            b = logical_index(r, c)
+                            coupling_map.add((a, b))
+
+        return sorted(coupling_map)
