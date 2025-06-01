@@ -63,13 +63,17 @@ class QrackAceBackend:
         self.long_range_columns = long_range_columns
         self._is_init = [False] * qubit_count
 
-        col_seq = [True] * long_range_columns + [False]
-        len_col_seq = len(col_seq)
-        self._is_col_long_range = (
-            col_seq * ((self.row_length + len_col_seq - 1) // len_col_seq)
-        )[: self.row_length]
-        if long_range_columns < self.row_length:
-            self._is_col_long_range[-1] = False
+        if long_range_columns >= self.row_length:
+            self._is_col_long_range = [True] * long_range_columns
+        else:
+            col_seq = [True] * long_range_columns + [False]
+            len_col_seq = len(col_seq)
+            self._is_col_long_range = (
+                col_seq * ((self.row_length + len_col_seq - 1) // len_col_seq)
+            )[: self.row_length]
+            if long_range_columns < self.row_length:
+                self._is_col_long_range[-1] = False
+
         self._hardware_offset = []
         tot_qubits = 0
         for _ in range(self.col_length):
@@ -479,6 +483,7 @@ class QrackAceBackend:
                 gate(self._unpack(lq1), self._unpack(lq2)[0])
             else:
                 shadow(self._unpack(lq1)[0], self._unpack(lq2)[0])
+            return
 
         self._correct(lq1)
 
