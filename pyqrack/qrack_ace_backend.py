@@ -486,7 +486,7 @@ class QrackAceBackend:
 
         hq1 = None
         hq2 = None
-        if (lq2_row == lq1_row) and (((lq1_col + 1) % self.row_length) == lq2_col):
+        if ((lq1_col + 1) % self.row_length) == lq2_col:
             if lq1_lr:
                 self._correct(lq2)
                 hq1 = self._unpack(lq1)
