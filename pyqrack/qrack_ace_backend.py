@@ -388,6 +388,7 @@ class QrackAceBackend:
             self.sim.h(hq[0])
             return
 
+        self._correct(lq)
         if self._is_init[lq]:
             self.sim.mcx([hq[0]], hq[1])
         self.sim.h(hq[0])
