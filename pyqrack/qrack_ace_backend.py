@@ -455,9 +455,6 @@ class QrackAceBackend:
 
         lq1_lr = self._is_col_long_range[lq1 % self.row_length]
         lq2_lr = self._is_col_long_range[lq2 % self.row_length]
-        if lq1_lr and lq2_lr:
-            gate(self._unpack(lq1), self._unpack(lq2)[0])
-            return
 
         self._correct(lq1)
 
@@ -499,7 +496,12 @@ class QrackAceBackend:
 
         hq1 = None
         hq2 = None
-        if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
+        if lq1_lr and lq2_lr:
+            if lq2_col in connected_cols:
+                gate(self._unpack(lq1), self._unpack(lq2)[0])
+            else:
+                shadow(self._unpack(lq1)[0], self._unpack(lq2)[0])
+        elif (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             if lq1_lr:
                 self._correct(lq2)
                 hq1 = self._unpack(lq1)
@@ -545,7 +547,7 @@ class QrackAceBackend:
                 gate([hq1[0]], hq2[0])
                 self._encode(lq1, hq1, False)
                 self._encode(lq2, hq2, True)
-        else:
+        elif lq1_col == lq2_col:
             hq1 = self._unpack(lq1)
             hq2 = self._unpack(lq2)
             if lq1_lr:
@@ -564,6 +566,22 @@ class QrackAceBackend:
                 else:
                     gate([hq1[1]], hq2[1])
                 gate([hq1[2]], hq2[2])
+        else:
+            hq1 = self._unpack(lq1)
+            hq2 = self._unpack(lq2)
+            if lq1_lr:
+                self._correct(lq2)
+                self._decode(lq2, hq2)
+                shadow(hq1[0], hq2[0])
+                self._encode(lq2, hq2)
+            elif lq2_lr:
+                self._decode(lq1, hq1)
+                shadow(hq1[0], hq2[0])
+                self._encode(lq1, hq1)
+            else:
+                shadow(hq1[0], hq2[0])
+                shadow(hq1[1], hq2[1])
+                shadow(hq1[2], hq2[2])
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
