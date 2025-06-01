@@ -1109,21 +1109,12 @@ class QrackAceBackend:
                 c = (c + 1) % cols
             connected_cols.append(c)
 
-            is_long = self._is_col_long_range[col]
-            if is_long:
-                for row in range(rows):
-                    a = logical_index(row, col)
-                    for c in connected_cols:
-                        for r in range(0, rows):
-                            b = logical_index(r, c)
-                            if a != b:
-                                coupling_map.add((a, b))
-            else:
-                for row in range(rows):
-                    a = logical_index(row, col)
-                    for c in connected_cols:
-                        for r in range(0, rows):
-                            b = logical_index(r, c)
+            for row in range(rows):
+                a = logical_index(row, col)
+                for c in connected_cols:
+                    for r in range(0, rows):
+                        b = logical_index(r, c)
+                        if a != b:
                             coupling_map.add((a, b))
 
         return sorted(coupling_map)
