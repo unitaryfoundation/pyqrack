@@ -1106,13 +1106,13 @@ class QrackAceBackend:
             while self._is_col_long_range[c] and (len(connected_cols) < self.row_length):
                 connected_cols.append(c)
                 c = (c - 1) % cols
-            if len(connected_cols) < self._row_length:
+            if len(connected_cols) < self.row_length:
                 connected_cols.append(c)
             c = (col + 1) % cols
             while self._is_col_long_range[c] and (len(connected_cols) < self.row_length):
                 connected_cols.append(c)
                 c = (c + 1) % cols
-            if len(connected_cols) < self._row_length:
+            if len(connected_cols) < self.row_length:
                 connected_cols.append(c)
 
             for row in range(rows):
