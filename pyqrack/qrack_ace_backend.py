@@ -69,45 +69,70 @@ class QrackAceBackend:
         self.long_range_columns = long_range_columns
 
         self.alternating_codes = alternating_codes
-        self._is_init = [False] * qubit_count
         self._coupling_map = None
 
         # If there's only one or zero "False" columns,
         # the entire simulator is connected, anyway.
+        len_col_seq = long_range_columns + 1
+        sim_count = (self.row_length + len_col_seq - 1) // len_col_seq
         if (long_range_columns + 1) >= self.row_length:
             self._is_col_long_range = [True] * self.row_length
         else:
             col_seq = [True] * long_range_columns + [False]
-            len_col_seq = len(col_seq)
-            self._is_col_long_range = (
-                col_seq * ((self.row_length + len_col_seq - 1) // len_col_seq)
-            )[: self.row_length]
+            self._is_col_long_range = (col_seq * sim_count)[: self.row_length]
             if long_range_columns < self.row_length:
                 self._is_col_long_range[-1] = False
 
+        self._qubit_dict = {}
         self._hardware_offset = []
+        self._ancilla = [0] * sim_count
+        sim_counts = [0] * sim_count
+        sim_id = 0
         tot_qubits = 0
-        for _ in range(self.col_length):
+        for r in range(self.col_length):
             for c in self._is_col_long_range:
                 self._hardware_offset.append(tot_qubits)
-                tot_qubits += 1 if c else 3
-        self._ancilla = tot_qubits
-        tot_qubits += 1
+                if c:
+                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
+                    tot_qubits += 1
+                    sim_counts[sim_id] += 1
+                elif not self.alternating_codes or not (r & 1):
+                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
+                    tot_qubits += 1
+                    sim_counts[sim_id] += 1
+                    sim_id = (sim_id + 1) % sim_count
+                    for _ in range(2):
+                        self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
+                        tot_qubits += 1
+                        sim_counts[sim_id] += 1
+                else:
+                    for _ in range(2):
+                        self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
+                        tot_qubits += 1
+                        sim_counts[sim_id] += 1
+                    sim_id = (sim_id + 1) % sim_count
+                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
+                    tot_qubits += 1
+                    sim_counts[sim_id] += 1
 
-        self.sim = (
-            toClone.sim.clone()
-            if toClone
-            else QrackSimulator(
-                tot_qubits,
-                isTensorNetwork=isTensorNetwork,
-                isStabilizerHybrid=isStabilizerHybrid,
-                isBinaryDecisionTree=isBinaryDecisionTree,
+        self.sim = []
+        for i in range(sim_count):
+            self._ancilla[i] = sim_counts[i]
+            sim_counts[i] += 1
+            self.sim.append(
+                toClone.sim[i].clone()
+                if toClone
+                else QrackSimulator(
+                    sim_counts[i],
+                    isTensorNetwork=isTensorNetwork,
+                    isStabilizerHybrid=isStabilizerHybrid,
+                    isBinaryDecisionTree=isBinaryDecisionTree,
+                )
             )
-        )
 
-        # You can still "monkey-patch" this, after the constructor.
-        if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ:
-            self.sim.set_sdrp(0.03)
+            # You can still "monkey-patch" this, after the constructor.
+            if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ:
+                self.sim[i].set_sdrp(0.03)
 
     def clone(self):
         return QrackAceBackend(toClone=self)
@@ -125,8 +150,8 @@ class QrackAceBackend:
         self.row_length = col_len if reverse else row_len
 
     def _ct_pair_prob(self, q1, q2):
-        p1 = self.sim.prob(q1)
-        p2 = self.sim.prob(q2)
+        p1 = self.sim[q1[0]].prob(q1[1])
+        p2 = self.sim[q2[0]].prob(q2[1])
 
         if p1 < p2:
             return p2, q1
@@ -136,96 +161,77 @@ class QrackAceBackend:
     def _cz_shadow(self, q1, q2):
         prob_max, t = self._ct_pair_prob(q1, q2)
         if prob_max > 0.5:
-            self.sim.z(t)
+            self.sim[t[0]].z(t[1])
 
-    def _anti_cz_shadow(self, q1, q2):
-        self.sim.x(q1)
-        self._cz_shadow(q1, q2)
-        self.sim.x(q1)
+    def _anti_cz_shadow(self, c, t):
+        self.sim[c[0]].x(c[1])
+        self._cz_shadow(c, t)
+        self.sim[c[0]].x(c[1])
 
     def _cx_shadow(self, c, t):
-        self.sim.h(t)
+        self.sim[t[0]].h(t[1])
         self._cz_shadow(c, t)
-        self.sim.h(t)
+        self.sim[t[0]].h(t[1])
 
     def _anti_cx_shadow(self, c, t):
-        self.sim.x(t)
+        self.sim[c[0]].x(c[1])
         self._cx_shadow(c, t)
-        self.sim.x(t)
+        self.sim[c[0]].x(c[1])
 
     def _cy_shadow(self, c, t):
-        self.sim.adjs(t)
+        self.sim[t[0]].adjs(t[1])
         self._cx_shadow(c, t)
-        self.sim.s(t)
+        self.sim[t[0]].s(t[1])
 
     def _anti_cy_shadow(self, c, t):
-        self.sim.x(t)
+        self.sim[c[0]].x(c[1])
         self._cy_shadow(c, t)
-        self.sim.x(t)
+        self.sim[c[0]].x(c[1])
 
     def _ccz_shadow(self, c1, q2, q3):
-        self.sim.mcx([q2], q3)
-        self.sim.adjt(q3)
+        self.sim[q2[0]].mcx([q2[1]], q3[1])
+        self.sim[q3[0]].adjt(q3[1])
         self._cx_shadow(c1, q3)
-        self.sim.t(q3)
-        self.sim.mcx([q2], q3)
-        self.sim.adjt(q3)
+        self.sim[q3[0]].t(q3[1])
+        self.sim[q2[0]].mcx([q2[1]], q3[1])
+        self.sim[q3[0]].adjt(q3[1])
         self._cx_shadow(c1, q3)
-        self.sim.t(q3)
-        self.sim.t(q2)
+        self.sim[q3[0]].t(q3[1])
+        self.sim[q2[0]].t(q2[1])
         self._cx_shadow(c1, q2)
-        self.sim.adjt(q2)
-        self.sim.t(c1)
+        self.sim[q2[0]].adjt(q2[1])
+        self.sim[c1[0]].t(c1[1])
         self._cx_shadow(c1, q2)
 
-    def _ccx_shadow(self, c1, q2, q3):
-        self.sim.h(q3)
-        self._ccz_shadow(c1, q2, q3)
-        self.sim.h(q3)
+    def _ccx_shadow(self, c1, q2, t):
+        self.sim[t[0]].h(t[1])
+        self._ccz_shadow(c1, q2, t)
+        self.sim[t[0]].h(t[1])
 
-    def _unpack(self, lq, reverse=False):
+    def _unpack(self, lq):
         offset = self._hardware_offset[lq]
 
         if self._is_col_long_range[lq % self.row_length]:
-            return [offset]
+            return [self._qubit_dict[offset]]
 
-        return (
-            [offset + 2, offset + 1, offset]
-            if reverse
-            else [offset, offset + 1, offset + 2]
-        )
+        return [
+            self._qubit_dict[offset],
+            self._qubit_dict[offset + 1],
+            self._qubit_dict[offset + 2],
+        ]
 
-    def _encode(self, lq, hq, reverse=False):
-        even_row = not ((lq // self.row_length) & 1)
-        # Encode shadow-first
-        if self._is_init[lq]:
-            self._cx_shadow(hq[0], hq[2])
-        if ((not self.alternating_codes) and reverse) or (even_row == reverse):
-            self.sim.mcx([hq[2]], hq[1])
-        else:
-            self.sim.mcx([hq[0]], hq[1])
-        self._is_init[lq] = True
-
-    def _decode(self, lq, hq, reverse=False):
-        if not self._is_init[lq]:
+    def _encode_decode(self, lq, hq):
+        if len(hq) < 2:
             return
-        even_row = not ((lq // self.row_length) & 1)
-        if ((not self.alternating_codes) and reverse) or (even_row == reverse):
-            # Decode entangled-first
-            self.sim.mcx([hq[2]], hq[1])
+        if hq[0][0] == hq[1][0]:
+            b0 = hq[0]
+            self.sim[b0[0]].mcx([b0[1]], hq[1][1])
         else:
-            # Decode entangled-first
-            self.sim.mcx([hq[0]], hq[1])
-        self._cx_shadow(hq[0], hq[2])
-
-    def _encode_decode_1qb(self, lq, hq):
-        if not self.alternating_codes or not ((lq // self.row_length) & 1):
-            self.sim.mcx([hq[0]], hq[1])
-        else:
-            self.sim.mcx([hq[2]], hq[1])
+            b2 = hq[2]
+            self.sim[b2[0]].mcx([b2[1]], hq[1][1])
 
     def _correct(self, lq):
-        if not self._is_init[lq]:
+        if self._is_col_long_range[lq % self.row_length]:
             return
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
@@ -234,25 +240,31 @@ class QrackAceBackend:
 
         single_bit = 0
         other_bits = []
-        if not self.alternating_codes or not ((lq // self.row_length) & 1):
+        hq = self._unpack(lq)
+        if hq[0][0] == hq[1][0]:
             single_bit = 2
             other_bits = [0, 1]
-        else:
+        elif hq[1][0] == hq[2][0]:
             single_bit = 0
             other_bits = [1, 2]
+        else:
+            raise RuntimeError("Invalid boundary qubit!")
 
-        hq = self._unpack(lq)
+        ancilla_sim = hq[other_bits[0]][0]
+        ancilla = self._ancilla[ancilla_sim]
 
-        single_bit_value = self.sim.prob(hq[single_bit])
+        single_bit_value = self.sim[hq[single_bit][0]].prob(hq[single_bit][1])
         single_bit_polarization = max(single_bit_value, 1 - single_bit_value)
 
         # Suggestion from Elara (the custom OpenAI GPT):
         # Create phase parity tie before measurement.
-        self._ccx_shadow(hq[single_bit], hq[other_bits[0]], self._ancilla)
-        self.sim.mcx([hq[other_bits[1]]], self._ancilla)
-        self.sim.force_m(self._ancilla, False)
+        # self._ccx_shadow(hq[single_bit], hq[other_bits[0]], [ancilla_sim, ancilla])
+        # self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
+        # self.sim[ancilla_sim].force_m(ancilla, False)
 
-        samples = self.sim.measure_shots([hq[other_bits[0]], hq[other_bits[1]]], shots)
+        samples = self.sim[ancilla_sim].measure_shots(
+            [hq[other_bits[0]][1], hq[other_bits[1]][1]], shots
+        )
 
         syndrome_indices = (
             [other_bits[1], other_bits[0]]
@@ -302,31 +314,29 @@ class QrackAceBackend:
             error_bit = syndrome.index(max(syndrome))
             if error_bit == single_bit:
                 # The stand-alone bit carries the error.
-                self.sim.x(hq[error_bit])
+                self.sim[hq[error_bit][0]].x(hq[error_bit][1])
             else:
                 # The coherent bits carry the error.
                 force_syndrome = False
                 # Form their syndrome.
-                self.sim.mcx([hq[other_bits[0]]], self._ancilla)
-                self.sim.mcx([hq[other_bits[1]]], self._ancilla)
+                self.sim[ancilla_sim].mcx([hq[other_bits[0]][1]], ancilla)
+                self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
                 # Force the syndrome pathological
-                self.sim.force_m(self._ancilla, True)
+                self.sim[ancilla_sim].force_m(ancilla, True)
                 # Reset the ancilla.
-                self.sim.x(self._ancilla)
+                self.sim[ancilla_sim].x(ancilla)
                 # Correct the bit flip.
-                self.sim.x(hq[error_bit])
+                self.sim[ancilla_sim].x(hq[error_bit][1])
 
         # There is no error.
         if force_syndrome:
             # Form the syndrome of the coherent bits.
-            self.sim.mcx([hq[other_bits[0]]], self._ancilla)
-            self.sim.mcx([hq[other_bits[1]]], self._ancilla)
+            self.sim[ancilla_sim].mcx([hq[other_bits[0]][1]], ancilla)
+            self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
             # Force the syndrome non-pathological.
-            self.sim.force_m(self._ancilla, False)
+            self.sim[ancilla_sim].force_m(ancilla, False)
 
     def _correct_if_like_h(self, th, lq):
-        if not self._is_init[lq]:
-            return
         while th > math.pi:
             th -= 2 * math.pi
         while th <= -math.pi:
@@ -337,8 +347,9 @@ class QrackAceBackend:
 
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.u(hq[0], th, ph, lm)
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
         while ph > math.pi:
@@ -352,142 +363,150 @@ class QrackAceBackend:
 
         if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
             # Produces/destroys superposition
-            if self._is_init[lq]:
-                self._correct_if_like_h(th, lq)
-                self._encode_decode_1qb(lq, hq)
-            self.sim.u(hq[0], th, ph, lm)
-            self.sim.u(hq[2], th, ph, lm)
-            if self._is_init[lq]:
-                self._encode_decode_1qb(lq, hq)
-            else:
-                self._encode(lq, hq)
+            self._correct_if_like_h(th, lq)
+            self._encode_decode(lq, hq)
+            b = hq[0]
+            self.sim[b[0]].u(b[1], th, ph, lm)
+            b = hq[2]
+            self.sim[b[0]].u(b[1], th, ph, lm)
+            self._encode_decode(lq, hq)
         else:
             # Shouldn't produce/destroy superposition
             for b in hq:
-                self.sim.u(b, th, ph, lm)
+                self.sim[b[0]].u(b[1], th, ph, lm)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.r(p, th, hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].r(p, th, b[1])
             return
 
         while th > math.pi:
             th -= 2 * math.pi
         while th <= -math.pi:
             th += 2 * math.pi
-        if self._is_init[lq] and (p == Pauli.PauliY):
+        if p == Pauli.PauliY:
             self._correct_if_like_h(th, lq)
 
         if (p == Pauli.PauliZ) or math.isclose(abs(th), math.pi):
             # Doesn't produce/destroy superposition
             for b in hq:
-                self.sim.r(p, th, b)
+                self.sim[b[0]].r(p, th, b[1])
         else:
             # Produces/destroys superposition
-            if self._is_init[lq]:
-                self._encode_decode_1qb(lq, hq)
-            self.sim.r(p, th, hq[0])
-            self.sim.r(p, th, hq[2])
-            if self._is_init[lq]:
-                self._encode_decode_1qb(lq, hq)
-            else:
-                self._encode(lq, hq)
+            self._encode_decode(lq, hq)
+            b = hq[0]
+            self.sim[b[0]].r(p, th, b[1])
+            b = hq[2]
+            self.sim[b[0]].r(p, th, b[1])
+            self._encode_decode(lq, hq)
 
     def h(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.h(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].h(b[1])
             return
 
-        if self._is_init[lq]:
-            self._correct(lq)
-            self._encode_decode_1qb(lq, hq)
-        self.sim.h(hq[0])
-        self.sim.h(hq[2])
-        if self._is_init[lq]:
-            self._encode_decode_1qb(lq, hq)
-        else:
-            self._encode(lq, hq)
+        self._correct(lq)
+        self._encode_decode(lq, hq)
+        b = hq[0]
+        self.sim[b[0]].h(b[1])
+        b = hq[2]
+        self.sim[b[0]].h(b[1])
+        self._encode_decode(lq, hq)
 
     def s(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.s(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].s(b[1])
             return
 
         for b in hq:
-            self.sim.s(b)
+            self.sim[b[0]].s(b[1])
 
     def adjs(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.adjs(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].adjs(b[1])
             return
 
         for b in hq:
-            self.sim.adjs(b)
+            self.sim[b[0]].adjs(b[1])
 
     def x(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.x(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].x(b[1])
             return
 
         for b in hq:
-            self.sim.x(b)
+            self.sim[b[0]].x(b[1])
 
     def y(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.y(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].y(b[1])
             return
 
         for b in hq:
-            self.sim.y(b)
+            self.sim[b[0]].y(b[1])
 
     def z(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.z(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].z(b[1])
             return
 
         for b in hq:
-            self.sim.z(b)
+            self.sim[b[0]].z(b[1])
 
     def t(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.t(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].t(b[1])
             return
 
         for b in hq:
-            self.sim.t(b)
+            self.sim[b[0]].t(b[1])
 
     def adjt(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            self.sim.adjt(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            self.sim[b[0]].adjt(b[1])
             return
 
         for b in hq:
-            self.sim.adjt(b)
+            self.sim[b[0]].adjt(b[1])
 
-    def _cpauli(self, lq1, lq2, anti, pauli):
+    def _get_gate(self, pauli, anti, sim_id):
         gate = None
         shadow = None
         if pauli == Pauli.PauliX:
-            gate = self.sim.macx if anti else self.sim.mcx
+            gate = self.sim[sim_id].macx if anti else self.sim[sim_id].mcx
             shadow = self._anti_cx_shadow if anti else self._cx_shadow
         elif pauli == Pauli.PauliY:
-            gate = self.sim.macy if anti else self.sim.mcy
+            gate = self.sim[sim_id].macy if anti else self.sim[sim_id].mcy
             shadow = self._anti_cy_shadow if anti else self._cy_shadow
         elif pauli == Pauli.PauliZ:
-            gate = self.sim.macz if anti else self.sim.mcz
+            gate = self.sim[sim_id].macz if anti else self.sim[sim_id].mcz
             shadow = self._anti_cz_shadow if anti else self._cz_shadow
         else:
-            return
+            raise RuntimeError(
+                "QrackAceBackend._get_gate() should never return identity!"
+            )
 
+        return gate, shadow
+
+    def _cpauli(self, lq1, lq2, anti, pauli):
         lq1_lr = self._is_col_long_range[lq1 % self.row_length]
         lq2_lr = self._is_col_long_range[lq2 % self.row_length]
 
@@ -498,125 +517,90 @@ class QrackAceBackend:
 
         connected_cols = []
         c = (lq1_col - 1) % self.row_length
-        while self._is_col_long_range[c] and (len(connected_cols) < (self.row_length - 1)):
+        while self._is_col_long_range[c] and (
+            len(connected_cols) < (self.row_length - 1)
+        ):
             connected_cols.append(c)
             c = (c - 1) % self.row_length
         if len(connected_cols) < (self.row_length - 1):
             connected_cols.append(c)
         boundary = len(connected_cols)
         c = (lq1_col + 1) % self.row_length
-        while self._is_col_long_range[c] and (len(connected_cols) < (self.row_length - 1)):
+        while self._is_col_long_range[c] and (
+            len(connected_cols) < (self.row_length - 1)
+        ):
             connected_cols.append(c)
             c = (c + 1) % self.row_length
         if len(connected_cols) < (self.row_length - 1):
             connected_cols.append(c)
 
+        hq1 = self._unpack(lq1)
+        hq2 = self._unpack(lq2)
+
         if lq1_lr and lq2_lr:
+            b1 = hq1[0]
+            b2 = hq2[0]
+            gate, shadow = self._get_gate(pauli, anti, b1[0])
             if lq2_col in connected_cols:
-                gate(self._unpack(lq1), self._unpack(lq2)[0])
+                gate([b1[1]], b2[1])
             else:
-                shadow(self._unpack(lq1)[0], self._unpack(lq2)[0])
+                shadow(b1, b2)
             return
 
         self._correct(lq1)
+        self._correct(lq2)
 
-        if not self._is_init[lq1]:
-            hq1 = self._unpack(lq1)
-            hq2 = self._unpack(lq2)
-            if lq1_lr:
-                self._decode(lq2, hq2)
-                gate(hq1, hq2[0])
-                self._encode(lq2, hq2)
-            elif lq2_lr:
-                self._decode(lq1, hq1)
-                gate([hq1[0]], hq2[0])
-                self._encode(lq1, hq1)
-            else:
-                gate([hq1[0]], hq2[0])
-                gate([hq1[1]], hq2[1])
-                gate([hq1[2]], hq2[2])
-
-            return
-
-        hq1 = None
-        hq2 = None
         if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
+            # lq2_col < lq1_col
+            self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
+            b = hq1[0]
             if lq1_lr:
-                self._correct(lq2)
-                hq1 = self._unpack(lq1)
-                hq2 = self._unpack(lq2, False)
-                self._decode(lq2, hq2, False)
-                gate(hq1, hq2[0])
-                self._encode(lq2, hq2, False)
+                self._get_gate(pauli, anti, hq1[0][0])[0]([b[1]], hq2[2][1])
             elif lq2_lr:
-                hq1 = self._unpack(lq1, True)
-                hq2 = self._unpack(lq2)
-                self._decode(lq1, hq1, True)
-                gate([hq1[0]], hq2[0])
-                self._encode(lq1, hq1, True)
+                self._get_gate(pauli, anti, hq2[0][0])[0]([b[1]], hq2[0][1])
             else:
-                self._correct(lq2)
-                hq1 = self._unpack(lq1, True)
-                hq2 = self._unpack(lq2, False)
-                self._decode(lq1, hq1, True)
-                self._decode(lq2, hq2, False)
-                gate([hq1[0]], hq2[0])
-                self._encode(lq2, hq2, False)
-                self._encode(lq1, hq1, True)
+                self._get_gate(pauli, anti, b[0])[0]([b[1]], hq2[2][1])
+            self._encode_decode(lq2, hq2)
+            self._encode_decode(lq1, hq1)
         elif lq2_col in connected_cols:
+            # lq1_col < lq2_col
+            self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
+            b = hq2[0]
             if lq1_lr:
-                self._correct(lq2)
-                hq2 = self._unpack(lq2, True)
-                hq1 = self._unpack(lq1)
-                self._decode(lq2, hq2, True)
-                gate(hq1, hq2[0])
-                self._encode(lq2, hq2, True)
+                self._get_gate(pauli, anti, hq1[0][0])[0]([hq1[0][1]], b[1])
             elif lq2_lr:
-                hq2 = self._unpack(lq2)
-                hq1 = self._unpack(lq1, False)
-                self._decode(lq1, hq1, False)
-                gate([hq1[0]], hq2[0])
-                self._encode(lq1, hq1, False)
+                self._get_gate(pauli, anti, hq2[0][0])[0]([hq1[2][1]], b[1])
             else:
-                self._correct(lq2)
-                hq2 = self._unpack(lq2, True)
-                hq1 = self._unpack(lq1, False)
-                self._decode(lq2, hq2, True)
-                self._decode(lq1, hq1, False)
-                gate([hq1[0]], hq2[0])
-                self._encode(lq1, hq1, False)
-                self._encode(lq2, hq2, True)
+                self._get_gate(pauli, anti, b[0])[0]([hq1[2][1]], b[1])
+            self._encode_decode(lq2, hq2)
+            self._encode_decode(lq1, hq1)
         elif lq1_col == lq2_col:
-            hq1 = self._unpack(lq1)
-            hq2 = self._unpack(lq2)
-            if lq1_lr:
-                self._correct(lq2)
-                self._decode(lq2, hq2)
-                gate(hq1, hq2[0])
-                self._encode(lq2, hq2)
-            elif lq2_lr:
-                self._decode(lq1, hq1)
-                gate([hq1[0]], hq2[0])
-                self._encode(lq1, hq1)
+            # Both are in the same boundary column.
+            b = hq1[0]
+            gate, shadow = self._get_gate(pauli, anti, b[0])
+            gate([b[1]], hq2[0][1])
+            b = hq1[2]
+            gate, shadow = self._get_gate(pauli, anti, b[0])
+            gate([b[1]], hq2[2][1])
+            if hq1[1][0] != hq2[1][0]:
+                shadow(hq1[1], hq2[1])
             else:
-                gate([hq1[0]], hq2[0])
-                if self.alternating_codes and ((lq2_row & 1) != (lq1_row & 1)):
-                    shadow(hq1[1], hq2[1])
-                else:
-                    gate([hq1[1]], hq2[1])
-                gate([hq1[2]], hq2[2])
+                b = hq1[1]
+                gate, shadow = self._get_gate(pauli, anti, b[0])
+                gate([b[1]], hq2[1][1])
         else:
-            hq1 = self._unpack(lq1)
-            hq2 = self._unpack(lq2)
+            # The qubits have no quantum connection.
+            gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
             if lq1_lr:
-                self._correct(lq2)
-                self._decode(lq2, hq2)
+                self._encode_decode(lq2, hq2)
                 shadow(hq1[0], hq2[0])
-                self._encode(lq2, hq2)
+                self._encode_decode(lq2, hq2)
             elif lq2_lr:
-                self._decode(lq1, hq1)
+                self._encode_decode(lq1, hq1)
                 shadow(hq1[0], hq2[0])
-                self._encode(lq1, hq1)
+                self._encode_decode(lq1, hq1)
             else:
                 shadow(hq1[0], hq2[0])
                 shadow(hq1[1], hq2[1])
@@ -700,12 +684,12 @@ class QrackAceBackend:
         self.swap(lq1, lq2)
 
     def m(self, lq):
-        self._is_init[lq] = False
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            return self.sim.m(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            return self.sim[b[0]].m(b[1])
 
-        if not self.alternating_codes or not ((lq // self.row_length) & 1):
+        if hq[0][0] == hq[0][1]:
             single_bit = 2
             other_bits = [0, 1]
         else:
@@ -713,24 +697,27 @@ class QrackAceBackend:
             other_bits = [1, 2]
         # The syndrome of "other_bits" is guaranteed to be fixed, after this.
         self._correct(lq)
-        syndrome = self.sim.m(hq[other_bits[0]])
-        syndrome += self.sim.force_m(hq[other_bits[1]], bool(syndrome))
+        b = hq[other_bits[0]]
+        syndrome = self.sim[b[0]].m(b[1])
+        b = hq[other_bits[1]]
+        syndrome += self.sim[b[0]].force_m(b[1], bool(syndrome))
         # The two separable parts of the code are correlated,
         # but not non-locally, via entanglement.
         # Collapse the other separable part toward agreement.
-        syndrome += self.sim.force_m(hq[single_bit], bool(syndrome))
+        b = hq[single_bit]
+        syndrome += self.sim[b[0]].force_m(b[1], bool(syndrome))
 
         return True if (syndrome > 1) else False
 
     def force_m(self, lq, c):
         hq = self._unpack(lq)
-        self._is_init[lq] = False
-        if self._is_col_long_range[lq % self.row_length]:
-            return self.sim.force_m(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            return self.sim[b[0]].force_m(b[1])
 
         self._correct(lq)
         for q in hq:
-            self.sim.force_m(q, c)
+            self.sim[q[0]].force_m(q[1], c)
 
         return c
 
@@ -769,17 +756,20 @@ class QrackAceBackend:
 
     def prob(self, lq):
         hq = self._unpack(lq)
-        if self._is_col_long_range[lq % self.row_length]:
-            return self.sim.prob(hq[0])
+        if len(hq) < 2:
+            b = hq[0]
+            return self.sim[b[0]].prob(b[1])
 
         self._correct(lq)
         if not self.alternating_codes or not ((lq // self.row_length) & 1):
             other_bits = [0, 1]
         else:
             other_bits = [1, 2]
-        self.sim.mcx([hq[other_bits[0]]], hq[other_bits[1]])
-        result = self.sim.prob(hq[other_bits[0]])
-        self.sim.mcx([hq[other_bits[0]]], hq[other_bits[1]])
+        b0 = hq[other_bits[0]]
+        b1 = hq[other_bits[1]]
+        self.sim[b0[0]].mcx([b0[1]], b1[1])
+        result = self.sim[b0[0]].prob(b0[1])
+        self.sim[b0[0]].mcx([b0[1]], b1[1])
 
         return result
 
@@ -1135,13 +1125,17 @@ class QrackAceBackend:
         for col in range(cols):
             connected_cols = [col]
             c = (col - 1) % cols
-            while self._is_col_long_range[c] and (len(connected_cols) < self.row_length):
+            while self._is_col_long_range[c] and (
+                len(connected_cols) < self.row_length
+            ):
                 connected_cols.append(c)
                 c = (c - 1) % cols
             if len(connected_cols) < self.row_length:
                 connected_cols.append(c)
             c = (col + 1) % cols
-            while self._is_col_long_range[c] and (len(connected_cols) < self.row_length):
+            while self._is_col_long_range[c] and (
+                len(connected_cols) < self.row_length
+            ):
                 connected_cols.append(c)
                 c = (c + 1) % cols
             if len(connected_cols) < self.row_length:
@@ -1183,25 +1177,31 @@ class QrackAceBackend:
                 continue  # No noise for even-even or odd-odd within a boundary column
 
             if same_col:
-                x_cy = 1 - (1 - x)**2
-                x_swap = 1 - (1 - x)**3
-                noise_model.add_quantum_error(depolarizing_error(x, 2), 'cx', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(x_cy, 2), 'cy', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(x_cy, 2), 'cz', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(x_swap, 2), 'swap', [a, b])
+                x_cy = 1 - (1 - x) ** 2
+                x_swap = 1 - (1 - x) ** 3
+                noise_model.add_quantum_error(depolarizing_error(x, 2), "cx", [a, b])
+                noise_model.add_quantum_error(depolarizing_error(x_cy, 2), "cy", [a, b])
+                noise_model.add_quantum_error(depolarizing_error(x_cy, 2), "cz", [a, b])
+                noise_model.add_quantum_error(
+                    depolarizing_error(x_swap, 2), "swap", [a, b]
+                )
             elif is_long_a or is_long_b:
-                y_cy = 1 - (1 - y)**2
-                y_swap = 1 - (1 - y)**3
-                noise_model.add_quantum_error(depolarizing_error(y, 2), 'cx', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cy', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cz', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(y_swap, 2), 'swap', [a, b])
+                y_cy = 1 - (1 - y) ** 2
+                y_swap = 1 - (1 - y) ** 3
+                noise_model.add_quantum_error(depolarizing_error(y, 2), "cx", [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), "cy", [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), "cz", [a, b])
+                noise_model.add_quantum_error(
+                    depolarizing_error(y_swap, 2), "swap", [a, b]
+                )
             else:
-                y_cy = 1 - (1 - y)**2
-                y_swap = 1 - (1 - y)**3
-                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cx', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cy', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), 'cz', [a, b])
-                noise_model.add_quantum_error(depolarizing_error(y_swap, 2), 'swap', [a, b])
+                y_cy = 1 - (1 - y) ** 2
+                y_swap = 1 - (1 - y) ** 3
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), "cx", [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), "cy", [a, b])
+                noise_model.add_quantum_error(depolarizing_error(y_cy, 2), "cz", [a, b])
+                noise_model.add_quantum_error(
+                    depolarizing_error(y_swap, 2), "swap", [a, b]
+                )
 
         return noise_model
