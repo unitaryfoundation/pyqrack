@@ -35,8 +35,7 @@ class QrackAceBackend:
 
     The backend was originally designed assuming an (orbifolded) 2D qubit grid like 2019 Sycamore.
     However, it quickly became apparent that users can basically design their own connectivity topologies,
-    without breaking the concept. (Not all will work equally well.) For maximum flexibility, set
-    "alternating_codes=False". (For best performance on Sycamore-like topologies,leave it "True.")
+    without breaking the concept. (Not all will work equally well.)
 
     Consider distributing the different "patches" to different GPUs with self.sim[sim_id].set_device(gpu_id)!
     (If you have 3+ patches, maybe your discrete GPU can do multiple patches in the time it takes an Intel HD
@@ -44,7 +43,6 @@ class QrackAceBackend:
 
     Attributes:
         sim(QrackSimulator): Array of simulators corresponding to "patches" between boundary rows.
-        alternating_codes(bool): Alternate repetition code elision by index?
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
         long_range_columns(int): How many ideal rows between QEC boundary rows?
@@ -54,7 +52,6 @@ class QrackAceBackend:
         self,
         qubit_count=1,
         long_range_columns=-1,
-        alternating_codes=True,
         reverse_row_and_col=False,
         isTensorNetwork=False,
         isStabilizerHybrid=False,
@@ -72,7 +69,6 @@ class QrackAceBackend:
             long_range_columns = 3 if (self.row_length % 3) == 1 else 2
         self.long_range_columns = long_range_columns
 
-        self.alternating_codes = alternating_codes
         self._coupling_map = None
 
         # If there's only one or zero "False" columns,
@@ -100,24 +96,24 @@ class QrackAceBackend:
                     self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
                     tot_qubits += 1
                     sim_counts[sim_id] += 1
-                elif not self.alternating_codes or not (r & 1):
-                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
-                    tot_qubits += 1
-                    sim_counts[sim_id] += 1
-                    sim_id = (sim_id + 1) % sim_count
+                elif (r & 1):
                     for _ in range(2):
                         self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
                         tot_qubits += 1
                         sim_counts[sim_id] += 1
+                    sim_id = (sim_id + 1) % sim_count
+                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
+                    tot_qubits += 1
+                    sim_counts[sim_id] += 1
                 else:
+                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
+                    tot_qubits += 1
+                    sim_counts[sim_id] += 1
+                    sim_id = (sim_id + 1) % sim_count
                     for _ in range(2):
                         self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
                         tot_qubits += 1
                         sim_counts[sim_id] += 1
-                    sim_id = (sim_id + 1) % sim_count
-                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
-                    tot_qubits += 1
-                    sim_counts[sim_id] += 1
 
         self.sim = []
         for i in range(sim_count):
@@ -738,16 +734,23 @@ class QrackAceBackend:
         result = 0
         # Randomize the order of measurement to amortize error.
         # However, locality of collapse matters:
-        # always measure across rows, and by row directionality.
-        rows = list(range(self.col_length))
-        random.shuffle(rows)
-        for lq_row in rows:
+        # measure in row pairs, and always across rows,
+        # and by row directionality.
+        row_pairs = list(range((self.col_length + 1) // 2))
+        random.shuffle(row_pairs)
+        for row_pair in row_pairs:
             col_offset = random.randint(0, self.row_length - 1)
-            col_reverse = self.alternating_codes and (lq_row & 1)
+            lq_row = row_pair << 1
             for c in range(self.row_length):
-                lq_col = (
-                    ((self.row_length - (c + 1)) if col_reverse else c) + col_offset
-                ) % self.row_length
+                lq_col = (c + col_offset) % self.row_length
+                lq = lq_row * self.row_length + lq_col
+                if self.m(lq):
+                    result |= 1 << lq
+            lq_row += 1
+            if lq_row == self.col_length:
+                continue
+            for c in range(self.row_length):
+                lq_col = ((self.row_length - (c + 1)) + col_offset) % self.row_length
                 lq = lq_row * self.row_length + lq_col
                 if self.m(lq):
                     result |= 1 << lq
