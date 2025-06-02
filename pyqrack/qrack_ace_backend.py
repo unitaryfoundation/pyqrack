@@ -272,9 +272,9 @@ class QrackAceBackend:
 
         # Suggestion from Elara (the custom OpenAI GPT):
         # Create phase parity tie before measurement.
-        # self._ccx_shadow(hq[single_bit], hq[other_bits[0]], [ancilla_sim, ancilla])
-        # self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
-        # self.sim[ancilla_sim].force_m(ancilla, False)
+        self._ccx_shadow(hq[single_bit], hq[other_bits[0]], [ancilla_sim, ancilla])
+        self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
+        self.sim[ancilla_sim].force_m(ancilla, False)
 
         samples = self.sim[ancilla_sim].measure_shots(
             [hq[other_bits[0]][1], hq[other_bits[1]][1]], shots
