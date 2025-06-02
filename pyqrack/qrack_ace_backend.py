@@ -377,13 +377,13 @@ class QrackAceBackend:
 
         if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
             # Produces/destroys superposition
-            self._correct_if_like_h(th, lq)
             self._encode_decode(lq, hq)
             b = hq[0]
             self.sim[b[0]].u(b[1], th, ph, lm)
             b = hq[2]
             self.sim[b[0]].u(b[1], th, ph, lm)
             self._encode_decode(lq, hq)
+            self._correct_if_like_h(th, lq)
         else:
             # Shouldn't produce/destroy superposition
             for b in hq:
@@ -400,9 +400,6 @@ class QrackAceBackend:
             th -= 2 * math.pi
         while th <= -math.pi:
             th += 2 * math.pi
-        if p == Pauli.PauliY:
-            self._correct_if_like_h(th, lq)
-
         if (p == Pauli.PauliZ) or math.isclose(abs(th), math.pi):
             # Doesn't produce/destroy superposition
             for b in hq:
@@ -415,6 +412,7 @@ class QrackAceBackend:
             b = hq[2]
             self.sim[b[0]].r(p, th, b[1])
             self._encode_decode(lq, hq)
+            self._correct_if_like_h(th, lq)
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -423,13 +421,13 @@ class QrackAceBackend:
             self.sim[b[0]].h(b[1])
             return
 
-        self._correct(lq)
         self._encode_decode(lq, hq)
         b = hq[0]
         self.sim[b[0]].h(b[1])
         b = hq[2]
         self.sim[b[0]].h(b[1])
         self._encode_decode(lq, hq)
+        self._correct(lq)
 
     def s(self, lq):
         hq = self._unpack(lq)
@@ -561,9 +559,6 @@ class QrackAceBackend:
                 shadow(b1, b2)
             return
 
-        self._correct(lq1)
-        self._correct(lq2)
-
         if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             # lq2_col < lq1_col
             self._encode_decode_half(lq1, hq1, True)
@@ -620,6 +615,9 @@ class QrackAceBackend:
                 shadow(hq1[2], hq2[2])
                 self._encode_decode(lq2, hq2)
                 self._encode_decode(lq1, hq1)
+
+        self._correct(lq1)
+        self._correct(lq2)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
@@ -776,7 +774,7 @@ class QrackAceBackend:
             return self.sim[b[0]].prob(b[1])
 
         self._correct(lq)
-        if not self.alternating_codes or not ((lq // self.row_length) & 1):
+        if hq[0][0] == hq[1][0]:
             other_bits = [0, 1]
         else:
             other_bits = [1, 2]
