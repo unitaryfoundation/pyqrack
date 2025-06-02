@@ -38,8 +38,12 @@ class QrackAceBackend:
     without breaking the concept. (Not all will work equally well.) For maximum flexibility, set
     "alternating_codes=False". (For best performance on Sycamore-like topologies,leave it "True.")
 
+    Consider distributing the different "patches" to different GPUs with self.sim[sim_id].set_device(gpu_id)!
+    (If you have 3+ patches, maybe your discrete GPU can do multiple patches in the time it takes an Intel HD
+    to do one patch worth of work!)
+
     Attributes:
-        sim(QrackSimulator): Corresponding simulator.
+        sim(QrackSimulator): Array of simulators corresponding to "patches" between boundary rows.
         alternating_codes(bool): Alternate repetition code elision by index?
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
@@ -227,6 +231,16 @@ class QrackAceBackend:
             b0 = hq[0]
             self.sim[b0[0]].mcx([b0[1]], hq[1][1])
         else:
+            b2 = hq[2]
+            self.sim[b2[0]].mcx([b2[1]], hq[1][1])
+
+    def _encode_decode_half(self, lq, hq, toward_0):
+        if len(hq) < 2:
+            return
+        if toward_0 and (hq[0][0] == hq[1][0]):
+            b0 = hq[0]
+            self.sim[b0[0]].mcx([b0[1]], hq[1][1])
+        elif not toward_0 and (hq[2][0] == hq[1][0]):
             b2 = hq[2]
             self.sim[b2[0]].mcx([b2[1]], hq[1][1])
 
@@ -552,8 +566,8 @@ class QrackAceBackend:
 
         if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             # lq2_col < lq1_col
-            self._encode_decode(lq1, hq1)
-            self._encode_decode(lq2, hq2)
+            self._encode_decode_half(lq1, hq1, True)
+            self._encode_decode_half(lq2, hq2, False)
             b = hq1[0]
             if lq1_lr:
                 self._get_gate(pauli, anti, hq1[0][0])[0]([b[1]], hq2[2][1])
@@ -561,12 +575,12 @@ class QrackAceBackend:
                 self._get_gate(pauli, anti, hq2[0][0])[0]([b[1]], hq2[0][1])
             else:
                 self._get_gate(pauli, anti, b[0])[0]([b[1]], hq2[2][1])
-            self._encode_decode(lq2, hq2)
-            self._encode_decode(lq1, hq1)
+            self._encode_decode_half(lq2, hq2, False)
+            self._encode_decode_half(lq1, hq1, True)
         elif lq2_col in connected_cols:
             # lq1_col < lq2_col
-            self._encode_decode(lq1, hq1)
-            self._encode_decode(lq2, hq2)
+            self._encode_decode_half(lq1, hq1, False)
+            self._encode_decode_half(lq2, hq2, True)
             b = hq2[0]
             if lq1_lr:
                 self._get_gate(pauli, anti, hq1[0][0])[0]([hq1[0][1]], b[1])
@@ -574,37 +588,38 @@ class QrackAceBackend:
                 self._get_gate(pauli, anti, hq2[0][0])[0]([hq1[2][1]], b[1])
             else:
                 self._get_gate(pauli, anti, b[0])[0]([hq1[2][1]], b[1])
-            self._encode_decode(lq2, hq2)
-            self._encode_decode(lq1, hq1)
+            self._encode_decode_half(lq2, hq2, True)
+            self._encode_decode_half(lq1, hq1, False)
         elif lq1_col == lq2_col:
             # Both are in the same boundary column.
+            self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
             b = hq1[0]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[0][1])
             b = hq1[2]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[2][1])
-            if hq1[1][0] != hq2[1][0]:
-                shadow(hq1[1], hq2[1])
-            else:
-                b = hq1[1]
-                gate, shadow = self._get_gate(pauli, anti, b[0])
-                gate([b[1]], hq2[1][1])
         else:
             # The qubits have no quantum connection.
             gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
             if lq1_lr:
+                connected01 = (hq2[0][0] == hq2[1][0])
                 self._encode_decode(lq2, hq2)
-                shadow(hq1[0], hq2[0])
+                shadow(hq1[0], hq2[0] if connected01 else hq2[2])
                 self._encode_decode(lq2, hq2)
             elif lq2_lr:
+                connected01 = (hq1[0][0] == hq1[1][0])
                 self._encode_decode(lq1, hq1)
-                shadow(hq1[0], hq2[0])
+                shadow(hq1[0] if connected01 else hq1[2], hq2[0])
                 self._encode_decode(lq1, hq1)
             else:
+                self._encode_decode(lq1, hq1)
+                self._encode_decode(lq2, hq2)
                 shadow(hq1[0], hq2[0])
-                shadow(hq1[1], hq2[1])
                 shadow(hq1[2], hq2[2])
+                self._encode_decode(lq2, hq2)
+                self._encode_decode(lq1, hq1)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
