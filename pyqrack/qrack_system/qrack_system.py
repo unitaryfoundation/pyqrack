@@ -143,6 +143,9 @@ class QrackSystem:
         self.qrack_lib.set_concurrency.restype = None
         self.qrack_lib.set_concurrency.argtypes = [c_ulonglong, c_ulonglong]
 
+        self.qrack_lib.set_device.restype = None
+        self.qrack_lib.set_device.argtypes = [c_ulonglong, c_ulonglong]
+
         # pseudo-quantum
 
         self.qrack_lib.ProbAll.restype = None

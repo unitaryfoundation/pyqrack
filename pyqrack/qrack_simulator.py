@@ -181,7 +181,13 @@ class QrackSimulator:
         self._throw_if_error()
 
     def set_concurrency(self, p):
+        """ Set the CPU parallel thread count"""
         Qrack.qrack_lib.set_concurrency(self.sid, p)
+        self._throw_if_error()
+
+    def set_device(self, d):
+        """ Set the GPU device ID"""
+        Qrack.qrack_lib.set_concurrency(self.sid, d)
         self._throw_if_error()
 
     def clone(self):
