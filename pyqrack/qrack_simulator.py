@@ -187,7 +187,7 @@ class QrackSimulator:
 
     def set_device(self, d):
         """ Set the GPU device ID"""
-        Qrack.qrack_lib.set_concurrency(self.sid, d)
+        Qrack.qrack_lib.set_device(self.sid, d)
         self._throw_if_error()
 
     def clone(self):
