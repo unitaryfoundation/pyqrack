@@ -212,6 +212,12 @@ class QrackAceBackend:
             self.sim.mcx([hq[0]], hq[1])
         self._cx_shadow(hq[0], hq[2])
 
+    def _encode_decode_1qb(self, lq, hq):
+        if not self.alternating_codes or not ((lq // self.row_length) & 1):
+            self.sim.mcx([hq[0]], hq[1])
+        else:
+            self.sim.mcx([hq[2]], hq[1])
+
     def _correct(self, lq):
         if not self._is_init[lq]:
             return
@@ -342,11 +348,11 @@ class QrackAceBackend:
             # Produces/destroys superposition
             if self._is_init[lq]:
                 self._correct_if_like_h(th, lq)
-                self.sim.mcx([hq[0]], hq[1])
+                self._encode_decode_1qb(lq, hq)
             self.sim.u(hq[0], th, ph, lm)
             self.sim.u(hq[2], th, ph, lm)
             if self._is_init[lq]:
-                self.sim.mcx([hq[0]], hq[1])
+                self._encode_decode_1qb(lq, hq)
             else:
                 self._encode(lq, hq)
         else:
@@ -374,11 +380,11 @@ class QrackAceBackend:
         else:
             # Produces/destroys superposition
             if self._is_init[lq]:
-                self.sim.mcx([hq[0]], hq[1])
+                self._encode_decode_1qb(lq, hq)
             self.sim.r(p, th, hq[0])
             self.sim.r(p, th, hq[2])
             if self._is_init[lq]:
-                self.sim.mcx([hq[0]], hq[1])
+                self._encode_decode_1qb(lq, hq)
             else:
                 self._encode(lq, hq)
 
@@ -388,13 +394,13 @@ class QrackAceBackend:
             self.sim.h(hq[0])
             return
 
-        self._correct(lq)
         if self._is_init[lq]:
-            self.sim.mcx([hq[0]], hq[1])
+            self._correct(lq)
+            self._encode_decode_1qb(lq, hq)
         self.sim.h(hq[0])
         self.sim.h(hq[2])
         if self._is_init[lq]:
-            self.sim.mcx([hq[0]], hq[1])
+            self._encode_decode_1qb(lq, hq)
         else:
             self._encode(lq, hq)
 
