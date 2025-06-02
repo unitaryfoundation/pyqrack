@@ -3,6 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 import math
+import os
 import random
 import sys
 import time
@@ -48,7 +49,7 @@ class QrackAceBackend:
     def __init__(
         self,
         qubit_count=1,
-        long_range_columns=2,
+        long_range_columns=-1,
         alternating_codes=True,
         reverse_row_and_col=False,
         isTensorNetwork=False,
@@ -56,8 +57,6 @@ class QrackAceBackend:
         isBinaryDecisionTree=False,
         toClone=None,
     ):
-        if long_range_columns < 0:
-            long_range_columns = 0
         if qubit_count < 0:
             qubit_count = 0
         if toClone:
@@ -65,8 +64,11 @@ class QrackAceBackend:
             long_range_columns = toClone.long_range_columns
 
         self._factor_width(qubit_count, reverse_row_and_col)
-        self.alternating_codes = alternating_codes
+        if long_range_columns < 0:
+            long_range_columns = 3 if (self.row_length % 3) == 1 else 2
         self.long_range_columns = long_range_columns
+
+        self.alternating_codes = alternating_codes
         self._is_init = [False] * qubit_count
         self._coupling_map = None
 
@@ -102,6 +104,10 @@ class QrackAceBackend:
                 isBinaryDecisionTree=isBinaryDecisionTree,
             )
         )
+
+        # You can still "monkey-patch" this, after the constructor.
+        if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ:
+            self.sim.set_sdrp(0.03)
 
     def clone(self):
         return QrackAceBackend(toClone=self)
