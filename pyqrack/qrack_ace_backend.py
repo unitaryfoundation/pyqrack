@@ -381,7 +381,7 @@ class QrackAceBackend:
             b = hq[2]
             self.sim[b[0]].u(b[1], th, ph, lm)
             self._encode_decode(lq, hq)
-            self._correct(lq, True)
+            self._correct(lq)
         else:
             # Shouldn't produce/destroy superposition
             for b in hq:
@@ -410,7 +410,7 @@ class QrackAceBackend:
             b = hq[2]
             self.sim[b[0]].r(p, th, b[1])
             self._encode_decode(lq, hq)
-            self._correct(lq, True)
+            self._correct(lq)
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -425,7 +425,7 @@ class QrackAceBackend:
         b = hq[2]
         self.sim[b[0]].h(b[1])
         self._encode_decode(lq, hq)
-        self._correct(lq, True)
+        self._correct(lq)
 
     def s(self, lq):
         hq = self._unpack(lq)
