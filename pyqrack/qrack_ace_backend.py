@@ -586,9 +586,12 @@ class QrackAceBackend:
             b = hq1[0]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[0][1])
-
-            shadow(hq1[1], hq2[1])
-
+            if (lq1_row & 1) == (lq2_row & 1):
+                b = hq1[1]
+                gate, shadow = self._get_gate(pauli, anti, b[0])
+                gate([b[1]], hq2[1][1])
+            else:
+                shadow(hq1[1], hq2[1])
             b = hq1[2]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[2][1])
