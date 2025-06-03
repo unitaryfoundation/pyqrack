@@ -555,7 +555,6 @@ class QrackAceBackend:
                 shadow(b1, b2)
             return
 
-        is_shadow = False
         if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             # lq2_col < lq1_col
             self._encode_decode_half(lq1, hq1, True)
@@ -584,8 +583,6 @@ class QrackAceBackend:
             self._encode_decode_half(lq1, hq1, False)
         elif lq1_col == lq2_col:
             # Both are in the same boundary column.
-            is_shadow = True
-
             b = hq1[0]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[0][1])
@@ -597,7 +594,6 @@ class QrackAceBackend:
             gate([b[1]], hq2[2][1])
         else:
             # The qubits have no quantum connection.
-            is_shadow = True
             gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
             if lq1_lr:
                 connected01 = (hq2[0][0] == hq2[1][0])
@@ -617,12 +613,11 @@ class QrackAceBackend:
                 self._encode_decode(lq2, hq2)
                 self._encode_decode(lq1, hq1)
 
-        if is_shadow:
-            self._correct(lq1, True)
-            if pauli != Pauli.PauliZ:
-                self._correct(lq2, False)
-            if pauli != Pauli.PauliX:
-                self._correct(lq2, True)
+        self._correct(lq1, True)
+        if pauli != Pauli.PauliZ:
+            self._correct(lq2, False)
+        if pauli != Pauli.PauliX:
+            self._correct(lq2, True)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
