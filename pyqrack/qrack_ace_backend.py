@@ -253,7 +253,6 @@ class QrackAceBackend:
         hq = self._unpack(lq)
 
         if phase:
-            # We're targeting phase-flip errors, instead.
             for b in hq:
                 self.sim[b[0]].h(b[1])
 
@@ -353,7 +352,6 @@ class QrackAceBackend:
             self.sim[ancilla_sim].force_m(ancilla, False)
 
         if phase:
-            # We're targeting phase-flip errors, instead.
             for b in hq:
                 self.sim[b[0]].h(b[1])
 
@@ -616,9 +614,9 @@ class QrackAceBackend:
                 self._encode_decode(lq1, hq1)
 
         self._correct(lq1, True)
-        if pauli != pauli.PauliZ:
+        if pauli != Pauli.PauliZ
             self._correct(lq2, False)
-        if pauli != pauli.PauliX:
+        if pauli != Pauli.PauliX
             self._correct(lq2, True)
 
     def cx(self, lq1, lq2):
