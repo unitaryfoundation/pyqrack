@@ -224,21 +224,10 @@ class QrackAceBackend:
         if len(hq) < 2:
             return
         if hq[0][0] == hq[1][0]:
-            b0 = hq[0]
-            self.sim[b0[0]].mcx([b0[1]], hq[1][1])
+            b = hq[0]
         else:
-            b2 = hq[2]
-            self.sim[b2[0]].mcx([b2[1]], hq[1][1])
-
-    def _encode_decode_half(self, lq, hq, toward_0):
-        if len(hq) < 2:
-            return
-        if toward_0 and (hq[0][0] == hq[1][0]):
-            b0 = hq[0]
-            self.sim[b0[0]].mcx([b0[1]], hq[1][1])
-        elif not toward_0 and (hq[2][0] == hq[1][0]):
-            b2 = hq[2]
-            self.sim[b2[0]].mcx([b2[1]], hq[1][1])
+            b = hq[2]
+        self.sim[b[0]].mcx([b[1]], hq[1][1])
 
     def _correct(self, lq, phase=False):
         if self._is_col_long_range[lq % self.row_length]:
@@ -545,6 +534,8 @@ class QrackAceBackend:
         hq1 = self._unpack(lq1)
         hq2 = self._unpack(lq2)
 
+        self._correct(lq1)
+
         if lq1_lr and lq2_lr:
             b1 = hq1[0]
             b2 = hq2[0]
@@ -557,44 +548,46 @@ class QrackAceBackend:
 
         if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             # lq2_col < lq1_col
-            self._encode_decode_half(lq1, hq1, True)
-            self._encode_decode_half(lq2, hq2, False)
-            b = hq1[0]
+            self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
+            gate, shadow = self._get_gate(pauli, anti, hq1[0])
             if lq1_lr:
-                self._get_gate(pauli, anti, hq1[0][0])[0]([b[1]], hq2[2][1])
+                gate([hq1[0][1]], hq2[2][1])
+                shadow(hq1[0], hq2[0])
             elif lq2_lr:
-                self._get_gate(pauli, anti, hq2[0][0])[0]([b[1]], hq2[0][1])
+                gate([hq1[0][1]], hq2[0][1])
             else:
-                self._get_gate(pauli, anti, b[0])[0]([b[1]], hq2[2][1])
-            self._encode_decode_half(lq2, hq2, False)
-            self._encode_decode_half(lq1, hq1, True)
+                gate([hq1[0][1]], hq2[2][1])
+                shadow(hq1[2], hq2[0])
+            self._encode_decode(lq2, hq2)
+            self._encode_decode(lq1, hq1)
         elif lq2_col in connected_cols:
             # lq1_col < lq2_col
-            self._encode_decode_half(lq1, hq1, False)
-            self._encode_decode_half(lq2, hq2, True)
-            b = hq2[0]
+            self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
+            gate, shadow = self._get_gate(pauli, anti, hq2[0])
             if lq1_lr:
-                self._get_gate(pauli, anti, hq1[0][0])[0]([hq1[0][1]], b[1])
+                gate([hq1[0][1]], hq2[0][1])
+                shadow(hq1[0], hq2[2])
             elif lq2_lr:
-                self._get_gate(pauli, anti, hq2[0][0])[0]([hq1[2][1]], b[1])
+                gate([hq1[2][1]], hq2[0][1])
             else:
-                self._get_gate(pauli, anti, b[0])[0]([hq1[2][1]], b[1])
-            self._encode_decode_half(lq2, hq2, True)
-            self._encode_decode_half(lq1, hq1, False)
+                gate([hq1[2][1]], hq2[0][1])
+                shadow(hq1[0], hq2[2])
+            self._encode_decode(lq2, hq2)
+            self._encode_decode(lq1, hq1)
         elif lq1_col == lq2_col:
             # Both are in the same boundary column.
+            self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
             b = hq1[0]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[0][1])
-            if (lq1_row & 1) == (lq2_row & 1):
-                b = hq1[1]
-                gate, shadow = self._get_gate(pauli, anti, b[0])
-                gate([b[1]], hq2[1][1])
-            else:
-                shadow(hq1[1], hq2[1])
             b = hq1[2]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[2][1])
+            self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
         else:
             # The qubits have no quantum connection.
             gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
