@@ -371,7 +371,6 @@ class QrackAceBackend:
         b = hq[2]
         self.sim[b[0]].u(b[1], th, ph, lm)
         self._encode_decode(lq, hq)
-        self._correct(lq, False)
         self._correct(lq, True)
 
     def r(self, p, th, lq):
@@ -397,7 +396,6 @@ class QrackAceBackend:
             b = hq[2]
             self.sim[b[0]].r(p, th, b[1])
             self._encode_decode(lq, hq)
-            self._correct(lq, False)
             self._correct(lq, True)
 
     def h(self, lq):
@@ -413,7 +411,6 @@ class QrackAceBackend:
         b = hq[2]
         self.sim[b[0]].h(b[1])
         self._encode_decode(lq, hq)
-        self._correct(lq, False)
         self._correct(lq, True)
 
     def s(self, lq):
