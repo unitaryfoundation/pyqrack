@@ -240,7 +240,7 @@ class QrackAceBackend:
             b2 = hq[2]
             self.sim[b2[0]].mcx([b2[1]], hq[1][1])
 
-    def _correct(self, lq, phase=False):
+    def _correct(self, lq):
         if self._is_col_long_range[lq % self.row_length]:
             return
         # We can't use true syndrome-based error correction,
@@ -251,11 +251,6 @@ class QrackAceBackend:
         single_bit = 0
         other_bits = []
         hq = self._unpack(lq)
-
-        if phase:
-            # We're targeting phase-flip errors, instead.
-            for b in hq:
-                self.sim[b[0]].h(b[1])
 
         if hq[0][0] == hq[1][0]:
             single_bit = 2
@@ -351,11 +346,6 @@ class QrackAceBackend:
             self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
             # Force the syndrome non-pathological.
             self.sim[ancilla_sim].force_m(ancilla, False)
-
-        if phase:
-            # We're targeting phase-flip errors, instead.
-            for b in hq:
-                self.sim[b[0]].h(b[1])
 
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
@@ -615,11 +605,9 @@ class QrackAceBackend:
                 self._encode_decode(lq2, hq2)
                 self._encode_decode(lq1, hq1)
 
-        self._correct(lq1, True)
-        if pauli != pauli.PauliZ:
-            self._correct(lq2, False)
-        if pauli != pauli.PauliX:
-            self._correct(lq2, True)
+        self._correct(lq1)
+        if pauli != Pauli.PauliZ
+            self._correct(lq2)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
