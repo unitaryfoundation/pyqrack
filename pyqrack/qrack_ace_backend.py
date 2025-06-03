@@ -146,8 +146,7 @@ class QrackAceBackend:
             col_len -= 1
         row_len = width // col_len
 
-        self.col_length = row_len if reverse else col_len
-        self.row_length = col_len if reverse else row_len
+        self.col_length, self.row_length = row_len, col_len if reverse else col_len, row_len
 
     def _ct_pair_prob(self, q1, q2):
         p1 = self.sim[q1[0]].prob(q1[1])
@@ -534,8 +533,6 @@ class QrackAceBackend:
         hq1 = self._unpack(lq1)
         hq2 = self._unpack(lq2)
 
-        self._correct(lq1)
-
         if lq1_lr and lq2_lr:
             b1 = hq1[0]
             b2 = hq2[0]
@@ -545,6 +542,8 @@ class QrackAceBackend:
             else:
                 shadow(b1, b2)
             return
+
+        self._correct(lq1)
 
         if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             # lq2_col < lq1_col
