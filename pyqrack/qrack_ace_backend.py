@@ -574,11 +574,12 @@ class QrackAceBackend:
             self._encode_decode_half(lq1, hq1, False)
         elif lq1_col == lq2_col:
             # Both are in the same boundary column.
-            self._encode_decode(lq1, hq1)
-            self._encode_decode(lq2, hq2)
             b = hq1[0]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[0][1])
+
+            shadow(hq1[1], hq2[1])
+
             b = hq1[2]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[2][1])
