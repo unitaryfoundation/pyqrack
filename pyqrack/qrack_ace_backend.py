@@ -364,14 +364,28 @@ class QrackAceBackend:
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
-        # Produces/destroys superposition
-        self._encode_decode(lq, hq)
-        b = hq[0]
-        self.sim[b[0]].u(b[1], th, ph, lm)
-        b = hq[2]
-        self.sim[b[0]].u(b[1], th, ph, lm)
-        self._encode_decode(lq, hq)
-        self._correct(lq, True)
+        while ph > math.pi:
+            ph -= 2 * math.pi
+        while ph <= -math.pi:
+            ph += 2 * math.pi
+        while lm > math.pi:
+            lm -= 2 * math.pi
+        while lm <= -math.pi:
+            lm += 2 * math.pi
+
+        if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
+            # Produces/destroys superposition
+            self._encode_decode(lq, hq)
+            b = hq[0]
+            self.sim[b[0]].u(b[1], th, ph, lm)
+            b = hq[2]
+            self.sim[b[0]].u(b[1], th, ph, lm)
+            self._encode_decode(lq, hq)
+            self._correct(lq, True)
+        else:
+            # Shouldn't produce/destroy superposition
+            for b in hq:
+                self.sim[b[0]].u(b[1], th, ph, lm)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
