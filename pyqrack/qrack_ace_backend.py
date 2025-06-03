@@ -346,15 +346,6 @@ class QrackAceBackend:
             # Force the syndrome non-pathological.
             self.sim[ancilla_sim].force_m(ancilla, False)
 
-    def _correct_if_like_h(self, th, lq):
-        while th > math.pi:
-            th -= 2 * math.pi
-        while th <= -math.pi:
-            th += 2 * math.pi
-        th = abs(th)
-        if not math.isclose(th, 0):
-            self._correct(lq)
-
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -379,7 +370,7 @@ class QrackAceBackend:
             b = hq[2]
             self.sim[b[0]].u(b[1], th, ph, lm)
             self._encode_decode(lq, hq)
-            self._correct_if_like_h(th, lq)
+            self._correct(lq)
         else:
             # Shouldn't produce/destroy superposition
             for b in hq:
@@ -408,7 +399,7 @@ class QrackAceBackend:
             b = hq[2]
             self.sim[b[0]].r(p, th, b[1])
             self._encode_decode(lq, hq)
-            self._correct_if_like_h(th, lq)
+            self._correct(lq)
 
     def h(self, lq):
         hq = self._unpack(lq)
