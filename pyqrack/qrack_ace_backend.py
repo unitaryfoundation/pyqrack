@@ -591,23 +591,15 @@ class QrackAceBackend:
         else:
             # The qubits have no quantum connection.
             gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
+            self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
+            shadow(hq1[0], hq2[0])
             if lq1_lr:
-                connected01 = (hq2[0][0] == hq2[1][0])
-                self._encode_decode(lq2, hq2)
-                shadow(hq1[0], hq2[0] if connected01 else hq2[2])
-                self._encode_decode(lq2, hq2)
-            elif lq2_lr:
-                connected01 = (hq1[0][0] == hq1[1][0])
-                self._encode_decode(lq1, hq1)
-                shadow(hq1[0] if connected01 else hq1[2], hq2[0])
-                self._encode_decode(lq1, hq1)
-            else:
-                self._encode_decode(lq1, hq1)
-                self._encode_decode(lq2, hq2)
-                shadow(hq1[0], hq2[0])
+                shadow(hq1[0], hq2[2])
+            elif not lq2_lr:
                 shadow(hq1[2], hq2[2])
-                self._encode_decode(lq2, hq2)
-                self._encode_decode(lq1, hq1)
+            self._encode_decode(lq2, hq2)
+            self._encode_decode(lq1, hq1)
 
         self._correct(lq1, True)
         if pauli != Pauli.PauliZ:
