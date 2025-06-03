@@ -146,7 +146,7 @@ class QrackAceBackend:
             col_len -= 1
         row_len = width // col_len
 
-        self.col_length, self.row_length = row_len, col_len if reverse else col_len, row_len
+        self.col_length, self.row_length = (row_len, col_len) if reverse else (col_len, row_len)
 
     def _ct_pair_prob(self, q1, q2):
         p1 = self.sim[q1[0]].prob(q1[1])
