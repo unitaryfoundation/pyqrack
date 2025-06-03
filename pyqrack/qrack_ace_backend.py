@@ -240,7 +240,7 @@ class QrackAceBackend:
             b2 = hq[2]
             self.sim[b2[0]].mcx([b2[1]], hq[1][1])
 
-    def _correct(self, lq):
+    def _correct(self, lq, phase=False):
         if self._is_col_long_range[lq % self.row_length]:
             return
         # We can't use true syndrome-based error correction,
@@ -251,6 +251,12 @@ class QrackAceBackend:
         single_bit = 0
         other_bits = []
         hq = self._unpack(lq)
+
+        if phase:
+            # We're targeting phase-flip errors, instead.
+            for b in hq:
+                self.sim[b[0]].h(b[1])
+
         if hq[0][0] == hq[1][0]:
             single_bit = 2
             other_bits = [0, 1]
@@ -346,6 +352,11 @@ class QrackAceBackend:
             # Force the syndrome non-pathological.
             self.sim[ancilla_sim].force_m(ancilla, False)
 
+        if phase:
+            # We're targeting phase-flip errors, instead.
+            for b in hq:
+                self.sim[b[0]].h(b[1])
+
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -353,28 +364,15 @@ class QrackAceBackend:
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
-        while ph > math.pi:
-            ph -= 2 * math.pi
-        while ph <= -math.pi:
-            ph += 2 * math.pi
-        while lm > math.pi:
-            lm -= 2 * math.pi
-        while lm <= -math.pi:
-            lm += 2 * math.pi
-
-        if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
-            # Produces/destroys superposition
-            self._encode_decode(lq, hq)
-            b = hq[0]
-            self.sim[b[0]].u(b[1], th, ph, lm)
-            b = hq[2]
-            self.sim[b[0]].u(b[1], th, ph, lm)
-            self._encode_decode(lq, hq)
-            self._correct(lq)
-        else:
-            # Shouldn't produce/destroy superposition
-            for b in hq:
-                self.sim[b[0]].u(b[1], th, ph, lm)
+        # Produces/destroys superposition
+        self._encode_decode(lq, hq)
+        b = hq[0]
+        self.sim[b[0]].u(b[1], th, ph, lm)
+        b = hq[2]
+        self.sim[b[0]].u(b[1], th, ph, lm)
+        self._encode_decode(lq, hq)
+        self._correct(lq, False)
+        self._correct(lq, True)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
@@ -399,7 +397,8 @@ class QrackAceBackend:
             b = hq[2]
             self.sim[b[0]].r(p, th, b[1])
             self._encode_decode(lq, hq)
-            self._correct(lq)
+            self._correct(lq, False)
+            self._correct(lq, True)
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -414,7 +413,8 @@ class QrackAceBackend:
         b = hq[2]
         self.sim[b[0]].h(b[1])
         self._encode_decode(lq, hq)
-        self._correct(lq)
+        self._correct(lq, False)
+        self._correct(lq, True)
 
     def s(self, lq):
         hq = self._unpack(lq)
@@ -604,8 +604,11 @@ class QrackAceBackend:
                 self._encode_decode(lq2, hq2)
                 self._encode_decode(lq1, hq1)
 
-        self._correct(lq1)
-        self._correct(lq2)
+        self._correct(lq1, True)
+        if pauli != pauli.PauliZ:
+            self._correct(lq2, False)
+        if pauli != pauli.PauliX:
+            self._correct(lq2, True)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
