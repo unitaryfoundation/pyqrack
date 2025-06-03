@@ -550,7 +550,7 @@ class QrackAceBackend:
             # lq2_col < lq1_col
             self._encode_decode(hq1)
             self._encode_decode(hq2)
-            gate, shadow = self._get_gate(pauli, anti, hq1[0])
+            gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
             if lq1_lr:
                 gate([hq1[0][1]], hq2[2][1])
                 shadow(hq1[0], hq2[0])
@@ -565,7 +565,7 @@ class QrackAceBackend:
             # lq1_col < lq2_col
             self._encode_decode(hq1)
             self._encode_decode(hq2)
-            gate, shadow = self._get_gate(pauli, anti, hq2[0])
+            gate, shadow = self._get_gate(pauli, anti, hq2[0][0])
             if lq1_lr:
                 gate([hq1[0][1]], hq2[0][1])
                 shadow(hq1[0], hq2[2])
