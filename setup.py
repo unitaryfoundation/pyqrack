@@ -18,8 +18,9 @@ with open(README_PATH) as readme_file:
 class Build(build_py):
     def run(self):
         protoc_command = ["make", "build-deps"]
-        if subprocess.call(protoc_command) != 0:
-            sys.exit(-1)
+        if os.name != "nt":
+            if subprocess.call(protoc_command) != 0:
+                sys.exit(-1)
         super().run()
 
 
