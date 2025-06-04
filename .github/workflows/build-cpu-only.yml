@@ -19,12 +19,6 @@ jobs:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
 
-      - name: Checkout Qrack
-        uses: actions/checkout@v4
-        with:
-          repository: 'unitaryfund/qrack'
-          path: qrack
-
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
@@ -38,19 +32,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel setuptools
 
-      - name: Build Qrack Linux x86-64
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF ..
-          make qrack_pinvoke
-
       - name: Build Wheel
         run: |
           source venv/bin/activate
-          mkdir pyqrack/qrack_system/qrack_lib
-          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
@@ -69,12 +53,6 @@ jobs:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
 
-      - name: Checkout Qrack
-        uses: actions/checkout@v4
-        with:
-          repository: 'unitaryfund/qrack'
-          path: qrack
-
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
@@ -88,19 +66,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel setuptools
 
-      - name: Build Qrack Linux x86-64
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF ..
-          make qrack_pinvoke
-
       - name: Build Wheel
         run: |
           source venv/bin/activate
-          mkdir pyqrack/qrack_system/qrack_lib
-          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
@@ -118,12 +86,6 @@ jobs:
     steps:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
-
-      - name: Checkout Qrack
-        uses: actions/checkout@v4
-        with:
-          repository: 'unitaryfund/qrack'
-          path: qrack
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -143,18 +105,8 @@ jobs:
           brew upgrade rustup
           brew install cmake
 
-      - name: Build Qrack MacOS
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_RDRAND=OFF -DENABLE_OPENCL=OFF ..
-          make qrack_pinvoke
-
       - name: Build Wheel
         run: |
-          mkdir pyqrack/qrack_system/qrack_lib
-          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
@@ -174,12 +126,6 @@ jobs:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
 
-      - name: Checkout Qrack
-        uses: actions/checkout@v4
-        with:
-          repository: 'unitaryfund/qrack'
-          path: qrack
-
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -190,18 +136,8 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel setuptools
 
-      - name: Build Qrack Windows x86-64
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake .. -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF
-          cmake --build . --config Release --target qrack_pinvoke
-
       - name: Build Wheel
         run: |
-          mkdir pyqrack/qrack_system/qrack_lib
-          copy qrack/build/Release/qrack_pinvoke.dll pyqrack/qrack_system/qrack_lib/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
