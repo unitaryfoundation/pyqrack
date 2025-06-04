@@ -5,7 +5,7 @@ Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator 
 
 (**PyQrack** is just pure Qrack.)
 
-**Note, if building from source**: You must build and install [unitaryfund/qrack](https://github.com/unitaryfund/qrack) to build the `main` branch from source. CI/CD builds wheels that contain pre-compiled Qrack binaries, and that is the form published on PyPi. **You must also install OpenCL.**
+**Note: You must also install OpenCL to use this version of Qrack.** (There are also CPU-only and CUDA version.)
 
 **If you're looking for Mac ARM support, use the package `pyqrack`, not `pyqrack-cpu`.** Mac officially "deprecated" OpenCL years ago. Hence, accelerator support is not included in ARM-based Mac wheels, and OpenCL installation is **not** required on these systems, but, if you have a CUDA accelerator on ARM-based Mac, you could try the package `pyqrack-cuda` instead.
 
