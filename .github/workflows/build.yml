@@ -164,6 +164,12 @@ jobs:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
 
+      - name: Checkout Qrack
+        uses: actions/checkout@v4Add commentMore actions
+        with:
+          repository: 'unitaryfund/qrack'
+          path: qrack
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
@@ -178,8 +184,22 @@ jobs:
         run: |
           vcpkg install opencl
 
+      - name: Build Qrack Windows x86-64
+        run: |
+          cd qrack
+          mkdir build
+          cd build
+          powershell -c "Invoke-WebRequest -Uri 'https://github.com/ckormanyos/xxd/releases/download/v1.1/xxd-win64-msvc.zip' -OutFile 'xxd-win64-msvc.zip'"
+          powershell -c "Expand-Archive -Path xxd-win64-msvc.zip -DestinationPath ."
+          cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DXXD_BIN="xxd.exe" -DQBCAPPOW=8 -DCPP_STD=14
+          cmake --build . --config Release --target qrack_pinvoke qrack_cl_precompile
+
       - name: Build Wheel
         run: |
+          mkdir pyqrack/qrack_system/qrack_lib
+          mkdir pyqrack/qrack_system/qrack_cl_precompile
+          copy qrack/build/Release/qrack_pinvoke.dll pyqrack/qrack_system/qrack_lib/
+          copy qrack/build/Release/qrack_cl_precompile.exe pyqrack/qrack_system/qrack_cl_precompile/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
