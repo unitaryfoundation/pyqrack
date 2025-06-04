@@ -38,21 +38,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel setuptools
 
-      - name: Build Qrack Linux x86-64
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=14 ..
-          make qrack_pinvoke qrack_cl_precompile
-
       - name: Build Wheel
         run: |
           source venv/bin/activate
-          mkdir pyqrack/qrack_system/qrack_lib
-          mkdir pyqrack/qrack_system/qrack_cl_precompile
-          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
-          cp qrack/build/qrack_cl_precompile pyqrack/qrack_system/qrack_cl_precompile/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
@@ -90,21 +78,9 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel setuptools
 
-      - name: Build Qrack Linux x86-64
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=14 ..
-          make qrack_pinvoke qrack_cl_precompile
-
       - name: Build Wheel
         run: |
           source venv/bin/activate
-          mkdir pyqrack/qrack_system/qrack_lib
-          mkdir pyqrack/qrack_system/qrack_cl_precompile
-          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
-          cp qrack/build/qrack_cl_precompile pyqrack/qrack_system/qrack_cl_precompile/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
@@ -147,18 +123,8 @@ jobs:
           brew upgrade
           brew install cmake
 
-      - name: Build Qrack MacOS
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_RDRAND=OFF -DENABLE_OPENCL=OFF -DQBCAPPOW=8 -DCPP_STD=14 ..
-          make qrack_pinvoke
-
       - name: Build Wheel
         run: |
-          mkdir pyqrack/qrack_system/qrack_lib
-          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
@@ -201,18 +167,8 @@ jobs:
           brew upgrade
           brew install cmake
 
-      - name: Build Qrack MacOS
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          cmake -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_RDRAND=OFF -DENABLE_OPENCL=OFF -DQBCAPPOW=8 -DCPP_STD=14 ..
-          make qrack_pinvoke
-
       - name: Build Wheel
         run: |
-          mkdir pyqrack/qrack_system/qrack_lib
-          cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
@@ -252,22 +208,8 @@ jobs:
         run: |
           vcpkg install opencl
 
-      - name: Build Qrack Windows x86-64
-        run: |
-          cd qrack
-          mkdir build
-          cd build
-          powershell -c "Invoke-WebRequest -Uri 'https://github.com/ckormanyos/xxd/releases/download/v1.1/xxd-win64-msvc.zip' -OutFile 'xxd-win64-msvc.zip'"
-          powershell -c "Expand-Archive -Path xxd-win64-msvc.zip -DestinationPath ."
-          cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DXXD_BIN="xxd.exe" -DQBCAPPOW=8 -DCPP_STD=14
-          cmake --build . --config Release --target qrack_pinvoke qrack_cl_precompile
-
       - name: Build Wheel
         run: |
-          mkdir pyqrack/qrack_system/qrack_lib
-          mkdir pyqrack/qrack_system/qrack_cl_precompile
-          copy qrack/build/Release/qrack_pinvoke.dll pyqrack/qrack_system/qrack_lib/
-          copy qrack/build/Release/qrack_cl_precompile.exe pyqrack/qrack_system/qrack_cl_precompile/
           python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
 
       - name: Upload Artifacts
