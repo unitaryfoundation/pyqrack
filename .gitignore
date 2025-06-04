@@ -22,6 +22,7 @@ var/
 wheels/
 qrack/
 pyqrack/qrack_system/qrack_lib/
+pyqrack/qrack_system/qrack_cl_precompile/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
