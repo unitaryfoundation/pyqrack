@@ -20,6 +20,8 @@ parts/
 sdist/
 var/
 wheels/
+qrack/
+pyqrack/qrack_system/qrack_lib/
 pip-wheel-metadata/
 share/python-wheels/
 *.egg-info/
