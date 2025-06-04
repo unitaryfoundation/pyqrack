@@ -37,6 +37,7 @@ endif
 endif
 endif
 	mkdir pyqrack/qrack_system/qrack_lib; cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/; cd ../../..
+	mkdir pyqrack/qrack_system/qrack_cl_precompile; cp qrack/build/qrack_cl_precompile pyqrack/qrack_system/qrack_cl_precompile/; cd ../../..
 
 .PHONY: install
 install:
