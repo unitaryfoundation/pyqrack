@@ -43,8 +43,6 @@ class QrackAceBackend:
 
     Attributes:
         sim(QrackSimulator): Array of simulators corresponding to "patches" between boundary rows.
-        row_length(int): Qubits per row.
-        col_length(int): Qubits per column.
         long_range_columns(int): How many ideal rows between QEC boundary rows?
         is_transpose(bool): Rows are long if False, columns are long if True
     """
@@ -68,7 +66,7 @@ class QrackAceBackend:
 
         self._factor_width(qubit_count, is_transpose)
         if long_range_columns < 0:
-            long_range_columns = 3 if (self.row_length % 3) == 1 else 2
+            long_range_columns = 3 if (self._row_length % 3) == 1 else 2
         self.long_range_columns = long_range_columns
         self.is_transpose = is_transpose
 
@@ -77,13 +75,13 @@ class QrackAceBackend:
         # If there's only one or zero "False" columns,
         # the entire simulator is connected, anyway.
         len_col_seq = long_range_columns + 1
-        sim_count = (self.row_length + len_col_seq - 1) // len_col_seq
-        if (long_range_columns + 1) >= self.row_length:
-            self._is_col_long_range = [True] * self.row_length
+        sim_count = (self._row_length + len_col_seq - 1) // len_col_seq
+        if (long_range_columns + 1) >= self._row_length:
+            self._is_col_long_range = [True] * self._row_length
         else:
             col_seq = [True] * long_range_columns + [False]
-            self._is_col_long_range = (col_seq * sim_count)[: self.row_length]
-            if long_range_columns < self.row_length:
+            self._is_col_long_range = (col_seq * sim_count)[: self._row_length]
+            if long_range_columns < self._row_length:
                 self._is_col_long_range[-1] = False
 
         self._qubit_dict = {}
@@ -92,7 +90,7 @@ class QrackAceBackend:
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
-        for r in range(self.col_length):
+        for r in range(self._col_length):
             for c in self._is_col_long_range:
                 self._hardware_offset.append(tot_qubits)
                 if c:
@@ -141,7 +139,13 @@ class QrackAceBackend:
         return QrackAceBackend(toClone=self)
 
     def num_qubits(self):
-        return self.row_length * self.col_length
+        return self._row_length * self._col_length
+
+    def get_row_length(self):
+        return self._row_length
+
+    def get_column_length(self):
+        return self._col_length
 
     def _factor_width(self, width, is_transpose=False):
         col_len = math.floor(math.sqrt(width))
@@ -149,7 +153,7 @@ class QrackAceBackend:
             col_len -= 1
         row_len = width // col_len
 
-        self.col_length, self.row_length = (row_len, col_len) if is_transpose else (col_len, row_len)
+        self._col_length, self._row_length = (row_len, col_len) if is_transpose else (col_len, row_len)
 
     def _ct_pair_prob(self, q1, q2):
         p1 = self.sim[q1[0]].prob(q1[1])
@@ -213,7 +217,7 @@ class QrackAceBackend:
     def _unpack(self, lq):
         offset = self._hardware_offset[lq]
 
-        if self._is_col_long_range[lq % self.row_length]:
+        if self._is_col_long_range[lq % self._row_length]:
             return [self._qubit_dict[offset]]
 
         return [
@@ -232,7 +236,7 @@ class QrackAceBackend:
         self.sim[b[0]].mcx([b[1]], hq[1][1])
 
     def _correct(self, lq, phase=False):
-        if self._is_col_long_range[lq % self.row_length]:
+        if self._is_col_long_range[lq % self._row_length]:
             return
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
@@ -506,31 +510,31 @@ class QrackAceBackend:
         return gate, shadow
 
     def _cpauli(self, lq1, lq2, anti, pauli):
-        lq1_lr = self._is_col_long_range[lq1 % self.row_length]
-        lq2_lr = self._is_col_long_range[lq2 % self.row_length]
+        lq1_lr = self._is_col_long_range[lq1 % self._row_length]
+        lq2_lr = self._is_col_long_range[lq2 % self._row_length]
 
-        lq1_row = lq1 // self.row_length
-        lq1_col = lq1 % self.row_length
-        lq2_row = lq2 // self.row_length
-        lq2_col = lq2 % self.row_length
+        lq1_row = lq1 // self._row_length
+        lq1_col = lq1 % self._row_length
+        lq2_row = lq2 // self._row_length
+        lq2_col = lq2 % self._row_length
 
         connected_cols = []
-        c = (lq1_col - 1) % self.row_length
+        c = (lq1_col - 1) % self._row_length
         while self._is_col_long_range[c] and (
-            len(connected_cols) < (self.row_length - 1)
+            len(connected_cols) < (self._row_length - 1)
         ):
             connected_cols.append(c)
-            c = (c - 1) % self.row_length
-        if len(connected_cols) < (self.row_length - 1):
+            c = (c - 1) % self._row_length
+        if len(connected_cols) < (self._row_length - 1):
             connected_cols.append(c)
         boundary = len(connected_cols)
-        c = (lq1_col + 1) % self.row_length
+        c = (lq1_col + 1) % self._row_length
         while self._is_col_long_range[c] and (
-            len(connected_cols) < (self.row_length - 1)
+            len(connected_cols) < (self._row_length - 1)
         ):
             connected_cols.append(c)
-            c = (c + 1) % self.row_length
-        if len(connected_cols) < (self.row_length - 1):
+            c = (c + 1) % self._row_length
+        if len(connected_cols) < (self._row_length - 1):
             connected_cols.append(c)
 
         hq1 = self._unpack(lq1)
@@ -730,22 +734,22 @@ class QrackAceBackend:
         # However, locality of collapse matters:
         # measure in row pairs, and always across rows,
         # and by row directionality.
-        row_pairs = list(range((self.col_length + 1) // 2))
+        row_pairs = list(range((self._col_length + 1) // 2))
         random.shuffle(row_pairs)
         for row_pair in row_pairs:
-            col_offset = random.randint(0, self.row_length - 1)
+            col_offset = random.randint(0, self._row_length - 1)
             lq_row = row_pair << 1
-            for c in range(self.row_length):
-                lq_col = (c + col_offset) % self.row_length
-                lq = lq_row * self.row_length + lq_col
+            for c in range(self._row_length):
+                lq_col = (c + col_offset) % self._row_length
+                lq = lq_row * self._row_length + lq_col
                 if self.m(lq):
                     result |= 1 << lq
             lq_row += 1
-            if lq_row == self.col_length:
+            if lq_row == self._col_length:
                 continue
-            for c in range(self.row_length):
-                lq_col = ((self.row_length - (c + 1)) + col_offset) % self.row_length
-                lq = lq_row * self.row_length + lq_col
+            for c in range(self._row_length):
+                lq_col = ((self._row_length - (c + 1)) + col_offset) % self._row_length
+                lq = lq_row * self._row_length + lq_col
                 if self.m(lq):
                     result |= 1 << lq
 
@@ -1126,7 +1130,7 @@ class QrackAceBackend:
             return self._coupling_map
 
         coupling_map = set()
-        rows, cols = self.row_length, self.col_length
+        rows, cols = self._row_length, self._col_length
 
         # Map each column index to its full list of logical qubit indices
         def logical_index(row, col):
@@ -1136,19 +1140,19 @@ class QrackAceBackend:
             connected_cols = [col]
             c = (col - 1) % cols
             while self._is_col_long_range[c] and (
-                len(connected_cols) < self.row_length
+                len(connected_cols) < self._row_length
             ):
                 connected_cols.append(c)
                 c = (c - 1) % cols
-            if len(connected_cols) < self.row_length:
+            if len(connected_cols) < self._row_length:
                 connected_cols.append(c)
             c = (col + 1) % cols
             while self._is_col_long_range[c] and (
-                len(connected_cols) < self.row_length
+                len(connected_cols) < self._row_length
             ):
                 connected_cols.append(c)
                 c = (c + 1) % cols
-            if len(connected_cols) < self.row_length:
+            if len(connected_cols) < self._row_length:
                 connected_cols.append(c)
 
             for row in range(rows):
@@ -1172,8 +1176,8 @@ class QrackAceBackend:
         noise_model = NoiseModel()
 
         for a, b in self.get_logical_coupling_map():
-            col_a, col_b = a % self.row_length, b % self.row_length
-            row_a, row_b = a // self.row_length, b // self.row_length
+            col_a, col_b = a % self._row_length, b % self._row_length
+            row_a, row_b = a // self._row_length, b // self._row_length
             is_long_a = self._is_col_long_range[col_a]
             is_long_b = self._is_col_long_range[col_b]
 
