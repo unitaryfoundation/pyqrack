@@ -46,14 +46,14 @@ class QrackAceBackend:
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
         long_range_columns(int): How many ideal rows between QEC boundary rows?
-        reverse_row_and_col(bool): Rows are long if False, columns are long if True
+        is_transpose(bool): Rows are long if False, columns are long if True
     """
 
     def __init__(
         self,
         qubit_count=1,
         long_range_columns=-1,
-        reverse_row_and_col=False,
+        is_transpose=False,
         isTensorNetwork=False,
         isStabilizerHybrid=False,
         isBinaryDecisionTree=False,
@@ -64,13 +64,13 @@ class QrackAceBackend:
         if toClone:
             qubit_count = toClone.num_qubits()
             long_range_columns = toClone.long_range_columns
-            reverse_row_and_col = toClone.reverse_row_and_col
+            is_transpose = toClone.is_transpose
 
-        self._factor_width(qubit_count, reverse_row_and_col)
+        self._factor_width(qubit_count, is_transpose)
         if long_range_columns < 0:
             long_range_columns = 3 if (self.row_length % 3) == 1 else 2
         self.long_range_columns = long_range_columns
-        self.reverse_row_and_col = reverse_row_and_col
+        self.is_transpose = is_transpose
 
         self._coupling_map = None
 
@@ -143,13 +143,13 @@ class QrackAceBackend:
     def num_qubits(self):
         return self.row_length * self.col_length
 
-    def _factor_width(self, width, reverse=False):
+    def _factor_width(self, width, is_transpose=False):
         col_len = math.floor(math.sqrt(width))
         while ((width // col_len) * col_len) != width:
             col_len -= 1
         row_len = width // col_len
 
-        self.col_length, self.row_length = (row_len, col_len) if reverse else (col_len, row_len)
+        self.col_length, self.row_length = (row_len, col_len) if is_transpose else (col_len, row_len)
 
     def _ct_pair_prob(self, q1, q2):
         p1 = self.sim[q1[0]].prob(q1[1])
