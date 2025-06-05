@@ -46,6 +46,7 @@ class QrackAceBackend:
         row_length(int): Qubits per row.
         col_length(int): Qubits per column.
         long_range_columns(int): How many ideal rows between QEC boundary rows?
+        reverse_row_and_col(bool): Rows are long if False, columns are long if True
     """
 
     def __init__(
@@ -63,11 +64,13 @@ class QrackAceBackend:
         if toClone:
             qubit_count = toClone.num_qubits()
             long_range_columns = toClone.long_range_columns
+            reverse_row_and_col = toClone.reverse_row_and_col
 
         self._factor_width(qubit_count, reverse_row_and_col)
         if long_range_columns < 0:
             long_range_columns = 3 if (self.row_length % 3) == 1 else 2
         self.long_range_columns = long_range_columns
+        self.reverse_row_and_col = reverse_row_and_col
 
         self._coupling_map = None
 
