@@ -518,6 +518,29 @@ class QrackAceBackend:
         lq2_row = lq2 // self._row_length
         lq2_col = lq2 % self._row_length
 
+        hq1 = self._unpack(lq1)
+        hq2 = self._unpack(lq2)
+
+        if lq1_lr and lq2_lr:
+            connected = (lq1_col == lq2_col) or ((self.long_range_columns + 1) >= self._row_length)
+            c = (lq1_col - 1) % self._row_length
+            while not connected and self._is_col_long_range[c]:
+                connected = (lq2_col == c)
+                c = (c - 1) % self._row_length
+            c = (lq1_col + 1) % self._row_length
+            while not connected and self._is_col_long_range[c]:
+                connected = (lq2_col == c)
+                c = (c + 1) % self._row_length
+
+            b1 = hq1[0]
+            b2 = hq2[0]
+            gate, shadow = self._get_gate(pauli, anti, b1[0])
+            if connected:
+                gate([b1[1]], b2[1])
+            else:
+                shadow(b1, b2)
+            return
+
         connected_cols = []
         c = (lq1_col - 1) % self._row_length
         while self._is_col_long_range[c] and (
@@ -536,19 +559,6 @@ class QrackAceBackend:
             c = (c + 1) % self._row_length
         if len(connected_cols) < (self._row_length - 1):
             connected_cols.append(c)
-
-        hq1 = self._unpack(lq1)
-        hq2 = self._unpack(lq2)
-
-        if lq1_lr and lq2_lr:
-            b1 = hq1[0]
-            b2 = hq2[0]
-            gate, shadow = self._get_gate(pauli, anti, b1[0])
-            if lq2_col in connected_cols:
-                gate([b1[1]], b2[1])
-            else:
-                shadow(b1, b2)
-            return
 
         self._correct(lq1)
 
