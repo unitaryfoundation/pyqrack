@@ -799,38 +799,27 @@ class QrackAceBackend:
 
         self._correct(lq)
         b = hq[1]
-        syndrome = b.reset()
+        b.reset()
         if c:
             b.x()
         b = hq[0]
-        syndrome += self.sim[b[0]].force_m(b[1], c)
+        self.sim[b[0]].force_m(b[1], c)
         b = hq[2]
-        syndrome += self.sim[b[0]].force_m(b[1], c)
+        self.sim[b[0]].force_m(b[1], c)
 
         return c
 
     def m_all(self):
-        result = 0
         # Randomize the order of measurement to amortize error.
-        # However, locality of collapse matters:
-        # measure in row pairs, and always across rows,
-        # and by row directionality.
-        row_pairs = list(range((self._col_length + 1) // 2))
-        random.shuffle(row_pairs)
-        for row_pair in row_pairs:
-            col_offset = random.randint(0, self._row_length - 1)
-            lq_row = row_pair << 1
-            for c in range(self._row_length):
-                lq_col = (c + col_offset) % self._row_length
-                lq = lq_row * self._row_length + lq_col
-                if self.m(lq):
-                    result |= 1 << lq
-            lq_row += 1
-            if lq_row == self._col_length:
-                continue
-            for c in range(self._row_length):
-                lq_col = ((self._row_length - (c + 1)) + col_offset) % self._row_length
-                lq = lq_row * self._row_length + lq_col
+        result = 0
+        rows = list(range(self._col_length))
+        random.shuffle(rows)
+        for lq_row in rows:
+            row_offset = lq_row * self._row_length
+            cols = list(range(self._row_length))
+            random.shuffle(cols)
+            for lq_col in cols:
+                lq = row_offset + lq_col
                 if self.m(lq):
                     result |= 1 << lq
 
