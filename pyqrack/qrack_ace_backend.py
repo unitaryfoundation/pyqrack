@@ -236,7 +236,7 @@ class QrackAceBackend:
         self.sim[b[0]].mcx([b[1]], hq[1][1])
 
     def _correct(self, lq, phase=False):
-        if self._is_col_long_range[lq % self._row_length]:
+        if self._is_col_long_range[lq % self._row_length] or (self._row_length == 2):
             return
         # We can't use true syndrome-based error correction,
         # because one of the qubits in the code is separated.
@@ -539,6 +539,22 @@ class QrackAceBackend:
                 gate([b1[1]], b2[1])
             else:
                 shadow(b1, b2)
+            return
+
+        if self._row_length == 2:
+            self._encode_decode(hq1)
+            self._encode_decode(hq2)
+            gate, shadow = self._get_gate(pauli, anti, hq1[2][0])
+            gate([hq1[2][1]], hq2[0][1])
+            gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
+            gate([hq1[0][1]], hq2[2][1])
+            self._encode_decode(hq2)
+            self._encode_decode(hq1)
+            self._correct(lq1, True)
+            if pauli != Pauli.PauliZ:
+                self._correct(lq2, False)
+            if pauli != Pauli.PauliX:
+                self._correct(lq2, True)
             return
 
         connected_cols = []
