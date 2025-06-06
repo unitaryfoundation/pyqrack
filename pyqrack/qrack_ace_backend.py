@@ -200,10 +200,9 @@ class QrackAceBackend:
         sim_id = 0
         tot_qubits = 0
         for r in range(self._col_length):
-            r_offset = r * self._row_length
-            for c_id in range(len(self._is_col_long_range)):
+            for c in self._is_col_long_range:
                 self._hardware_offset.append(tot_qubits)
-                if self._is_col_long_range[c_id]:
+                if c:
                     self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
                     tot_qubits += 1
                     sim_counts[sim_id] += 1
@@ -212,7 +211,7 @@ class QrackAceBackend:
                     tot_qubits += 1
                     sim_counts[sim_id] += 1
 
-                    self._lhv_dict[r_offset + c_id] = LHVQubit()
+                    self._lhv_dict[tot_qubits] = LHVQubit()
                     tot_qubits += 1
 
                     sim_id = (sim_id + 1) % sim_count
@@ -332,7 +331,7 @@ class QrackAceBackend:
 
         return [
             self._qubit_dict[offset],
-            self._lhv_dict[lq],
+            self._lhv_dict[offset + 1],
             self._qubit_dict[offset + 2],
         ]
 
