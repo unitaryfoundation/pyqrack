@@ -43,15 +43,16 @@ class LHVQubit:
         self.bloch = [(x + z) / math.sqrt(2), y, (z - x) / math.sqrt(2)]
 
     def x(self):
-        self.bloch = [-self.bloch[0], -self.bloch[1], -self.bloch[2]]
+        x, y, z = self.bloch
+        self.bloch = [x, -y, -z]
 
     def z(self):
-        self.bloch[1] = -self.bloch[1]
-        self.bloch[2] = -self.bloch[2]
+        x, y, z = self.bloch
+        self.bloch = [-x, -y, z]
 
     def y(self):
-        self.x()
-        self.z()
+        x, y, z = self.bloch
+        self.bloch = [-x, y, -z]
 
     def rz(self, theta):
         # Rotate Bloch vector around Z-axis by angle theta (in radians)
