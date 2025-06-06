@@ -288,13 +288,13 @@ class QrackAceBackend:
 
     def _qec_s(self, t):
         if isinstance(t, tuple):
-            self.sim[c[0]].s(t[1])
+            self.sim[t[0]].s(t[1])
         else:
             t.s()
 
     def _qec_adjs(self, t):
         if isinstance(t, tuple):
-            self.sim[c[0]].adjs(t[1])
+            self.sim[t[0]].adjs(t[1])
         else:
             t.adjs()
 
