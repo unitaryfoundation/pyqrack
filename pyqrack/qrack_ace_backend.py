@@ -550,11 +550,6 @@ class QrackAceBackend:
             gate([hq1[0][1]], hq2[2][1])
             self._encode_decode(hq2)
             self._encode_decode(hq1)
-            self._correct(lq1, True)
-            if pauli != Pauli.PauliZ:
-                self._correct(lq2, False)
-            if pauli != Pauli.PauliX:
-                self._correct(lq2, True)
             return
 
         connected_cols = []
