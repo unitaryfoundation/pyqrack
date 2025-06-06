@@ -706,25 +706,15 @@ class QrackAceBackend:
             b = hq[0]
             return self.sim[b[0]].m(b[1])
 
-        if hq[0][0] == hq[0][1]:
-            single_bit = 2
-            other_bits = [0, 1]
-        else:
-            single_bit = 0
-            other_bits = [1, 2]
-        # The syndrome of "other_bits" is guaranteed to be fixed, after this.
-        self._correct(lq)
-        b = hq[other_bits[0]]
-        syndrome = self.sim[b[0]].m(b[1])
-        b = hq[other_bits[1]]
-        syndrome += self.sim[b[0]].force_m(b[1], bool(syndrome))
-        # The two separable parts of the code are correlated,
-        # but not non-locally, via entanglement.
-        # Collapse the other separable part toward agreement.
-        b = hq[single_bit]
-        syndrome += self.sim[b[0]].force_m(b[1], bool(syndrome))
+        result = (random.random() < self.prob(lq))
+        b = hq[0]
+        self.sim[b[0]].force_m(b[1], result)
+        b = hq[1]
+        self.sim[b[0]].force_m(b[1], result)
+        b = hq[2]
+        self.sim[b[0]].force_m(b[1], result)
 
-        return True if (syndrome > 1) else False
+        return result
 
     def force_m(self, lq, c):
         hq = self._unpack(lq)
@@ -785,15 +775,11 @@ class QrackAceBackend:
             return self.sim[b[0]].prob(b[1])
 
         self._correct(lq)
-        if hq[0][0] == hq[1][0]:
-            other_bits = [0, 1]
-        else:
-            other_bits = [1, 2]
-        b0 = hq[other_bits[0]]
-        b1 = hq[other_bits[1]]
-        self.sim[b0[0]].mcx([b0[1]], b1[1])
-        result = self.sim[b0[0]].prob(b0[1])
-        self.sim[b0[0]].mcx([b0[1]], b1[1])
+        self._encode_decode(hq)
+        b0 = hq[0]
+        b2 = hq[2]
+        result = (self.sim[b0[0]].prob(b0[1]) + self.sim[b2[0]].prob(b2[1])) / 2
+        self._encode_decode(hq)
 
         return result
 
