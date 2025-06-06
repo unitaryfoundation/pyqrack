@@ -50,6 +50,24 @@ class LHVQubit:
         x, y, z = self.bloch
         self.bloch = [x, -y, z]
 
+    def rx(self, theta):
+        # Rotate Bloch vector around X-axis by angle theta
+        x, y, z = self.bloch
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+        new_y = cos_theta * y - sin_theta * z
+        new_z = sin_theta * y + cos_theta * z
+        self.bloch = [x, new_y, new_z]
+
+    def ry(self, theta):
+        # Rotate Bloch vector around Y-axis by angle theta
+        x, y, z = self.bloch
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+        new_x = cos_theta * x + sin_theta * z
+        new_z = -sin_theta * x + cos_theta * z
+        self.bloch = [new_x, y, new_z]
+
     def rz(self, theta):
         # Rotate Bloch vector around Z-axis by angle theta (in radians)
         x, y, z = self.bloch
@@ -71,36 +89,19 @@ class LHVQubit:
     def adjt(self):
         self.rz(-math.pi / 4)
 
-    def ry(self, theta):
-        # Rotate Bloch vector around Y-axis by angle theta
-        x, y, z = self.bloch
-        cos_theta = math.cos(theta)
-        sin_theta = math.sin(theta)
-        new_x = cos_theta * x + sin_theta * z
-        new_z = -sin_theta * x + cos_theta * z
-        self.bloch = [new_x, y, new_z]
-
-    def rz(self, theta):
-        x, y, z = self.bloch
-        cos_theta = math.cos(theta)
-        sin_theta = math.sin(theta)
-        new_x = cos_theta * x - sin_theta * y
-        new_y = sin_theta * x + cos_theta * y
-        self.bloch = [new_x, new_y, z]
-
     def u(self, theta, phi, lam):
         # Apply general single-qubit unitary gate
         self.rz(lam)
         self.ry(theta)
         self.rz(phi)
 
-    def prob(self, basis='Z'):
+    def prob(self, basis=Pauli.PauliZ):
         """Sample a classical outcome from the current 'quantum' state"""
-        if basis == 'Z':
+        if basis == Pauli.PauliZ:
             prob_1 = (1 - self.bloch[2]) / 2
-        elif basis == 'X':
+        elif basis == Pauli.PauliX:
             prob_1 = (1 - self.bloch[0]) / 2
-        elif basis == 'Y':
+        elif basis == Pauli.PauliY:
             prob_1 = (1 - self.bloch[1]) / 2
         else:
             raise ValueError(f"Unsupported basis: {basis}")
@@ -112,6 +113,28 @@ class LHVQubit:
         if result:
             self.x()
         return result
+
+# Provided by Elara (the custom OpenAI GPT)
+def _cpauli_lhv(prob, targ, axis, anti, theta=math.pi):
+    """
+    Apply a 'soft' controlled-Pauli gate: rotate target qubit
+    proportionally to control's Z expectation value.
+
+    theta: full rotation angle if control in |1⟩
+    """
+    # Control influence is (1 - ctrl.bloch[2]) / 2 = P(|1⟩)
+    # BUT we avoid collapse by using the expectation value:
+    control_influence = (1 - prob) if anti else prob
+
+    effective_theta = control_influence * theta
+
+    # Apply partial rotation to target qubit:
+    if axis == Pauli.PauliX:
+        targ.rx(effective_theta)
+    elif axis == Pauli.PauliY:
+        targ.ry(effective_theta)
+    elif axis == Puali.PauliZ:
+        targ.rz(effective_theta)
 
 class QrackAceBackend:
     """A back end for elided quantum error correction
@@ -615,33 +638,32 @@ class QrackAceBackend:
             if lq1_lr:
                 gate([hq1[0][1]], hq2[2][1])
                 shadow(hq1[0], hq2[0])
-                shadow(hq1[0], hq2[1])
+                _cpauli_lhv(self.sim[hq1[0][0]].prob(hq1[0][1]), hq2[1], pauli, anti)
             elif lq2_lr:
                 gate([hq1[0][1]], hq2[0][1])
             else:
                 gate([hq1[0][1]], hq2[2][1])
                 shadow(hq1[2], hq2[0])
-                shadow(hq1[1], hq2[1])
+                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
         elif lq2_col in connected_cols:
             # lq1_col < lq2_col
             gate, shadow = self._get_gate(pauli, anti, hq2[0][0])
             if lq1_lr:
                 gate([hq1[0][1]], hq2[0][1])
                 shadow(hq1[0], hq2[2])
-                shadow(hq1[0], hq2[1])
+                _cpauli_lhv(self.sim[hq1[0][0]].prob(hq1[0][1]), hq2[1], pauli, anti)
             elif lq2_lr:
                 gate([hq1[2][1]], hq2[0][1])
             else:
                 gate([hq1[2][1]], hq2[0][1])
                 shadow(hq1[0], hq2[2])
-                shadow(hq1[1], hq2[1])
+                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
         elif lq1_col == lq2_col:
             # Both are in the same boundary column.
             b = hq1[0]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[0][1])
-            b = hq1[1]
-            shadow(b, hq2[1])
+            _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
             b = hq1[2]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[2][1])
@@ -653,7 +675,7 @@ class QrackAceBackend:
                 shadow(hq1[0], hq2[2])
                 shadow(hq1[0], hq2[1])
             elif not lq2_lr:
-                shadow(hq1[1], hq2[1])
+                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
                 shadow(hq1[2], hq2[2])
 
         self._correct(lq1)
