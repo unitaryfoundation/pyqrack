@@ -336,7 +336,7 @@ class QrackAceBackend:
         ]
 
     def _correct(self, lq, level=0):
-        if self._is_col_long_range[lq % self._row_length]:
+        if self._is_col_long_range[lq % self._row_length] or (self._row_length == 2):
             return
 
         hq = self._unpack(lq)
@@ -610,6 +610,14 @@ class QrackAceBackend:
                 shadow(b1, b2)
             return
 
+        if self._row_length == 2:
+            gate, shadow = self._get_gate(pauli, anti, hq1[2][0])
+            gate([hq1[2][1]], hq2[0][1])
+            gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
+            gate([hq1[0][1]], hq2[2][1])
+            _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
+            return
+
         connected_cols = []
         c = (lq1_col - 1) % self._row_length
         while self._is_col_long_range[c] and (
@@ -764,12 +772,11 @@ class QrackAceBackend:
             return self.sim[b[0]].prob(b[1])
 
         self._correct(lq)
-        
         b0 = hq[0]
-        b1 = hq[1]
         b2 = hq[2]
+        result = (self.sim[b0[0]].prob(b0[1]) + self.sim[b2[0]].prob(b2[1])) / 2
 
-        return (self.sim[b0[0]].prob(b0[1]) + b1.prob() + self.sim[b2[0]].prob(b2[1])) / 3
+        return result
 
     def m(self, lq):
         hq = self._unpack(lq)
@@ -777,15 +784,13 @@ class QrackAceBackend:
             b = hq[0]
             return self.sim[b[0]].m(b[1])
 
-        self._correct(lq)
-        result = random.random() < self.prob(lq)
-
+        result = (random.random() < self.prob(lq))
+        b = hq[0]
+        self.sim[b[0]].force_m(b[1], result)
         b = hq[1]
         b.reset()
         if result:
             b.x()
-        b = hq[0]
-        self.sim[b[0]].force_m(b[1], result)
         b = hq[2]
         self.sim[b[0]].force_m(b[1], result)
 
