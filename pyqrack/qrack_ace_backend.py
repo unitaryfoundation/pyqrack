@@ -654,7 +654,7 @@ class QrackAceBackend:
         if pauli != Pauli.PauliZ:
             self._correct(lq2, False)
         if pauli != Pauli.PauliX:
-            self._corrent(lq2, True)
+            self._correct(lq2, True)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
