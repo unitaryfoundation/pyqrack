@@ -27,6 +27,115 @@ except ImportError:
     _IS_QISKIT_AER_AVAILABLE = False
 
 
+# Initial stub and concept produced through conversation with Elara
+# (the custom OpenAI GPT)
+class LHVQubit:
+    def __init__(self):
+        # Initial state in "Bloch vector" terms, defaults to |0⟩
+        self.reset()
+
+    def reset(self):
+        self.bloch = [0.0, 0.0, 1.0]
+
+    def h(self):
+        # Hadamard: rotate around Y-axis then X-axis (simplified for LHV)
+        x, y, z = self.bloch
+        self.bloch = [(x + z) / math.sqrt(2), y, (z - x) / math.sqrt(2)]
+
+    def x(self):
+        x, y, z = self.bloch
+        self.bloch = [x, y, -z]
+
+    def z(self):
+        x, y, z = self.bloch
+        self.bloch = [x, -y, z]
+
+    def rx(self, theta):
+        # Rotate Bloch vector around X-axis by angle theta
+        x, y, z = self.bloch
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+        new_y = cos_theta * y - sin_theta * z
+        new_z = sin_theta * y + cos_theta * z
+        self.bloch = [x, new_y, new_z]
+
+    def ry(self, theta):
+        # Rotate Bloch vector around Y-axis by angle theta
+        x, y, z = self.bloch
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+        new_x = cos_theta * x + sin_theta * z
+        new_z = -sin_theta * x + cos_theta * z
+        self.bloch = [new_x, y, new_z]
+
+    def rz(self, theta):
+        # Rotate Bloch vector around Z-axis by angle theta (in radians)
+        x, y, z = self.bloch
+        cos_theta = math.cos(theta)
+        sin_theta = math.sin(theta)
+        new_x = cos_theta * x - sin_theta * y
+        new_y = sin_theta * x + cos_theta * y
+        self.bloch = [new_x, new_y, z]
+
+    def s(self):
+        self.rz(math.pi / 2)
+
+    def adjs(self):
+        self.rz(-math.pi / 2)
+
+    def t(self):
+        self.rz(math.pi / 4)
+
+    def adjt(self):
+        self.rz(-math.pi / 4)
+
+    def u(self, theta, phi, lam):
+        # Apply general single-qubit unitary gate
+        self.rz(lam)
+        self.ry(theta)
+        self.rz(phi)
+
+    def prob(self, basis=Pauli.PauliZ):
+        """Sample a classical outcome from the current 'quantum' state"""
+        if basis == Pauli.PauliZ:
+            prob_1 = (1 - self.bloch[2]) / 2
+        elif basis == Pauli.PauliX:
+            prob_1 = (1 - self.bloch[0]) / 2
+        elif basis == Pauli.PauliY:
+            prob_1 = (1 - self.bloch[1]) / 2
+        else:
+            raise ValueError(f"Unsupported basis: {basis}")
+        return prob_1
+
+    def m(self):
+        result = random.random() < self.prob()
+        self.reset()
+        if result:
+            self.x()
+        return result
+
+# Provided by Elara (the custom OpenAI GPT)
+def _cpauli_lhv(prob, targ, axis, anti, theta=math.pi):
+    """
+    Apply a 'soft' controlled-Pauli gate: rotate target qubit
+    proportionally to control's Z expectation value.
+
+    theta: full rotation angle if control in |1⟩
+    """
+    # Control influence is (1 - ctrl.bloch[2]) / 2 = P(|1⟩)
+    # BUT we avoid collapse by using the expectation value:
+    control_influence = (1 - prob) if anti else prob
+
+    effective_theta = control_influence * theta
+
+    # Apply partial rotation to target qubit:
+    if axis == Pauli.PauliX:
+        targ.rx(effective_theta)
+    elif axis == Pauli.PauliY:
+        targ.ry(effective_theta)
+    elif axis == Puali.PauliZ:
+        targ.rz(effective_theta)
+
 class QrackAceBackend:
     """A back end for elided quantum error correction
 
@@ -85,8 +194,8 @@ class QrackAceBackend:
                 self._is_col_long_range[-1] = False
 
         self._qubit_dict = {}
+        self._lhv_dict = {}
         self._hardware_offset = []
-        self._ancilla = [0] * sim_count
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -97,28 +206,21 @@ class QrackAceBackend:
                     self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
                     tot_qubits += 1
                     sim_counts[sim_id] += 1
-                elif (r & 1):
-                    for _ in range(2):
-                        self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
-                        tot_qubits += 1
-                        sim_counts[sim_id] += 1
-                    sim_id = (sim_id + 1) % sim_count
-                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
-                    tot_qubits += 1
-                    sim_counts[sim_id] += 1
                 else:
                     self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
                     tot_qubits += 1
                     sim_counts[sim_id] += 1
+
+                    self._lhv_dict[tot_qubits] = LHVQubit()
+                    tot_qubits += 1
+
                     sim_id = (sim_id + 1) % sim_count
-                    for _ in range(2):
-                        self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
-                        tot_qubits += 1
-                        sim_counts[sim_id] += 1
+                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
+                    tot_qubits += 1
+                    sim_counts[sim_id] += 1
 
         self.sim = []
         for i in range(sim_count):
-            self._ancilla[i] = sim_counts[i]
             sim_counts[i] += 1
             self.sim.append(
                 toClone.sim[i].clone()
@@ -156,8 +258,8 @@ class QrackAceBackend:
         self._col_length, self._row_length = (row_len, col_len) if is_transpose else (col_len, row_len)
 
     def _ct_pair_prob(self, q1, q2):
-        p1 = self.sim[q1[0]].prob(q1[1])
-        p2 = self.sim[q2[0]].prob(q2[1])
+        p1 = self.sim[q1[0]].prob(q1[1]) if isinstance(q1, tuple) else q1.prob()
+        p2 = self.sim[q2[0]].prob(q2[1]) if isinstance(q2, tuple) else q2.prob()
 
         if p1 < p2:
             return p2, q1
@@ -167,52 +269,59 @@ class QrackAceBackend:
     def _cz_shadow(self, q1, q2):
         prob_max, t = self._ct_pair_prob(q1, q2)
         if prob_max > 0.5:
-            self.sim[t[0]].z(t[1])
+            if isinstance(t, tuple):
+                self.sim[t[0]].z(t[1])
+            else:
+                t.z()
+
+    def _qec_x(self, c):
+        if isinstance(c, tuple):
+            self.sim[c[0]].x(c[1])
+        else:
+            c.x()
+
+    def _qec_h(self, t):
+        if isinstance(t, tuple):
+            self.sim[t[0]].h(t[1])
+        else:
+            t.h()
+
+    def _qec_s(self, t):
+        if isinstance(t, tuple):
+            self.sim[c[0]].s(t[1])
+        else:
+            t.s()
+
+    def _qec_adjs(self, t):
+        if isinstance(t, tuple):
+            self.sim[c[0]].adjs(t[1])
+        else:
+            t.adjs()
 
     def _anti_cz_shadow(self, c, t):
-        self.sim[c[0]].x(c[1])
+        self._qec_x(c)
         self._cz_shadow(c, t)
-        self.sim[c[0]].x(c[1])
+        self._qec_x(c)
 
     def _cx_shadow(self, c, t):
-        self.sim[t[0]].h(t[1])
+        self._qec_h(t)
         self._cz_shadow(c, t)
-        self.sim[t[0]].h(t[1])
+        self._qec_h(t)
 
     def _anti_cx_shadow(self, c, t):
-        self.sim[c[0]].x(c[1])
+        self._qec_x(c)
         self._cx_shadow(c, t)
-        self.sim[c[0]].x(c[1])
+        self._qec_x(c)
 
     def _cy_shadow(self, c, t):
-        self.sim[t[0]].adjs(t[1])
+        self._qec_adjs(t)
         self._cx_shadow(c, t)
-        self.sim[t[0]].s(t[1])
+        self._qec_s(t)
 
     def _anti_cy_shadow(self, c, t):
-        self.sim[c[0]].x(c[1])
+        self._qec_x(c)
         self._cy_shadow(c, t)
-        self.sim[c[0]].x(c[1])
-
-    def _ccz_shadow(self, c1, q2, q3):
-        self.sim[q2[0]].mcx([q2[1]], q3[1])
-        self.sim[q3[0]].adjt(q3[1])
-        self._cx_shadow(c1, q3)
-        self.sim[q3[0]].t(q3[1])
-        self.sim[q2[0]].mcx([q2[1]], q3[1])
-        self.sim[q3[0]].adjt(q3[1])
-        self._cx_shadow(c1, q3)
-        self.sim[q3[0]].t(q3[1])
-        self.sim[q2[0]].t(q2[1])
-        self._cx_shadow(c1, q2)
-        self.sim[q2[0]].adjt(q2[1])
-        self.sim[c1[0]].t(c1[1])
-        self._cx_shadow(c1, q2)
-
-    def _ccx_shadow(self, c1, q2, t):
-        self.sim[t[0]].h(t[1])
-        self._ccz_shadow(c1, q2, t)
-        self.sim[t[0]].h(t[1])
+        self._qec_x(c)
 
     def _unpack(self, lq):
         offset = self._hardware_offset[lq]
@@ -222,133 +331,43 @@ class QrackAceBackend:
 
         return [
             self._qubit_dict[offset],
-            self._qubit_dict[offset + 1],
+            self._lhv_dict[offset + 1],
             self._qubit_dict[offset + 2],
         ]
-
-    def _encode_decode(self, hq):
-        if len(hq) < 2:
-            return
-        if hq[0][0] == hq[1][0]:
-            b = hq[0]
-        else:
-            b = hq[2]
-        self.sim[b[0]].mcx([b[1]], hq[1][1])
 
     def _correct(self, lq, phase=False):
         if self._is_col_long_range[lq % self._row_length] or (self._row_length == 2):
             return
-        # We can't use true syndrome-based error correction,
-        # because one of the qubits in the code is separated.
-        # However, we can get pretty close!
-        shots = 512
 
-        single_bit = 0
-        other_bits = []
         hq = self._unpack(lq)
 
         if phase:
-            for b in hq:
-                self.sim[b[0]].h(b[1])
+            b = hq[0]
+            self.sim[b[0]].h(b[1])
+            b = hq[1]
+            b.h()
+            b = hq[2]
+            self.sim[b[0]].h(b[1])
 
-        if hq[0][0] == hq[1][0]:
-            single_bit = 2
-            other_bits = [0, 1]
-        elif hq[1][0] == hq[2][0]:
-            single_bit = 0
-            other_bits = [1, 2]
-        else:
-            raise RuntimeError("Invalid boundary qubit!")
+        p = [self.sim[hq[0][0]].prob(hq[0][1]), hq[1].prob(), self.sim[hq[2][0]].prob(hq[2][1])]
+        avg = sum(p) / 3
+        result = (avg >= 0.5)
+        syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
 
-        ancilla_sim = hq[other_bits[0]][0]
-        ancilla = self._ancilla[ancilla_sim]
-
-        single_bit_value = self.sim[hq[single_bit][0]].prob(hq[single_bit][1])
-        single_bit_polarization = max(single_bit_value, 1 - single_bit_value)
-
-        # Suggestion from Elara (the custom OpenAI GPT):
-        # Create phase parity tie before measurement.
-        # self._ccx_shadow(hq[single_bit], hq[other_bits[0]], [ancilla_sim, ancilla])
-        # self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
-        # self.sim[ancilla_sim].force_m(ancilla, False)
-
-        samples = self.sim[ancilla_sim].measure_shots(
-            [hq[other_bits[0]][1], hq[other_bits[1]][1]], shots
-        )
-
-        syndrome_indices = (
-            [other_bits[1], other_bits[0]]
-            if (single_bit_value >= 0.5)
-            else [other_bits[0], other_bits[1]]
-        )
-        syndrome = [0, 0, 0]
-        values = []
-        for sample in samples:
-            match sample:
-                case 0:
-                    value = single_bit_value
-                    syndrome[single_bit] += value
-                case 1:
-                    value = single_bit_polarization
-                    syndrome[syndrome_indices[0]] += value
-                case 2:
-                    value = single_bit_polarization
-                    syndrome[syndrome_indices[1]] += value
-                case 3:
-                    value = 1 - single_bit_value
-                    syndrome[single_bit] += value
-            values.append(value)
-
-        # Suggestion from Elara (custom OpenAI GPT):
-        # Compute the standard deviation and only correct if we're outside a confidence interval.
-        # (This helps avoid limit-point over-correction.)
-        syndrome_sum = sum(syndrome)
-        z_score_numer = syndrome_sum - shots / 2
-        z_score = 0
-        if z_score_numer > 0:
-            syndrome_component_mean = syndrome_sum / shots
-            syndrome_total_variance = sum(
-                (value - syndrome_component_mean) ** 2 for value in values
-            )
-            z_score_denom = math.sqrt(syndrome_total_variance)
-            z_score = (
-                math.inf
-                if math.isclose(z_score_denom, 0)
-                else (z_score_numer / z_score_denom)
-            )
-
-        force_syndrome = True
-        # (From Elara, this is the value that minimizes the sum of Type I and Type II error.)
-        if z_score >= (497 / 999):
-            # There is an error.
-            error_bit = syndrome.index(max(syndrome))
-            if error_bit == single_bit:
-                # The stand-alone bit carries the error.
-                self.sim[hq[error_bit][0]].x(hq[error_bit][1])
-            else:
-                # The coherent bits carry the error.
-                force_syndrome = False
-                # Form their syndrome.
-                self.sim[ancilla_sim].mcx([hq[other_bits[0]][1]], ancilla)
-                self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
-                # Force the syndrome pathological
-                self.sim[ancilla_sim].force_m(ancilla, True)
-                # Reset the ancilla.
-                self.sim[ancilla_sim].x(ancilla)
-                # Correct the bit flip.
-                self.sim[ancilla_sim].x(hq[error_bit][1])
-
-        # There is no error.
-        if force_syndrome:
-            # Form the syndrome of the coherent bits.
-            self.sim[ancilla_sim].mcx([hq[other_bits[0]][1]], ancilla)
-            self.sim[ancilla_sim].mcx([hq[other_bits[1]][1]], ancilla)
-            # Force the syndrome non-pathological.
-            self.sim[ancilla_sim].force_m(ancilla, False)
+        for q in range(3):
+            if syndrome[q] > 0.5:
+                if q == 1:
+                    hq[q].x()
+                else:
+                    self.sim[hq[q][0]].x(hq[q][1])
 
         if phase:
-            for b in hq:
-                self.sim[b[0]].h(b[1])
+            b = hq[0]
+            self.sim[b[0]].h(b[1])
+            b = hq[1]
+            b.h()
+            b = hq[2]
+            self.sim[b[0]].h(b[1])
 
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
@@ -357,28 +376,15 @@ class QrackAceBackend:
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
-        while ph > math.pi:
-            ph -= 2 * math.pi
-        while ph <= -math.pi:
-            ph += 2 * math.pi
-        while lm > math.pi:
-            lm -= 2 * math.pi
-        while lm <= -math.pi:
-            lm += 2 * math.pi
+        b = hq[0]
+        self.sim[b[0]].u(b[1], th, ph, lm)
+        b = hq[1]
+        b.u(th, ph, lm)
+        b = hq[2]
+        self.sim[b[0]].u(b[1], th, ph, lm)
 
-        if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
-            # Produces/destroys superposition
-            self._encode_decode(hq)
-            b = hq[0]
-            self.sim[b[0]].u(b[1], th, ph, lm)
-            b = hq[2]
-            self.sim[b[0]].u(b[1], th, ph, lm)
-            self._encode_decode(hq)
-            self._correct(lq)
-        else:
-            # Shouldn't produce/destroy superposition
-            for b in hq:
-                self.sim[b[0]].u(b[1], th, ph, lm)
+        self._correct(lq, False)
+        self._correct(lq, True)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
@@ -387,23 +393,22 @@ class QrackAceBackend:
             self.sim[b[0]].r(p, th, b[1])
             return
 
-        while th > math.pi:
-            th -= 2 * math.pi
-        while th <= -math.pi:
-            th += 2 * math.pi
-        if (p == Pauli.PauliZ) or math.isclose(abs(th), math.pi):
-            # Doesn't produce/destroy superposition
-            for b in hq:
-                self.sim[b[0]].r(p, th, b[1])
-        else:
-            # Produces/destroys superposition
-            self._encode_decode(hq)
-            b = hq[0]
-            self.sim[b[0]].r(p, th, b[1])
-            b = hq[2]
-            self.sim[b[0]].r(p, th, b[1])
-            self._encode_decode(hq)
-            self._correct(lq)
+        b = hq[0]
+        self.sim[b[0]].r(p, th, b[1])
+        b = hq[1]
+        if p == Pauli.PauliX:
+            b.rx(th)
+        elif p == Pauli.PauliY:
+            b.ry(th)
+        elif p == Pauli.PauliZ:
+            b.rz(th)
+        b = hq[2]
+        self.sim[b[0]].r(p, th, b[1])
+
+        if p != Pauli.PauliZ:
+            self._correct(lq, False)
+        if p != Pauli.PauliX:
+            self._correct(lq, True)
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -412,12 +417,13 @@ class QrackAceBackend:
             self.sim[b[0]].h(b[1])
             return
 
-        self._encode_decode(hq)
+        self._correct(lq)
         b = hq[0]
         self.sim[b[0]].h(b[1])
+        b = hq[1]
+        b.h()
         b = hq[2]
         self.sim[b[0]].h(b[1])
-        self._encode_decode(hq)
         self._correct(lq)
 
     def s(self, lq):
@@ -427,8 +433,12 @@ class QrackAceBackend:
             self.sim[b[0]].s(b[1])
             return
 
-        for b in hq:
-            self.sim[b[0]].s(b[1])
+        b = hq[0]
+        self.sim[b[0]].s(b[1])
+        b = hq[1]
+        b.s()
+        b = hq[2]
+        self.sim[b[0]].s(b[1])
 
     def adjs(self, lq):
         hq = self._unpack(lq)
@@ -437,8 +447,12 @@ class QrackAceBackend:
             self.sim[b[0]].adjs(b[1])
             return
 
-        for b in hq:
-            self.sim[b[0]].adjs(b[1])
+        b = hq[0]
+        self.sim[b[0]].adjs(b[1])
+        b = hq[1]
+        b.adjs()
+        b = hq[2]
+        self.sim[b[0]].adjs(b[1])
 
     def x(self, lq):
         hq = self._unpack(lq)
@@ -447,8 +461,12 @@ class QrackAceBackend:
             self.sim[b[0]].x(b[1])
             return
 
-        for b in hq:
-            self.sim[b[0]].x(b[1])
+        b = hq[0]
+        self.sim[b[0]].x(b[1])
+        b = hq[1]
+        b.x()
+        b = hq[2]
+        self.sim[b[0]].x(b[1])
 
     def y(self, lq):
         hq = self._unpack(lq)
@@ -457,8 +475,12 @@ class QrackAceBackend:
             self.sim[b[0]].y(b[1])
             return
 
-        for b in hq:
-            self.sim[b[0]].y(b[1])
+        b = hq[0]
+        self.sim[b[0]].y(b[1])
+        b = hq[1]
+        b.y()
+        b = hq[2]
+        self.sim[b[0]].y(b[1])
 
     def z(self, lq):
         hq = self._unpack(lq)
@@ -467,8 +489,12 @@ class QrackAceBackend:
             self.sim[b[0]].z(b[1])
             return
 
-        for b in hq:
-            self.sim[b[0]].z(b[1])
+        b = hq[0]
+        self.sim[b[0]].z(b[1])
+        b = hq[1]
+        b.z()
+        b = hq[2]
+        self.sim[b[0]].z(b[1])
 
     def t(self, lq):
         hq = self._unpack(lq)
@@ -477,8 +503,12 @@ class QrackAceBackend:
             self.sim[b[0]].t(b[1])
             return
 
-        for b in hq:
-            self.sim[b[0]].t(b[1])
+        b = hq[0]
+        self.sim[b[0]].t(b[1])
+        b = hq[1]
+        b.t()
+        b = hq[2]
+        self.sim[b[0]].t(b[1])
 
     def adjt(self, lq):
         hq = self._unpack(lq)
@@ -487,8 +517,12 @@ class QrackAceBackend:
             self.sim[b[0]].adjt(b[1])
             return
 
-        for b in hq:
-            self.sim[b[0]].adjt(b[1])
+        b = hq[0]
+        self.sim[b[0]].adjt(b[1])
+        b = hq[1]
+        b.adjt()
+        b = hq[2]
+        self.sim[b[0]].adjt(b[1])
 
     def _get_gate(self, pauli, anti, sim_id):
         gate = None
@@ -542,14 +576,11 @@ class QrackAceBackend:
             return
 
         if self._row_length == 2:
-            self._encode_decode(hq1)
-            self._encode_decode(hq2)
             gate, shadow = self._get_gate(pauli, anti, hq1[2][0])
             gate([hq1[2][1]], hq2[0][1])
             gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
             gate([hq1[0][1]], hq2[2][1])
-            self._encode_decode(hq2)
-            self._encode_decode(hq1)
+            _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
             return
 
         connected_cols = []
@@ -575,64 +606,55 @@ class QrackAceBackend:
 
         if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
             # lq2_col < lq1_col
-            self._encode_decode(hq1)
-            self._encode_decode(hq2)
             gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
             if lq1_lr:
                 gate([hq1[0][1]], hq2[2][1])
                 shadow(hq1[0], hq2[0])
+                _cpauli_lhv(self.sim[hq1[0][0]].prob(hq1[0][1]), hq2[1], pauli, anti)
             elif lq2_lr:
                 gate([hq1[0][1]], hq2[0][1])
             else:
                 gate([hq1[0][1]], hq2[2][1])
                 shadow(hq1[2], hq2[0])
-            self._encode_decode(hq2)
-            self._encode_decode(hq1)
+                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
         elif lq2_col in connected_cols:
             # lq1_col < lq2_col
-            self._encode_decode(hq1)
-            self._encode_decode(hq2)
             gate, shadow = self._get_gate(pauli, anti, hq2[0][0])
             if lq1_lr:
                 gate([hq1[0][1]], hq2[0][1])
                 shadow(hq1[0], hq2[2])
+                _cpauli_lhv(self.sim[hq1[0][0]].prob(hq1[0][1]), hq2[1], pauli, anti)
             elif lq2_lr:
                 gate([hq1[2][1]], hq2[0][1])
             else:
                 gate([hq1[2][1]], hq2[0][1])
                 shadow(hq1[0], hq2[2])
-            self._encode_decode(hq2)
-            self._encode_decode(hq1)
+                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
         elif lq1_col == lq2_col:
             # Both are in the same boundary column.
-            self._encode_decode(hq1)
-            self._encode_decode(hq2)
             b = hq1[0]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[0][1])
+            _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
             b = hq1[2]
             gate, shadow = self._get_gate(pauli, anti, b[0])
             gate([b[1]], hq2[2][1])
-            self._encode_decode(hq1)
-            self._encode_decode(hq2)
         else:
             # The qubits have no quantum connection.
             gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
-            self._encode_decode(hq1)
-            self._encode_decode(hq2)
             shadow(hq1[0], hq2[0])
             if lq1_lr:
                 shadow(hq1[0], hq2[2])
+                shadow(hq1[0], hq2[1])
             elif not lq2_lr:
+                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
                 shadow(hq1[2], hq2[2])
-            self._encode_decode(hq2)
-            self._encode_decode(hq1)
 
         self._correct(lq1, True)
         if pauli != Pauli.PauliZ:
             self._correct(lq2, False)
         if pauli != Pauli.PauliX:
-            self._correct(lq2, True)
+            self._corrent(lq2, True)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
@@ -711,6 +733,19 @@ class QrackAceBackend:
         self.cz(lq1, lq2)
         self.swap(lq1, lq2)
 
+    def prob(self, lq):
+        hq = self._unpack(lq)
+        if len(hq) < 2:
+            b = hq[0]
+            return self.sim[b[0]].prob(b[1])
+
+        self._correct(lq)
+        b0 = hq[0]
+        b2 = hq[2]
+        result = (self.sim[b0[0]].prob(b0[1]) + self.sim[b2[0]].prob(b2[1])) / 2
+
+        return result
+
     def m(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -721,7 +756,9 @@ class QrackAceBackend:
         b = hq[0]
         self.sim[b[0]].force_m(b[1], result)
         b = hq[1]
-        self.sim[b[0]].force_m(b[1], result)
+        b.reset()
+        if result:
+            b.x()
         b = hq[2]
         self.sim[b[0]].force_m(b[1], result)
 
@@ -734,33 +771,28 @@ class QrackAceBackend:
             return self.sim[b[0]].force_m(b[1])
 
         self._correct(lq)
-        for q in hq:
-            self.sim[q[0]].force_m(q[1], c)
+        b = hq[1]
+        b.reset()
+        if c:
+            b.x()
+        b = hq[0]
+        self.sim[b[0]].force_m(b[1], c)
+        b = hq[2]
+        self.sim[b[0]].force_m(b[1], c)
 
         return c
 
     def m_all(self):
-        result = 0
         # Randomize the order of measurement to amortize error.
-        # However, locality of collapse matters:
-        # measure in row pairs, and always across rows,
-        # and by row directionality.
-        row_pairs = list(range((self._col_length + 1) // 2))
-        random.shuffle(row_pairs)
-        for row_pair in row_pairs:
-            col_offset = random.randint(0, self._row_length - 1)
-            lq_row = row_pair << 1
-            for c in range(self._row_length):
-                lq_col = (c + col_offset) % self._row_length
-                lq = lq_row * self._row_length + lq_col
-                if self.m(lq):
-                    result |= 1 << lq
-            lq_row += 1
-            if lq_row == self._col_length:
-                continue
-            for c in range(self._row_length):
-                lq_col = ((self._row_length - (c + 1)) + col_offset) % self._row_length
-                lq = lq_row * self._row_length + lq_col
+        result = 0
+        rows = list(range(self._col_length))
+        random.shuffle(rows)
+        for lq_row in rows:
+            row_offset = lq_row * self._row_length
+            cols = list(range(self._row_length))
+            random.shuffle(cols)
+            for lq_col in cols:
+                lq = row_offset + lq_col
                 if self.m(lq):
                     result |= 1 << lq
 
@@ -778,21 +810,6 @@ class QrackAceBackend:
             samples.append(sample)
 
         return samples
-
-    def prob(self, lq):
-        hq = self._unpack(lq)
-        if len(hq) < 2:
-            b = hq[0]
-            return self.sim[b[0]].prob(b[1])
-
-        self._correct(lq)
-        self._encode_decode(hq)
-        b0 = hq[0]
-        b2 = hq[2]
-        result = (self.sim[b0[0]].prob(b0[1]) + self.sim[b2[0]].prob(b2[1])) / 2
-        self._encode_decode(hq)
-
-        return result
 
     def _apply_op(self, operation):
         name = operation.name
