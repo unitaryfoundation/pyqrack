@@ -335,28 +335,18 @@ class QrackAceBackend:
             self._qubit_dict[offset + 2],
         ]
 
-    def _correct(self, lq, level=0):
+    def _correct(self, lq, phase=False):
         if self._is_col_long_range[lq % self._row_length] or (self._row_length == 2):
             return
 
         hq = self._unpack(lq)
 
-        if level == 1:
+        if phase:
             b = hq[0]
             self.sim[b[0]].h(b[1])
             b = hq[1]
             b.h()
             b = hq[2]
-            self.sim[b[0]].h(b[1])
-        elif level == 2:
-            b = hq[0]
-            self.sim[b[0]].adjs(b[1])
-            self.sim[b[0]].h(b[1])
-            b = hq[1]
-            b.adjs()
-            b.h()
-            b = hq[2]
-            self.sim[b[0]].adjs(b[1])
             self.sim[b[0]].h(b[1])
 
         p = [self.sim[hq[0][0]].prob(hq[0][1]), hq[1].prob(), self.sim[hq[2][0]].prob(hq[2][1])]
@@ -371,26 +361,13 @@ class QrackAceBackend:
                 else:
                     self.sim[hq[q][0]].x(hq[q][1])
 
-        if level == 0:
-            self._correct(lq, 1)
-        elif level == 1:
+        if phase:
             b = hq[0]
             self.sim[b[0]].h(b[1])
             b = hq[1]
             b.h()
             b = hq[2]
             self.sim[b[0]].h(b[1])
-            self._correct(lq, 2)
-        elif level == 2:
-            b = hq[0]
-            self.sim[b[0]].h(b[1])
-            self.sim[b[0]].s(b[1])
-            b = hq[1]
-            b.h()
-            b.s()
-            b = hq[2]
-            self.sim[b[0]].h(b[1])
-            self.sim[b[0]].s(b[1])
 
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
@@ -406,18 +383,8 @@ class QrackAceBackend:
         b = hq[2]
         self.sim[b[0]].u(b[1], th, ph, lm)
 
-        while ph > math.pi:
-            ph -= 2 * math.pi
-        while ph <= -math.pi:
-            ph += 2 * math.pi
-        while lm > math.pi:
-            lm -= 2 * math.pi
-        while lm <= -math.pi:
-            lm += 2 * math.pi
-
-        if not math.isclose(ph, -lm) and not math.isclose(abs(ph), math.pi / 2):
-            # Produces/destroys superposition
-            self._correct(lq)
+        self._correct(lq, False)
+        self._correct(lq, True)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
@@ -438,13 +405,10 @@ class QrackAceBackend:
         b = hq[2]
         self.sim[b[0]].r(p, th, b[1])
 
-        while th > math.pi:
-            th -= 2 * math.pi
-        while th <= -math.pi:
-            th += 2 * math.pi
-        if not ((p == Pauli.PauliZ) or math.isclose(abs(th), math.pi)):
-            # Produces/destroys superposition
-            self._correct(lq)
+        if p != Pauli.PauliZ:
+            self._correct(lq, False)
+        if p != Pauli.PauliX:
+            self._correct(lq, True)
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -453,6 +417,7 @@ class QrackAceBackend:
             self.sim[b[0]].h(b[1])
             return
 
+        self._correct(lq)
         b = hq[0]
         self.sim[b[0]].h(b[1])
         b = hq[1]
@@ -685,8 +650,11 @@ class QrackAceBackend:
                 _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
                 shadow(hq1[2], hq2[2])
 
-        self._correct(lq1)
-        self._correct(lq2)
+        self._correct(lq1, True)
+        if pauli != Pauli.PauliZ:
+            self._correct(lq2, False)
+        if pauli != Pauli.PauliX:
+            self._corrent(lq2, True)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
