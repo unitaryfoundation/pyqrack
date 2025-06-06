@@ -133,7 +133,7 @@ def _cpauli_lhv(prob, targ, axis, anti, theta=math.pi):
         targ.rx(effective_theta)
     elif axis == Pauli.PauliY:
         targ.ry(effective_theta)
-    elif axis == Puali.PauliZ:
+    elif axis == Pauli.PauliZ:
         targ.rz(effective_theta)
 
 class QrackAceBackend:
