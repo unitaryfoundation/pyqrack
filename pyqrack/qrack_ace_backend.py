@@ -166,23 +166,23 @@ class QrackAceBackend:
     def __init__(
         self,
         qubit_count=1,
-        long_range_columns=-1,
+        long_range_columns=2,
         is_transpose=False,
         isTensorNetwork=False,
         isStabilizerHybrid=False,
         isBinaryDecisionTree=False,
         toClone=None,
     ):
-        if qubit_count < 0:
-            qubit_count = 0
         if toClone:
             qubit_count = toClone.num_qubits()
             long_range_columns = toClone.long_range_columns
             is_transpose = toClone.is_transpose
+        if qubit_count < 0:
+            qubit_count = 0
+        if long_range_columns < 0:
+            long_range_columns = 0
 
         self._factor_width(qubit_count, is_transpose)
-        if long_range_columns < 0:
-            long_range_columns = 3 if (self._row_length % 3) == 1 else 2
         self.long_range_columns = long_range_columns
         self.is_transpose = is_transpose
 
@@ -242,7 +242,7 @@ class QrackAceBackend:
 
             # You can still "monkey-patch" this, after the constructor.
             if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ:
-                self.sim[i].set_sdrp(0.03)
+                self.sim[i].set_sdrp(0.02375)
 
     def clone(self):
         return QrackAceBackend(toClone=self)
