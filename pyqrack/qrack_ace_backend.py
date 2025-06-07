@@ -192,11 +192,11 @@ class QrackAceBackend:
         if "QRACK_FPPOW" in os.environ:
             fppow = int(os.environ.get("QRACK_FPPOW"))
         if fppow < 5:
-            self._epsilon = 2**-10
+            self._epsilon = 2**-9
         elif fppow > 5:
-            self._epsilon = 2**-52
+            self._epsilon = 2**-51
         else:
-            self._epsilon = 2**-23
+            self._epsilon = 2**-22
 
         self._coupling_map = None
 
