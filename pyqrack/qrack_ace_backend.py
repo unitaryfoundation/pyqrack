@@ -357,8 +357,10 @@ class QrackAceBackend:
             self.sim[b[0]].h(b[1])
 
         p = [self.sim[hq[0][0]].prob(hq[0][1]), hq[1].prob(), self.sim[hq[2][0]].prob(hq[2][1])]
-        avg = sum(p) / 3
-        result = (avg >= 0.5)
+        # Balancing suggestion from Elara (the custom OpenAI GPT)
+        prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
+        qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
+        result = ((prms + (1 - qrms)) / 2) >= 0.5
         syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
 
         for q in range(3):
