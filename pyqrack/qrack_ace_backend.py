@@ -790,13 +790,13 @@ class QrackAceBackend:
             return self.sim[b[0]].m(b[1])
 
         p = self.prob(lq)
-        result = (random.random() < p) or ((p + self._epsilon) >= 1)
+        result = ((p + self._epsilon) >= 1) or (random.random() < p)
 
         b = hq[0]
         p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
         if p < self._epsilon:
-            if self.sim[b[0]].m(b[1], result):
-                self.sim[b[0]].x(b[1], result)
+            if self.sim[b[0]].m(b[1]):
+                self.sim[b[0]].x(b[1])
         else:
             self.sim[b[0]].force_m(b[1], result)
 
@@ -808,8 +808,8 @@ class QrackAceBackend:
         b = hq[2]
         p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
         if p < self._epsilon:
-            if self.sim[b[0]].m(b[1], result):
-                self.sim[b[0]].x(b[1], result)
+            if self.sim[b[0]].m(b[1]):
+                self.sim[b[0]].x(b[1])
         else:
             self.sim[b[0]].force_m(b[1], result)
 
