@@ -385,7 +385,7 @@ class QrackAceBackend:
         syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
 
         for q in range(3):
-            if syndrome[q] > 0.5:
+            if syndrome[q] > (0.5 + self._epsilon):
                 if q == 1:
                     hq[q].x()
                 else:
