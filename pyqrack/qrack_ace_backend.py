@@ -750,13 +750,9 @@ class QrackAceBackend:
         b0 = hq[0]
         b1 = hq[1]
         b2 = hq[2]
-        # RMS
-        p = [self.sim[b0[0]].prob(b0[1]), b1.prob(), self.sim[b2[0]].prob(b2[1])]
-        # Balancing suggestion from Elara (the custom OpenAI GPT)
-        prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
-        qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
+        result = (self.sim[b0[0]].prob(b0[1]) + b1.prob() + self.sim[b2[0]].prob(b2[1])) / 3
 
-        return (prms + (1 - qrms)) / 2
+        return result
 
     def m(self, lq):
         hq = self._unpack(lq)
