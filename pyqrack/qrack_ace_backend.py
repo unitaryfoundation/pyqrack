@@ -30,9 +30,12 @@ except ImportError:
 # Initial stub and concept produced through conversation with Elara
 # (the custom OpenAI GPT)
 class LHVQubit:
-    def __init__(self):
+    def __init__(self, toClone=None):
         # Initial state in "Bloch vector" terms, defaults to |0⟩
-        self.reset()
+        if toClone:
+            self.bloch = toClone.bloch.copy()
+        else:
+            self.reset()
 
     def reset(self):
         self.bloch = [0.0, 0.0, 1.0]
@@ -45,6 +48,10 @@ class LHVQubit:
     def x(self):
         x, y, z = self.bloch
         self.bloch = [x, y, -z]
+
+    def y(self):
+        x, y, z = self.bloch
+        self.bloch = [-x, y, z]
 
     def z(self):
         x, y, z = self.bloch
@@ -211,7 +218,7 @@ class QrackAceBackend:
                     tot_qubits += 1
                     sim_counts[sim_id] += 1
 
-                    self._lhv_dict[tot_qubits] = LHVQubit()
+                    self._lhv_dict[tot_qubits] = LHVQubit(toClone = toClone._lhv_dict[tot_qubits] if toClone else None)
                     tot_qubits += 1
 
                     sim_id = (sim_id + 1) % sim_count
@@ -741,8 +748,9 @@ class QrackAceBackend:
 
         self._correct(lq)
         b0 = hq[0]
+        b1 = hq[1]
         b2 = hq[2]
-        result = (self.sim[b0[0]].prob(b0[1]) + self.sim[b2[0]].prob(b2[1])) / 2
+        result = (self.sim[b0[0]].prob(b0[1]) + b1.prob() + self.sim[b2[0]].prob(b2[1])) / 3
 
         return result
 
