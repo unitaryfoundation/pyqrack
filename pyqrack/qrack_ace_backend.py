@@ -795,7 +795,7 @@ class QrackAceBackend:
         b = hq[0]
         p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
         if p < self._epsilon:
-            if self.sim[b[0]].m(b[1]):
+            if self.sim[b[0]].m(b[1]) != result:
                 self.sim[b[0]].x(b[1])
         else:
             self.sim[b[0]].force_m(b[1], result)
@@ -808,7 +808,7 @@ class QrackAceBackend:
         b = hq[2]
         p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
         if p < self._epsilon:
-            if self.sim[b[0]].m(b[1]):
+            if self.sim[b[0]].m(b[1]) != result:
                 self.sim[b[0]].x(b[1])
         else:
             self.sim[b[0]].force_m(b[1], result)
