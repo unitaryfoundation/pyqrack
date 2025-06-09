@@ -171,8 +171,17 @@ class QrackAceBackend:
         long_range_columns=2,
         is_transpose=False,
         isTensorNetwork=False,
+        isSchmidtDecomposeMulti=False,
+        isSchmidtDecompose=True,
         isStabilizerHybrid=False,
         isBinaryDecisionTree=False,
+        isPaged=True,
+        isCpuGpuHybrid=True,
+        isOpenCL=True,
+        isHostPointer=(
+            True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False
+        ),
+        noise=0,
         toClone=None,
     ):
         if toClone:
@@ -242,15 +251,21 @@ class QrackAceBackend:
 
         self.sim = []
         for i in range(sim_count):
-            sim_counts[i] += 1
             self.sim.append(
                 toClone.sim[i].clone()
                 if toClone
                 else QrackSimulator(
                     sim_counts[i],
                     isTensorNetwork=isTensorNetwork,
+                    isSchmidtDecomposeMulti=isSchmidtDecomposeMulti,
+                    isSchmidtDecompose=isSchmidtDecompose,
                     isStabilizerHybrid=isStabilizerHybrid,
                     isBinaryDecisionTree=isBinaryDecisionTree,
+                    isPaged=isPaged,
+                    isCpuGpuHybrid=isCpuGpuHybrid,
+                    isOpenCL=isOpenCL,
+                    isHostPointer=isHostPointer,
+                    noise=noise,
                 )
             )
 
