@@ -168,8 +168,8 @@ class QrackAceBackend:
     def __init__(
         self,
         qubit_count=1,
-        long_range_rows=2,
         long_range_columns=5,
+        long_range_rows=2,
         is_transpose=False,
         isTensorNetwork=False,
         isSchmidtDecomposeMulti=False,
@@ -677,7 +677,7 @@ class QrackAceBackend:
         return gate, shadow
 
     def _get_connected(self, i, is_row):
-        long_rage = self._is_row_long_range if is_row else self._is_col_long_range
+        long_range = self._is_row_long_range if is_row else self._is_col_long_range
         length = self._col_length if is_row else self._row_length
 
         connected = [i]
@@ -1354,9 +1354,7 @@ class QrackAceBackend:
             if is_long_a and is_long_b:
                 continue  # No noise on long-to-long
 
-            same_col = col_a == col_b
-
-            if same_col:
+            if (col_a == col_b) or (row_a == row_b):
                 continue  # No noise for same column
 
             if is_long_a or is_long_b:
