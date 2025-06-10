@@ -728,28 +728,6 @@ class QrackAceBackend:
         lq1_lr = len(hq1) == 1
         lq2_lr = len(hq2) == 1
 
-        if lq1_lr and lq2_lr:
-            connected = (lq1_col == lq2_col) or (
-                (self.long_range_columns + 1) >= self._row_length
-            )
-            c = (lq1_col - 1) % self._row_length
-            while not connected and self._is_col_long_range[c]:
-                connected = lq2_col == c
-                c = (c - 1) % self._row_length
-            c = (lq1_col + 1) % self._row_length
-            while not connected and self._is_col_long_range[c]:
-                connected = lq2_col == c
-                c = (c + 1) % self._row_length
-
-            b1 = hq1[0]
-            b2 = hq2[0]
-            gate, shadow = self._get_gate(pauli, anti, b1[0])
-            if connected:
-                gate([b1[1]], b2[1])
-            else:
-                shadow(b1, b2)
-            return
-
         self._correct(lq1)
 
         qb1, lhv1 = self._get_qb_lhv_indices(hq1)
