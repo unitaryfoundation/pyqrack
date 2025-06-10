@@ -709,7 +709,11 @@ class QrackAceBackend:
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
                     gate_fn([b1[1]], b2[1])
-                elif lq1_lr or (b1 == b2) or ((len(qb1) == 2) and (b1 == (b2 & 1))):
+                elif (
+                    lq1_lr
+                    or (b1[1] == b2[1])
+                    or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1)))
+                ):
                     shadow_fn(b1, b2)
 
     def _cpauli(self, lq1, lq2, anti, pauli):
