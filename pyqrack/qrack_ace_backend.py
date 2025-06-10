@@ -168,7 +168,8 @@ class QrackAceBackend:
     def __init__(
         self,
         qubit_count=1,
-        long_range_columns=2,
+        long_range_rows=2,
+        long_range_columns=5,
         is_transpose=False,
         isTensorNetwork=False,
         isSchmidtDecomposeMulti=False,
@@ -187,6 +188,7 @@ class QrackAceBackend:
         if toClone:
             qubit_count = toClone.num_qubits()
             long_range_columns = toClone.long_range_columns
+            long_range_rows = toClone.long_range_rows
             is_transpose = toClone.is_transpose
         if qubit_count < 0:
             qubit_count = 0
@@ -195,6 +197,7 @@ class QrackAceBackend:
 
         self._factor_width(qubit_count, is_transpose)
         self.long_range_columns = long_range_columns
+        self.long_range_rows = long_range_rows
         self.is_transpose = is_transpose
 
         fppow = 5
@@ -209,45 +212,68 @@ class QrackAceBackend:
 
         self._coupling_map = None
 
-        # If there's only one or zero "False" columns,
+        # If there's only one or zero "False" columns or rows,
         # the entire simulator is connected, anyway.
         len_col_seq = long_range_columns + 1
-        sim_count = (self._row_length + len_col_seq - 1) // len_col_seq
-        if (long_range_columns + 1) >= self._row_length:
+        col_patch_count = (self._row_length + len_col_seq - 1) // len_col_seq
+        if (self._row_length < 3) or ((long_range_columns + 1) >= self._row_length):
             self._is_col_long_range = [True] * self._row_length
         else:
             col_seq = [True] * long_range_columns + [False]
-            self._is_col_long_range = (col_seq * sim_count)[: self._row_length]
+            self._is_col_long_range = (col_seq * col_patch_count)[: self._row_length]
             if long_range_columns < self._row_length:
                 self._is_col_long_range[-1] = False
+        len_row_seq = long_range_rows + 1
+        row_patch_count = (self._col_length + len_row_seq - 1) // len_row_seq
+        if (self._col_length < 3) or ((long_range_rows + 1) >= self._col_length):
+            self._is_row_long_range = [True] * self._col_length
+        else:
+            row_seq = [True] * long_range_rows + [False]
+            self._is_row_long_range = (row_seq * row_patch_count)[: self._col_length]
+            if long_range_rows < self._col_length:
+                self._is_row_long_range[-1] = False
+        sim_count = col_patch_count * row_patch_count
+        self._row_offset = 0
+        for r in range(self._col_length):
+            for c in self._is_col_long_range:
+                self._row_offset += 1 if c else 3
 
         self._qubit_dict = {}
-        self._lhv_dict = {}
-        self._hardware_offset = []
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
-        for r in range(self._col_length):
+        for r in self._is_row_long_range:
             for c in self._is_col_long_range:
-                self._hardware_offset.append(tot_qubits)
-                if c:
-                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
-                    tot_qubits += 1
-                    sim_counts[sim_id] += 1
-                else:
-                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
-                    tot_qubits += 1
-                    sim_counts[sim_id] += 1
+                qubit = [(sim_id, sim_counts[sim_id])]
+                sim_counts[sim_id] += 1
 
-                    self._lhv_dict[tot_qubits] = LHVQubit(
-                        toClone=toClone._lhv_dict[tot_qubits] if toClone else None
+                if (not c) or (not r):
+                    t_sim_id = (sim_id + 1) % sim_count
+                    qubit.append((t_sim_id, sim_counts[t_sim_id]))
+                    sim_counts[t_sim_id] += 1
+
+                    qubit.append(
+                        LHVQubit(
+                            toClone=(
+                                toClone._qubit_dict[tot_qubits][2] if toClone else None
+                            )
+                        )
                     )
-                    tot_qubits += 1
 
+                if (not c) and (not r):
+                    t_sim_id = (sim_id + col_patch_count) % sim_count
+                    qubit.append((t_sim_id, sim_counts[t_sim_id]))
+                    sim_counts[t_sim_id] += 1
+
+                    t_sim_id = (t_sim_id + 1) % sim_count
+                    qubit.append((t_sim_id, sim_counts[t_sim_id]))
+                    sim_counts[t_sim_id] += 1
+
+                if not c:
                     sim_id = (sim_id + 1) % sim_count
-                    self._qubit_dict[tot_qubits] = (sim_id, sim_counts[sim_id])
-                    tot_qubits += 1
-                    sim_counts[sim_id] += 1
+
+                self._qubit_dict[tot_qubits] = qubit
+                tot_qubits += 1
 
         self.sim = []
         for i in range(sim_count):
@@ -362,57 +388,97 @@ class QrackAceBackend:
         self._qec_x(c)
 
     def _unpack(self, lq):
-        offset = self._hardware_offset[lq]
+        return self._qubit_dict[lq]
 
-        if self._is_col_long_range[lq % self._row_length]:
-            return [self._qubit_dict[offset]]
+    def _get_qb_lhv_indices(self, hq):
+        qb = []
+        if len(hq) < 2:
+            qb = [0]
+            lhv = -1
+        elif len(hq) < 4:
+            qb = [0, 1]
+            lhv = 2
+        else:
+            qb = [0, 1, 3, 4]
+            lhv = 2
 
-        return [
-            self._qubit_dict[offset],
-            self._lhv_dict[offset + 1],
-            self._qubit_dict[offset + 2],
-        ]
+        return qb, lhv
 
     def _correct(self, lq, phase=False):
-        if self._is_col_long_range[lq % self._row_length] or (self._row_length == 2):
-            return
-
         hq = self._unpack(lq)
 
-        if phase:
-            b = hq[0]
-            self.sim[b[0]].h(b[1])
-            b = hq[1]
-            b.h()
-            b = hq[2]
-            self.sim[b[0]].h(b[1])
+        if len(hq) == 1:
+            return
 
-        # RMS
-        p = [
-            self.sim[hq[0][0]].prob(hq[0][1]),
-            hq[1].prob(),
-            self.sim[hq[2][0]].prob(hq[2][1]),
-        ]
-        # Balancing suggestion from Elara (the custom OpenAI GPT)
-        prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
-        qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
-        result = ((prms + (1 - qrms)) / 2) >= 0.5
-        syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
-
-        for q in range(3):
-            if syndrome[q] > (0.5 + self._epsilon):
-                if q == 1:
-                    hq[q].x()
-                else:
-                    self.sim[hq[q][0]].x(hq[q][1])
+        qb, lhv = self._get_qb_lhv_indices(hq)
 
         if phase:
-            b = hq[0]
-            self.sim[b[0]].h(b[1])
-            b = hq[1]
+            for q in qb:
+                b = hq[q]
+                self.sim[b[0]].h(b[1])
+            b = hq[lhv]
             b.h()
-            b = hq[2]
-            self.sim[b[0]].h(b[1])
+
+        if len(hq) == 5:
+            # RMS
+            p = [
+                self.sim[hq[0][0]].prob(hq[0][1]),
+                self.sim[hq[1][0]].prob(hq[1][1]),
+                hq[2].prob(),
+                self.sim[hq[3][0]].prob(hq[3][1]),
+                self.sim[hq[4][0]].prob(hq[4][1]),
+            ]
+            # Balancing suggestion from Elara (the custom OpenAI GPT)
+            prms = math.sqrt(
+                (p[0] ** 2 + p[1] ** 2 + 3 * (p[2] ** 2) + p[3] ** 2 + p[4] ** 2) / 7
+            )
+            qrms = math.sqrt(
+                (
+                    (1 - p[0]) ** 2
+                    + (1 - p[1]) ** 2
+                    + 3 * ((1 - p[2]) ** 2)
+                    + (1 - p[3]) ** 2
+                    + (1 - p[4]) ** 2
+                )
+                / 7
+            )
+            result = ((prms + (1 - qrms)) / 2) >= 0.5
+            syndrome = (
+                [1 - p[0], 1 - p[1], 1 - p[2], 1 - p[3], 1 - p[4]]
+                if result
+                else [p[0], p[1], p[2], p[3], p[4]]
+            )
+            for q in range(5):
+                if syndrome[q] > (0.5 + self._epsilon):
+                    if q == 2:
+                        hq[q].x()
+                    else:
+                        self.sim[hq[q][0]].x(hq[q][1])
+        else:
+            # RMS
+            p = [
+                self.sim[hq[0][0]].prob(hq[0][1]),
+                self.sim[hq[1][0]].prob(hq[1][1]),
+                hq[2].prob(),
+            ]
+            # Balancing suggestion from Elara (the custom OpenAI GPT)
+            prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
+            qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
+            result = ((prms + (1 - qrms)) / 2) >= 0.5
+            syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
+            for q in range(3):
+                if syndrome[q] > (0.5 + self._epsilon):
+                    if q == 2:
+                        hq[q].x()
+                    else:
+                        self.sim[hq[q][0]].x(hq[q][1])
+
+        if phase:
+            for q in qb:
+                b = hq[q]
+                self.sim[b[0]].h(b[1])
+            b = hq[lhv]
+            b.h()
 
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
@@ -421,12 +487,14 @@ class QrackAceBackend:
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
-        b = hq[0]
-        self.sim[b[0]].u(b[1], th, ph, lm)
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].u(b[1], th, ph, lm)
+
+        b = hq[lhv]
         b.u(th, ph, lm)
-        b = hq[2]
-        self.sim[b[0]].u(b[1], th, ph, lm)
 
         self._correct(lq, False)
         self._correct(lq, True)
@@ -438,17 +506,19 @@ class QrackAceBackend:
             self.sim[b[0]].r(p, th, b[1])
             return
 
-        b = hq[0]
-        self.sim[b[0]].r(p, th, b[1])
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].r(p, th, b[1])
+
+        b = hq[lhv]
         if p == Pauli.PauliX:
             b.rx(th)
         elif p == Pauli.PauliY:
             b.ry(th)
         elif p == Pauli.PauliZ:
             b.rz(th)
-        b = hq[2]
-        self.sim[b[0]].r(p, th, b[1])
 
         if p != Pauli.PauliZ:
             self._correct(lq, False)
@@ -463,12 +533,16 @@ class QrackAceBackend:
             return
 
         self._correct(lq)
-        b = hq[0]
-        self.sim[b[0]].h(b[1])
-        b = hq[1]
+
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].h(b[1])
+
+        b = hq[lhv]
         b.h()
-        b = hq[2]
-        self.sim[b[0]].h(b[1])
+
         self._correct(lq)
 
     def s(self, lq):
@@ -478,12 +552,14 @@ class QrackAceBackend:
             self.sim[b[0]].s(b[1])
             return
 
-        b = hq[0]
-        self.sim[b[0]].s(b[1])
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].s(b[1])
+
+        b = hq[lhv]
         b.s()
-        b = hq[2]
-        self.sim[b[0]].s(b[1])
 
     def adjs(self, lq):
         hq = self._unpack(lq)
@@ -492,12 +568,14 @@ class QrackAceBackend:
             self.sim[b[0]].adjs(b[1])
             return
 
-        b = hq[0]
-        self.sim[b[0]].adjs(b[1])
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].adjs(b[1])
+
+        b = hq[lhv]
         b.adjs()
-        b = hq[2]
-        self.sim[b[0]].adjs(b[1])
 
     def x(self, lq):
         hq = self._unpack(lq)
@@ -506,12 +584,14 @@ class QrackAceBackend:
             self.sim[b[0]].x(b[1])
             return
 
-        b = hq[0]
-        self.sim[b[0]].x(b[1])
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].x(b[1])
+
+        b = hq[lhv]
         b.x()
-        b = hq[2]
-        self.sim[b[0]].x(b[1])
 
     def y(self, lq):
         hq = self._unpack(lq)
@@ -520,12 +600,14 @@ class QrackAceBackend:
             self.sim[b[0]].y(b[1])
             return
 
-        b = hq[0]
-        self.sim[b[0]].y(b[1])
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].y(b[1])
+
+        b = hq[lhv]
         b.y()
-        b = hq[2]
-        self.sim[b[0]].y(b[1])
 
     def z(self, lq):
         hq = self._unpack(lq)
@@ -534,12 +616,14 @@ class QrackAceBackend:
             self.sim[b[0]].z(b[1])
             return
 
-        b = hq[0]
-        self.sim[b[0]].z(b[1])
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].z(b[1])
+
+        b = hq[lhv]
         b.z()
-        b = hq[2]
-        self.sim[b[0]].z(b[1])
 
     def t(self, lq):
         hq = self._unpack(lq)
@@ -548,12 +632,14 @@ class QrackAceBackend:
             self.sim[b[0]].t(b[1])
             return
 
-        b = hq[0]
-        self.sim[b[0]].t(b[1])
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].t(b[1])
+
+        b = hq[lhv]
         b.t()
-        b = hq[2]
-        self.sim[b[0]].t(b[1])
 
     def adjt(self, lq):
         hq = self._unpack(lq)
@@ -562,12 +648,14 @@ class QrackAceBackend:
             self.sim[b[0]].adjt(b[1])
             return
 
-        b = hq[0]
-        self.sim[b[0]].adjt(b[1])
-        b = hq[1]
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            self.sim[b[0]].adjt(b[1])
+
+        b = hq[lhv]
         b.adjt()
-        b = hq[2]
-        self.sim[b[0]].adjt(b[1])
 
     def _get_gate(self, pauli, anti, sim_id):
         gate = None
@@ -588,10 +676,43 @@ class QrackAceBackend:
 
         return gate, shadow
 
-    def _cpauli(self, lq1, lq2, anti, pauli):
-        lq1_lr = self._is_col_long_range[lq1 % self._row_length]
-        lq2_lr = self._is_col_long_range[lq2 % self._row_length]
+    def _get_connected(self, i, is_row):
+        long_rage = self._is_row_long_range if is_row else self._is_col_long_range
+        length = self._col_length if is_row else self._row_length
 
+        connected = [i]
+        c = (i - 1) % length
+        while long_range[c] and (len(connected) < length):
+            connected.append(c)
+            c = (c - 1) % length
+        if len(connected) < length:
+            connected.append(c)
+        boundary = len(connected)
+        c = (i + 1) % length
+        while long_range[c] and (len(connected) < length):
+            connected.append(c)
+            c = (c + 1) % length
+        if len(connected) < length:
+            connected.append(c)
+
+        return connected, boundary
+
+    def _apply_coupling(self, pauli, anti, qb1, lhv1, hq1, qb2, lhv2, hq2, lq1_lr):
+        for q1 in qb1:
+            if q1 == lhv1:
+                continue
+            b1 = hq1[q1]
+            gate_fn, shadow_fn = self._get_gate(pauli, anti, b1[0])
+            for q2 in qb2:
+                if q2 == lhv2:
+                    continue
+                b2 = hq2[q2]
+                if b1[0] == b2[0]:
+                    gate_fn([b1[1]], b2[1])
+                elif lq1_lr or (b1 == b2):
+                    shadow_fn(b1, b2)
+
+    def _cpauli(self, lq1, lq2, anti, pauli):
         lq1_row = lq1 // self._row_length
         lq1_col = lq1 % self._row_length
         lq2_row = lq2 // self._row_length
@@ -599,6 +720,9 @@ class QrackAceBackend:
 
         hq1 = self._unpack(lq1)
         hq2 = self._unpack(lq2)
+
+        lq1_lr = len(hq1) == 1
+        lq2_lr = len(hq2) == 1
 
         if lq1_lr and lq2_lr:
             connected = (lq1_col == lq2_col) or (
@@ -622,80 +746,20 @@ class QrackAceBackend:
                 shadow(b1, b2)
             return
 
-        if self._row_length == 2:
-            gate, shadow = self._get_gate(pauli, anti, hq1[2][0])
-            gate([hq1[2][1]], hq2[0][1])
-            gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
-            gate([hq1[0][1]], hq2[2][1])
-            _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
-            return
-
-        connected_cols = []
-        c = (lq1_col - 1) % self._row_length
-        while self._is_col_long_range[c] and (
-            len(connected_cols) < (self._row_length - 1)
-        ):
-            connected_cols.append(c)
-            c = (c - 1) % self._row_length
-        if len(connected_cols) < (self._row_length - 1):
-            connected_cols.append(c)
-        boundary = len(connected_cols)
-        c = (lq1_col + 1) % self._row_length
-        while self._is_col_long_range[c] and (
-            len(connected_cols) < (self._row_length - 1)
-        ):
-            connected_cols.append(c)
-            c = (c + 1) % self._row_length
-        if len(connected_cols) < (self._row_length - 1):
-            connected_cols.append(c)
-
         self._correct(lq1)
 
-        if (lq2_col in connected_cols) and (connected_cols.index(lq2_col) < boundary):
-            # lq2_col < lq1_col
-            gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
-            if lq1_lr:
-                gate([hq1[0][1]], hq2[2][1])
-                shadow(hq1[0], hq2[0])
-                _cpauli_lhv(self.sim[hq1[0][0]].prob(hq1[0][1]), hq2[1], pauli, anti)
-            elif lq2_lr:
-                gate([hq1[0][1]], hq2[0][1])
-            else:
-                gate([hq1[0][1]], hq2[2][1])
-                shadow(hq1[2], hq2[0])
-                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
-        elif lq2_col in connected_cols:
-            # lq1_col < lq2_col
-            gate, shadow = self._get_gate(pauli, anti, hq2[0][0])
-            if lq1_lr:
-                gate([hq1[0][1]], hq2[0][1])
-                shadow(hq1[0], hq2[2])
-                _cpauli_lhv(self.sim[hq1[0][0]].prob(hq1[0][1]), hq2[1], pauli, anti)
-            elif lq2_lr:
-                gate([hq1[2][1]], hq2[0][1])
-            else:
-                gate([hq1[2][1]], hq2[0][1])
-                shadow(hq1[0], hq2[2])
-                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
-        elif lq1_col == lq2_col:
-            # Both are in the same boundary column.
-            b = hq1[0]
-            gate, shadow = self._get_gate(pauli, anti, b[0])
-            gate([b[1]], hq2[0][1])
-            _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
-            b = hq1[2]
-            gate, shadow = self._get_gate(pauli, anti, b[0])
-            gate([b[1]], hq2[2][1])
-        else:
-            # The qubits have no quantum connection.
-            gate, shadow = self._get_gate(pauli, anti, hq1[0][0])
-            shadow(hq1[0], hq2[0])
-            if lq1_lr:
-                shadow(hq1[0], hq2[2])
-                shadow(hq1[0], hq2[1])
-            elif not lq2_lr:
-                _cpauli_lhv(hq1[1].prob(), hq2[1], pauli, anti)
-                shadow(hq1[2], hq2[2])
+        qb1, lhv1 = self._get_qb_lhv_indices(hq1)
+        qb2, lhv2 = self._get_qb_lhv_indices(hq2)
+        # Apply cross coupling on hardware qubits first
+        self._apply_coupling(pauli, anti, qb1, lhv1, hq1, qb2, lhv2, hq2, lq1_lr)
+        # Apply coupling to the local-hidden-variable target
+        if lhv2 >= 0:
+            _cpauli_lhv(
+                hq1[lhv1].prob() if lhv1 >= 0 else self.sim[hq1[0][0]].prob(hq1[0][1]),
+                hq2[lhv2],
+                pauli,
+                anti,
+            )
 
         self._correct(lq1, True)
         if pauli != Pauli.PauliZ:
@@ -787,14 +851,39 @@ class QrackAceBackend:
             return self.sim[b[0]].prob(b[1])
 
         self._correct(lq)
-        b0 = hq[0]
-        b1 = hq[1]
-        b2 = hq[2]
-        # RMS
-        p = [self.sim[b0[0]].prob(b0[1]), b1.prob(), self.sim[b2[0]].prob(b2[1])]
-        # Balancing suggestion from Elara (the custom OpenAI GPT)
-        prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
-        qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
+        if len(hq) == 5:
+            # RMS
+            p = [
+                self.sim[hq[0][0]].prob(hq[0][1]),
+                self.sim[hq[1][0]].prob(hq[1][1]),
+                hq[2].prob(),
+                self.sim[hq[3][0]].prob(hq[3][1]),
+                self.sim[hq[4][0]].prob(hq[4][1]),
+            ]
+            # Balancing suggestion from Elara (the custom OpenAI GPT)
+            prms = math.sqrt(
+                (p[0] ** 2 + p[1] ** 2 + 3 * (p[2] ** 2) + p[3] ** 2 + p[4] ** 2) / 7
+            )
+            qrms = math.sqrt(
+                (
+                    (1 - p[0]) ** 2
+                    + (1 - p[1]) ** 2
+                    + 3 * ((1 - p[2]) ** 2)
+                    + (1 - p[3]) ** 2
+                    + (1 - p[4]) ** 2
+                )
+                / 7
+            )
+        else:
+            # RMS
+            p = [
+                self.sim[hq[0][0]].prob(hq[0][1]),
+                self.sim[hq[1][0]].prob(hq[1][1]),
+                hq[2].prob(),
+            ]
+            # Balancing suggestion from Elara (the custom OpenAI GPT)
+            prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
+            qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
 
         return (prms + (1 - qrms)) / 2
 
@@ -807,44 +896,47 @@ class QrackAceBackend:
         p = self.prob(lq)
         result = ((p + self._epsilon) >= 1) or (random.random() < p)
 
-        b = hq[0]
-        p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
-        if p < self._epsilon:
-            if self.sim[b[0]].m(b[1]) != result:
-                self.sim[b[0]].x(b[1])
-        else:
-            self.sim[b[0]].force_m(b[1], result)
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
+            if p < self._epsilon:
+                if self.sim[b[0]].m(b[1]) != result:
+                    self.sim[b[0]].x(b[1])
+            else:
+                self.sim[b[0]].force_m(b[1], result)
+
+        b = hq[lhv]
+        b.reset()
+        if result:
+            b.x()
+
+        return result
+
+    def force_m(self, lq, result):
+        hq = self._unpack(lq)
+        if len(hq) < 2:
+            b = hq[0]
+            return self.sim[b[0]].force_m(b[1], result)
+
+        self._correct(lq)
+
+        qb, lhv = self._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
+            if p < self._epsilon:
+                if self.sim[b[0]].m(b[1]) != result:
+                    self.sim[b[0]].x(b[1])
+            else:
+                self.sim[b[0]].force_m(b[1], result)
 
         b = hq[1]
         b.reset()
         if result:
             b.x()
-
-        b = hq[2]
-        p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
-        if p < self._epsilon:
-            if self.sim[b[0]].m(b[1]) != result:
-                self.sim[b[0]].x(b[1])
-        else:
-            self.sim[b[0]].force_m(b[1], result)
-
-        return result
-
-    def force_m(self, lq, c):
-        hq = self._unpack(lq)
-        if len(hq) < 2:
-            b = hq[0]
-            return self.sim[b[0]].force_m(b[1])
-
-        self._correct(lq)
-        b = hq[1]
-        b.reset()
-        if c:
-            b.x()
-        b = hq[0]
-        self.sim[b[0]].force_m(b[1], c)
-        b = hq[2]
-        self.sim[b[0]].force_m(b[1], c)
 
         return c
 
@@ -1227,28 +1319,12 @@ class QrackAceBackend:
             return row * cols + col
 
         for col in range(cols):
-            connected_cols = [col]
-            c = (col - 1) % cols
-            while self._is_col_long_range[c] and (
-                len(connected_cols) < self._row_length
-            ):
-                connected_cols.append(c)
-                c = (c - 1) % cols
-            if len(connected_cols) < self._row_length:
-                connected_cols.append(c)
-            c = (col + 1) % cols
-            while self._is_col_long_range[c] and (
-                len(connected_cols) < self._row_length
-            ):
-                connected_cols.append(c)
-                c = (c + 1) % cols
-            if len(connected_cols) < self._row_length:
-                connected_cols.append(c)
-
+            connected_cols, _ = self._get_connected(col, False)
             for row in range(rows):
+                connected_rows, _ = self._get_connected(row, False)
                 a = logical_index(row, col)
                 for c in connected_cols:
-                    for r in range(0, rows):
+                    for r in connected_rows:
                         b = logical_index(r, c)
                         if a != b:
                             coupling_map.add((a, b))
