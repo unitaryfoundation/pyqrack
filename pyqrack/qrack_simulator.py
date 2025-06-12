@@ -122,6 +122,9 @@ class QrackSimulator:
     def _ulonglong_byref(self, a):
         return (ctypes.c_ulonglong * len(a))(*a)
 
+    def _longlong_byref(self, a):
+        return (ctypes.c_longlong * len(a))(*a)
+
     def _double_byref(self, a):
         return (ctypes.c_double * len(a))(*a)
 
@@ -188,6 +191,11 @@ class QrackSimulator:
     def set_device(self, d):
         """Set the GPU device ID"""
         Qrack.qrack_lib.set_device(self.sid, d)
+        self._throw_if_error()
+
+    def set_device_list(self, d):
+        """Set the GPU device ID"""
+        Qrack.qrack_lib.set_device(self.sid, len(d), self._longlong_byref(d))
         self._throw_if_error()
 
     def clone(self):
