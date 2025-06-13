@@ -66,7 +66,7 @@ class QrackSystem:
                     )
                     raise e
 
-        self.fppow = 5
+        self.fppow = 6
         if "QRACK_FPPOW" in os.environ:
             self.fppow = int(os.environ.get("QRACK_FPPOW"))
         if self.fppow < 4 or self.fppow > 7:

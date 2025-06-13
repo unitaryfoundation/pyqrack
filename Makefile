@@ -23,16 +23,16 @@ endif
 	mkdir -p qrack/build
 ifeq ($(UNAME_S),Linux)
 ifeq ($(UNAME_P),x86_64)
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 -DFPPOW=6 ..; make qrack_pinvoke
 else
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 -DFPPOW=6 ..; make qrack_pinvoke
 endif
 endif
 ifeq ($(UNAME_S),Darwin)
 ifeq ($(UNAME_P),x86_64)
-	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 -DFPPOW=6 ..; make qrack_pinvoke
 else
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 -DFPPOW=6 ..; make qrack_pinvoke
 endif
 endif
 endif
