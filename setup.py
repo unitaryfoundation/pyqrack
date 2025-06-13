@@ -25,7 +25,7 @@ class Build(build_py):
 
 
 setup(
-    name='pyqrack',
+    name='pyqrack-complex128',
     version=VERSION,
     packages=['pyqrack', 'pyqrack.qrack_system', 'pyqrack.stats'],
     cmdclass={"build_py": Build},
