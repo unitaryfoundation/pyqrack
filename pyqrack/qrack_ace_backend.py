@@ -601,7 +601,7 @@ class QrackAceBackend:
                     continue
                 indices.append(x)
                 w = (1.5 - p[x])
-                a_target += x * a[x]
+                a_target += w * a[x]
                 i_target += w * i[x]
                 weight += w
 
