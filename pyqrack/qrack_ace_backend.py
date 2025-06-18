@@ -586,7 +586,7 @@ class QrackAceBackend:
             a_target = 0
             i_target = 0
             for x in range(4):
-                if p[x] < (0.5 + self._epsilon):
+                if p[x] < 0.5:
                     continue
                 indices.append(x)
                 a_target += a[x]
@@ -624,7 +624,7 @@ class QrackAceBackend:
             a_target = 0
             i_target = 0
             for x in range(2):
-                if p[x] < (0.5 + self._epsilon):
+                if p[x] < 0.5:
                     continue
                 indices.append(x)
                 a_target += a[x]
