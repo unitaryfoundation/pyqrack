@@ -593,8 +593,8 @@ class QrackAceBackend:
                 i_target += i[x]
 
             if len(indices) > 1:
-                a_target /= weight
-                i_target /= weight
+                a_target /= len(indices)
+                i_target /= len(indices)
                 for x in indices:
                     self.rotate_to_bloch(hq[x], a[x], i[x], a_target, i_target)
         else:
