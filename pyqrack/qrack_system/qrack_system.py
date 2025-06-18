@@ -147,7 +147,11 @@ class QrackSystem:
         self.qrack_lib.set_device.argtypes = [c_ulonglong, c_longlong]
 
         self.qrack_lib.set_device_list.restype = None
-        self.qrack_lib.set_device_list.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_longlong)]
+        self.qrack_lib.set_device_list.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_longlong),
+        ]
 
         # pseudo-quantum
 

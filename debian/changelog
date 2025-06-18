@@ -1,3 +1,27 @@
+pyqrack (1.58.4) bionic; urgency=medium
+
+  * QrackAceBackend (Bionic 4/4)
+
+ -- Dan Strano <stranoj@gmail.com>  Sat, 14 Jun 2025 15:43:43 -0400
+
+pyqrack (1.58.3) focal; urgency=medium
+
+  * QrackAceBackend (Focal 3/4)
+
+ -- Dan Strano <stranoj@gmail.com>  Sat, 14 Jun 2025 15:41:54 -0400
+
+pyqrack (1.58.2) jammy; urgency=medium
+
+  * QrackAceBackend (Jammy 2/4)
+
+ -- Dan Strano <stranoj@gmail.com>  Sat, 14 Jun 2025 15:40:00 -0400
+
+pyqrack (1.58.1) noble; urgency=medium
+
+  * QrackAceBackend (Noble 1/4)
+
+ -- Dan Strano <stranoj@gmail.com>  Sat, 14 Jun 2025 15:34:29 -0400
+
 pyqrack (1.38.6) bionic; urgency=medium
 
   * Single-shot Qiskit bug fix (Bionic 4/4)
