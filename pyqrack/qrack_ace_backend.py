@@ -493,17 +493,6 @@ class QrackAceBackend:
 
         sim.mtrx([m00, m01, m10, m11], q)
 
-    def logit(self, x):
-        # Theoretically, these limit points are "infinite,"
-        # but precision caps out between 36 and 37:
-        if 5e-17 > (1 - x):
-            return 37
-        # For the negative limit, the precision caps out
-        # between -37 and -38
-        elif x < 1e-17:
-            return -38
-        return max(-38, min(37, math.log(x / (1 - x))))
-
 
     def _correct(self, lq, phase=False):
         hq = self._unpack(lq)
@@ -570,7 +559,7 @@ class QrackAceBackend:
                 if p[x] < 0.5:
                     continue
                 indices.append(x)
-                w = self.logit(1 - p[x])
+                w = (1.5 - p[x])
                 a_target += w * a[x]
                 i_target += w * i[x]
                 weight += w
@@ -611,7 +600,7 @@ class QrackAceBackend:
                 if p[x] < 0.5:
                     continue
                 indices.append(x)
-                w = self.logit(1.0 - p[x])
+                w = (1.5 - p[x])
                 a_target += x * a[x]
                 i_target += w * i[x]
                 weight += w
