@@ -443,6 +443,25 @@ class QrackAceBackend:
 
         return qb, lhv
 
+    def _get_lhv_bloch_angles(self, sim):
+        # Z axis
+        z = 1 - 2 * sim.prob(Pauli.PauliZ)
+        prob = z**2
+
+        # X axis
+        x = 1 - 2 * sim.prob(Pauli.PauliX)
+        prob += x**2
+
+        # Y axis
+        y = 1 - 2 * sim.prob(Pauli.PauliY)
+        prob += y**2
+
+        prob = math.sqrt(prob)
+        inclination = math.atan2(math.sqrt(x**2 + y**2), z)
+        azimuth = math.atan2(y, x)
+
+        return prob, azimuth, inclination
+
     def _get_bloch_angles(self, hq):
         sim = self.sim[hq[0]]
         q = hq[1]
@@ -472,13 +491,10 @@ class QrackAceBackend:
         return prob, azimuth, inclination
 
     def _rotate_to_bloch(
-        self, hq, azimuth_curr, inclination_curr, azimuth_target, inclination_target
+        self, hq, delta_azimuth, delta_inclination
     ):
         sim = self.sim[hq[0]]
         q = hq[1]
-
-        delta_azimuth = azimuth_target - azimuth_curr
-        delta_inclination = inclination_target - inclination_curr
 
         # Apply rotation as "Azimuth, Inclination" (AI)
         cosA = math.cos(delta_azimuth)
@@ -492,6 +508,23 @@ class QrackAceBackend:
         m11 = complex(cosI, 0)
 
         sim.mtrx([m00, m01, m10, m11], q)
+
+
+    def _rotate_lhv_to_bloch(
+        self, sim, delta_azimuth, delta_inclination
+    ):
+        # Apply rotation as "Azimuth, Inclination" (AI)
+        cosA = math.cos(delta_azimuth)
+        sinA = math.sin(delta_azimuth)
+        cosI = math.cos(delta_inclination / 2)
+        sinI = math.sin(delta_inclination / 2)
+
+        m00 = complex(cosI, 0)
+        m01 = complex(-cosA, sinA) * sinI
+        m10 = complex(cosA, sinA) * sinI
+        m11 = complex(cosI, 0)
+
+        sim.mtrx([m00, m01, m10, m11])
 
 
     def _correct(self, lq, phase=False):
@@ -548,6 +581,7 @@ class QrackAceBackend:
             p, a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
             p[0], a[0], i[0] = self._get_bloch_angles(hq[0])
             p[1], a[1], i[1] = self._get_bloch_angles(hq[1])
+            p[2], a[2], i[2] = self._get_lhv_bloch_angles(hq[2])
             p[3], a[3], i[3] = self._get_bloch_angles(hq[3])
             p[4], a[4], i[4] = self._get_bloch_angles(hq[4])
 
@@ -569,7 +603,10 @@ class QrackAceBackend:
                 a_target /= weight
                 i_target /= weight
                 for x in indices:
-                    self._rotate_to_bloch(hq[x], a[x], i[x], a_target, i_target)
+                    if x == 2:
+                        self._rotate_lhv_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                    else:
+                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
         else:
             # RMS
             p = [
@@ -592,6 +629,7 @@ class QrackAceBackend:
             p, a, i = [0, 0, 0], [0, 0, 0], [0, 0, 0]
             p[0], a[0], i[0] = self._get_bloch_angles(hq[0])
             p[1], a[1], i[1] = self._get_bloch_angles(hq[1])
+            p[2], a[2], i[2] = self._get_lhv_bloch_angles(hq[2])
 
             indices = []
             a_target = 0
@@ -611,7 +649,10 @@ class QrackAceBackend:
                 a_target /= weight
                 i_target /= weight
                 for x in indices:
-                    self._rotate_to_bloch(hq[x], a[x], i[x], a_target, i_target)
+                    if x == 2:
+                        self._rotate_lhv_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                    else:
+                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         if phase:
             for q in qb:
