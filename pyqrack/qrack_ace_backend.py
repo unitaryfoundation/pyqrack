@@ -271,8 +271,6 @@ class QrackAceBackend:
             self._is_row_long_range = (row_seq * row_patch_count)[: self._col_length]
             if long_range_rows < self._col_length:
                 self._is_row_long_range[-1] = False
-            # Fix patch asymmetry:
-            self._is_row_long_range.reverse()
         sim_count = col_patch_count * row_patch_count
 
         self._qubit_dict = {}
