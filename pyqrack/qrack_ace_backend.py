@@ -274,10 +274,6 @@ class QrackAceBackend:
             # Fix patch asymmetry:
             self._is_row_long_range.reverse()
         sim_count = col_patch_count * row_patch_count
-        self._row_offset = 0
-        for r in range(self._col_length):
-            for c in self._is_col_long_range:
-                self._row_offset += 1 if c else 3
 
         self._qubit_dict = {}
         sim_counts = [0] * sim_count
