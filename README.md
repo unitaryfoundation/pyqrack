@@ -35,4 +35,4 @@ For custom Qrack build floating-point precision, where options are `half`, `floa
 
 Please feel welcome to open an issue, if you'd like help. 😃
 
-**Special thanks go to Zeeshan Ahmed, for bug fixes and design suggestions, Ashish Panigrahi, for documentation and design suggestions, WingCode, for documentation, and to the broader community of Qrack contributors, for years of happy Qracking! You rock!**
+**Special thanks go to Zeeshan Ahmed, for bug fixes and design suggestions, Ashish Panigrahi, for documentation and design suggestions, WingCode, for documentation, Or Golan, for CI build pipeline tooling, and to the broader community of Qrack contributors, for years of happy Qracking! You rock!**
