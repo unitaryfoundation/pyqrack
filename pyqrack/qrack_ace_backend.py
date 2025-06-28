@@ -332,7 +332,8 @@ class QrackAceBackend:
 
             # You can still "monkey-patch" this, after the constructor.
             if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ:
-                self.sim[i].set_sdrp(0.02375)
+                # Empirically tuned
+                self.sim[i].set_sdrp(0.08)
 
     def clone(self):
         return QrackAceBackend(toClone=self)
