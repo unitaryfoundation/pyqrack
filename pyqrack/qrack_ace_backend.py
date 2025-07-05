@@ -45,6 +45,7 @@ class QrackAceBackend:
         sim(QrackSimulator): Array of simulators corresponding to "patches" between boundary rows.
         long_range_columns(int): How many ideal rows between QEC boundary rows?
         is_transpose(bool): Rows are long if False, columns are long if True
+        correction_bias(float): Bias magnitude and direction during pseudo-QEC
     """
 
     def __init__(
@@ -53,6 +54,7 @@ class QrackAceBackend:
         long_range_columns=4,
         long_range_rows=4,
         is_transpose=False,
+        correction_bias=0,
         isTensorNetwork=False,
         isSchmidtDecomposeMulti=False,
         isSchmidtDecompose=True,
@@ -81,6 +83,7 @@ class QrackAceBackend:
         self.long_range_columns = long_range_columns
         self.long_range_rows = long_range_rows
         self.is_transpose = is_transpose
+        self.correction_bias = correction_bias
 
         fppow = 5
         if "QRACK_FPPOW" in os.environ:
@@ -116,10 +119,9 @@ class QrackAceBackend:
                 self._is_row_long_range[-1] = False
         sim_count = col_patch_count * row_patch_count
 
-        self._qubit_dict = {}
+        self._qubits = []
         sim_counts = [0] * sim_count
         sim_id = 0
-        tot_qubits = 0
         for r in self._is_row_long_range:
             for c in self._is_col_long_range:
                 qubit = [(sim_id, sim_counts[sim_id])]
@@ -142,8 +144,7 @@ class QrackAceBackend:
                 if not c:
                     sim_id = (sim_id + 1) % sim_count
 
-                self._qubit_dict[tot_qubits] = qubit
-                tot_qubits += 1
+                self._qubits.append(qubit)
 
         self.sim = []
         for i in range(sim_count):
@@ -259,7 +260,7 @@ class QrackAceBackend:
         self._qec_x(c)
 
     def _unpack(self, lq):
-        return self._qubit_dict[lq]
+        return self._qubits[lq]
 
     def _get_qb_indices(self, hq):
         qb = []
@@ -369,6 +370,8 @@ class QrackAceBackend:
                 for x in range(4):
                     self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
+                self.apply_magnetic_bias([lq], self.correction_bias)
+
         else:
             # RMS
             p = [
@@ -400,19 +403,23 @@ class QrackAceBackend:
                 for x in range(2):
                     self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
+                self.apply_magnetic_bias([lq], self.correction_bias)
+
         if phase:
             for q in qb:
                 b = hq[q]
                 self.sim[b[0]].h(b[1])
 
     def apply_magnetic_bias(self, q, b):
+        if b == 0:
+            return
         b = math.exp(b)
         for x in q:
             hq = self._unpack(x)
             for h in hq:
                 a, i = self._get_bloch_angles(h)
                 self._rotate_to_bloch(
-                    h, math.atan(math.tan(a) * b), math.atan(math.tan(i)) * b
+                    h, math.atan(math.tan(a) * b) - a, math.atan(math.tan(i) * b) - i
                 )
 
     def u(self, lq, th, ph, lm):
