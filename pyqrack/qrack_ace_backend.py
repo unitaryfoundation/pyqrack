@@ -279,6 +279,7 @@ class QrackAceBackend:
         self._qubits = []
         sim_counts = [0] * sim_count
         sim_id = 0
+        tot_qubits = 0
         for r in self._is_row_long_range:
             for c in self._is_col_long_range:
                 qubit = [(sim_id, sim_counts[sim_id])]
@@ -292,7 +293,7 @@ class QrackAceBackend:
                     qubit.append(
                         LHVQubit(
                             toClone=(
-                                toClone._qubit_dict[tot_qubits][2] if toClone else None
+                                toClone._qubits[tot_qubits][2] if toClone else None
                             )
                         )
                     )
@@ -310,6 +311,7 @@ class QrackAceBackend:
                     sim_id = (sim_id + 1) % sim_count
 
                 self._qubits.append(qubit)
+                tot_qubits += 1
 
         self.sim = []
         for i in range(sim_count):
@@ -570,9 +572,10 @@ class QrackAceBackend:
                         self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
-                a, i = [0, 0, 0, 0], [0, 0, 0, 0]
+                a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
+                a[2], i[2] = self._get_lhv_bloch_angles(hq[2])
                 a[3], i[3] = self._get_bloch_angles(hq[3])
                 a[4], i[4] = self._get_bloch_angles(hq[4])
 
@@ -584,12 +587,13 @@ class QrackAceBackend:
                     a_target += a[x]
                     i_target += i[x]
 
-                a_target /= 4
-                i_target /= 4
+                a_target /= 5
+                i_target /= 5
                 for x in range(5):
                     if x == 2:
-                        continue
-                    self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                        self._rotate_lhv_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                    else:
+                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
                 self.apply_magnetic_bias([lq], self.correction_bias)
 
@@ -613,9 +617,10 @@ class QrackAceBackend:
                         self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
-                a, i = [0, 0], [0, 0]
+                a, i = [0, 0, 0], [0, 0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
+                a[2], i[2] = self._get_lhv_bloch_angles(hq[2])
 
                 a_target = 0
                 i_target = 0
@@ -625,12 +630,13 @@ class QrackAceBackend:
                     a_target += a[x]
                     i_target += i[x]
 
-                a_target /= 2
-                i_target /= 2
+                a_target /= 3
+                i_target /= 3
                 for x in range(3):
                     if x == 2:
-                        continue
-                    self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                        self._rotate_lhv_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                    else:
+                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
                 self.apply_magnetic_bias([lq], self.correction_bias)
 
@@ -642,6 +648,21 @@ class QrackAceBackend:
             b.h()
 
     def apply_magnetic_bias(self, q, b):
+        if b == 0:
+            return
+        b = math.exp(b) - 1
+        for x in q:
+            hq = self._unpack(x)
+            for c in range(len(hq)):
+                h = hq[c]
+                if c == 2:
+                    a, i = self._get_lhv_bloch_angles(h)
+                    self._rotate_lhv_to_bloch(h, a * b - 1, i * b - 1)
+                else:
+                    a, i = self._get_bloch_angles(h)
+                    self._rotate_to_bloch(h, a * b - 1, i * b - 1)
+
+    def apply_tangent_magnetic_bias(self, q, b):
         if b == 0:
             return
         b = math.exp(b)
