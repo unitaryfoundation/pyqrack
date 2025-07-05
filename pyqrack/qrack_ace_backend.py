@@ -405,6 +405,16 @@ class QrackAceBackend:
                 b = hq[q]
                 self.sim[b[0]].h(b[1])
 
+    def apply_magnetic_bias(self, q, b):
+        b = math.exp(b)
+        for x in q:
+            hq = self._unpack(x)
+            for h in hq:
+                a, i = self._get_bloch_angles(h)
+                self._rotate_to_bloch(
+                    h, math.atan(math.tan(a) * b), math.atan(math.tan(i)) * b
+                )
+
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
         if len(hq) < 2:
