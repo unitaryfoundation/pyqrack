@@ -353,7 +353,7 @@ class QrackAceBackend:
                     self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
-                a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
+                a, i = [0, 0, 0, 0], [0, 0, 0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
                 a[2], i[2] = self._get_bloch_angles(hq[3])
@@ -388,7 +388,7 @@ class QrackAceBackend:
                     self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
-                a, i = [0, 0, 0], [0, 0, 0]
+                a, i = [0, 0], [0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
 
