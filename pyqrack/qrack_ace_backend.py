@@ -27,163 +27,6 @@ except ImportError:
     _IS_QISKIT_AER_AVAILABLE = False
 
 
-# Initial stub and concept produced through conversation with Elara
-# (the custom OpenAI GPT)
-class LHVQubit:
-    def __init__(self, toClone=None):
-        # Initial state in "Bloch vector" terms, defaults to |0⟩
-        if toClone:
-            self.bloch = toClone.bloch.copy()
-        else:
-            self.reset()
-
-    def reset(self):
-        self.bloch = [0.0, 0.0, 1.0]
-
-    def h(self):
-        # Hadamard: rotate around Y-axis then X-axis (simplified for LHV)
-        x, y, z = self.bloch
-        self.bloch = [(x + z) / math.sqrt(2), y, (z - x) / math.sqrt(2)]
-
-    def x(self):
-        x, y, z = self.bloch
-        self.bloch = [x, y, -z]
-
-    def y(self):
-        x, y, z = self.bloch
-        self.bloch = [-x, y, z]
-
-    def z(self):
-        x, y, z = self.bloch
-        self.bloch = [x, -y, z]
-
-    def rx(self, theta):
-        # Rotate Bloch vector around X-axis by angle theta
-        x, y, z = self.bloch
-        cos_theta = math.cos(theta)
-        sin_theta = math.sin(theta)
-        new_y = cos_theta * y - sin_theta * z
-        new_z = sin_theta * y + cos_theta * z
-        self.bloch = [x, new_y, new_z]
-
-    def ry(self, theta):
-        # Rotate Bloch vector around Y-axis by angle theta
-        x, y, z = self.bloch
-        cos_theta = math.cos(theta)
-        sin_theta = math.sin(theta)
-        new_x = cos_theta * x + sin_theta * z
-        new_z = -sin_theta * x + cos_theta * z
-        self.bloch = [new_x, y, new_z]
-
-    def rz(self, theta):
-        # Rotate Bloch vector around Z-axis by angle theta (in radians)
-        x, y, z = self.bloch
-        cos_theta = math.cos(theta)
-        sin_theta = math.sin(theta)
-        new_x = cos_theta * x - sin_theta * y
-        new_y = sin_theta * x + cos_theta * y
-        self.bloch = [new_x, new_y, z]
-
-    def s(self):
-        self.rz(math.pi / 2)
-
-    def adjs(self):
-        self.rz(-math.pi / 2)
-
-    def t(self):
-        self.rz(math.pi / 4)
-
-    def adjt(self):
-        self.rz(-math.pi / 4)
-
-    def u(self, theta, phi, lam):
-        # Apply general single-qubit unitary gate
-        self.rz(lam)
-        self.ry(theta)
-        self.rz(phi)
-
-    # Provided verbatim by Elara (the custom OpenAI GPT):
-    def mtrx(self, matrix):
-        """
-        Apply a 2x2 unitary matrix to the LHV Bloch vector using only standard math/cmath.
-        Matrix format: [a, b, c, d] for [[a, b], [c, d]]
-        """
-        a, b, c, d = matrix
-
-        # Current Bloch vector
-        x, y, z = self.bloch
-
-        # Convert to density matrix ρ = ½ (I + xσx + yσy + zσz)
-        rho = [[(1 + z) / 2, (x - 1j * y) / 2], [(x + 1j * y) / 2, (1 - z) / 2]]
-
-        # Compute U * ρ
-        u_rho = [
-            [a * rho[0][0] + b * rho[1][0], a * rho[0][1] + b * rho[1][1]],
-            [c * rho[0][0] + d * rho[1][0], c * rho[0][1] + d * rho[1][1]],
-        ]
-
-        # Compute (U * ρ) * U†
-        rho_prime = [
-            [
-                u_rho[0][0] * a.conjugate() + u_rho[0][1] * b.conjugate(),
-                u_rho[0][0] * c.conjugate() + u_rho[0][1] * d.conjugate(),
-            ],
-            [
-                u_rho[1][0] * a.conjugate() + u_rho[1][1] * b.conjugate(),
-                u_rho[1][0] * c.conjugate() + u_rho[1][1] * d.conjugate(),
-            ],
-        ]
-
-        # Extract Bloch components: Tr(ρ'σi) = 2 * Re[...]
-        new_x = 2 * rho_prime[0][1].real + 2 * rho_prime[1][0].real
-        new_y = 2 * (rho_prime[0][1].imag - rho_prime[1][0].imag)
-        new_z = 2 * rho_prime[0][0].real - 1  # since Tr(ρ') = 1
-
-        self.bloch = [new_x, new_y, new_z]
-
-    def prob(self, basis=Pauli.PauliZ):
-        """Sample a classical outcome from the current 'quantum' state"""
-        if basis == Pauli.PauliZ:
-            prob_1 = (1 - self.bloch[2]) / 2
-        elif basis == Pauli.PauliX:
-            prob_1 = (1 - self.bloch[0]) / 2
-        elif basis == Pauli.PauliY:
-            prob_1 = (1 - self.bloch[1]) / 2
-        else:
-            raise ValueError(f"Unsupported basis: {basis}")
-        return prob_1
-
-    def m(self):
-        result = random.random() < self.prob()
-        self.reset()
-        if result:
-            self.x()
-        return result
-
-
-# Provided by Elara (the custom OpenAI GPT)
-def _cpauli_lhv(prob, targ, axis, anti, theta=math.pi):
-    """
-    Apply a 'soft' controlled-Pauli gate: rotate target qubit
-    proportionally to control's Z expectation value.
-
-    theta: full rotation angle if control in |1⟩
-    """
-    # Control influence is (1 - ctrl.bloch[2]) / 2 = P(|1⟩)
-    # BUT we avoid collapse by using the expectation value:
-    control_influence = (1 - prob) if anti else prob
-
-    effective_theta = control_influence * theta
-
-    # Apply partial rotation to target qubit:
-    if axis == Pauli.PauliX:
-        targ.rx(effective_theta)
-    elif axis == Pauli.PauliY:
-        targ.ry(effective_theta)
-    elif axis == Pauli.PauliZ:
-        targ.rz(effective_theta)
-
-
 class QrackAceBackend:
     """A back end for elided quantum error correction
 
@@ -286,14 +129,6 @@ class QrackAceBackend:
                     t_sim_id = (sim_id + 1) % sim_count
                     qubit.append((t_sim_id, sim_counts[t_sim_id]))
                     sim_counts[t_sim_id] += 1
-
-                    qubit.append(
-                        LHVQubit(
-                            toClone=(
-                                toClone._qubit_dict[tot_qubits][2] if toClone else None
-                            )
-                        )
-                    )
 
                 if (not c) and (not r):
                     t_sim_id = (sim_id + col_patch_count) % sim_count
@@ -426,34 +261,16 @@ class QrackAceBackend:
     def _unpack(self, lq):
         return self._qubit_dict[lq]
 
-    def _get_qb_lhv_indices(self, hq):
+    def _get_qb_indices(self, hq):
         qb = []
         if len(hq) < 2:
             qb = [0]
-            lhv = -1
         elif len(hq) < 4:
             qb = [0, 1]
-            lhv = 2
         else:
-            qb = [0, 1, 3, 4]
-            lhv = 2
+            qb = [0, 1, 2, 3]
 
-        return qb, lhv
-
-    def _get_lhv_bloch_angles(self, sim):
-        # Z axis
-        z = 1 - 2 * sim.prob(Pauli.PauliZ)
-
-        # X axis
-        x = 1 - 2 * sim.prob(Pauli.PauliX)
-
-        # Y axis
-        y = 1 - 2 * sim.prob(Pauli.PauliY)
-
-        inclination = math.atan2(math.sqrt(x**2 + y**2), z)
-        azimuth = math.atan2(y, x)
-
-        return azimuth, inclination
+        return qb
 
     def _get_bloch_angles(self, hq):
         sim = self.sim[hq[0]].clone()
@@ -480,9 +297,7 @@ class QrackAceBackend:
 
         return azimuth, inclination
 
-    def _rotate_to_bloch(
-        self, hq, delta_azimuth, delta_inclination
-    ):
+    def _rotate_to_bloch(self, hq, delta_azimuth, delta_inclination):
         sim = self.sim[hq[0]]
         q = hq[1]
 
@@ -499,95 +314,59 @@ class QrackAceBackend:
 
         sim.mtrx([m00, m01, m10, m11], q)
 
-
-    def _rotate_lhv_to_bloch(
-        self, sim, delta_azimuth, delta_inclination
-    ):
-        # Apply rotation as "Azimuth, Inclination" (AI)
-        cosA = math.cos(delta_azimuth)
-        sinA = math.sin(delta_azimuth)
-        cosI = math.cos(delta_inclination / 2)
-        sinI = math.sin(delta_inclination / 2)
-
-        m00 = complex(cosI, 0)
-        m01 = complex(-cosA, sinA) * sinI
-        m10 = complex(cosA, sinA) * sinI
-        m11 = complex(cosI, 0)
-
-        sim.mtrx([m00, m01, m10, m11])
-
-
     def _correct(self, lq, phase=False, skip_rotation=False):
         hq = self._unpack(lq)
 
         if len(hq) == 1:
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         if phase:
             for q in qb:
                 b = hq[q]
                 self.sim[b[0]].h(b[1])
-            b = hq[lhv]
-            b.h()
 
         if len(hq) == 5:
             # RMS
             p = [
                 self.sim[hq[0][0]].prob(hq[0][1]),
                 self.sim[hq[1][0]].prob(hq[1][1]),
-                hq[2].prob(),
+                self.sim[hq[2][0]].prob(hq[2][1]),
                 self.sim[hq[3][0]].prob(hq[3][1]),
-                self.sim[hq[4][0]].prob(hq[4][1]),
             ]
             # Balancing suggestion from Elara (the custom OpenAI GPT)
-            prms = math.sqrt(
-                (p[0] ** 2 + p[1] ** 2 + 3 * (p[2] ** 2) + p[3] ** 2 + p[4] ** 2) / 7
-            )
+            prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2 + p[3] ** 2) / 4)
             qrms = math.sqrt(
-                (
-                    (1 - p[0]) ** 2
-                    + (1 - p[1]) ** 2
-                    + 3 * ((1 - p[2]) ** 2)
-                    + (1 - p[3]) ** 2
-                    + (1 - p[4]) ** 2
-                )
-                / 7
+                ((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2 + (1 - p[3]) ** 2)
+                / 4
             )
             result = ((prms + (1 - qrms)) / 2) >= 0.5
             syndrome = (
-                [1 - p[0], 1 - p[1], 1 - p[2], 1 - p[3], 1 - p[4]]
+                [1 - p[0], 1 - p[1], 1 - p[2], 1 - p[3]]
                 if result
-                else [p[0], p[1], p[2], p[3], p[4]]
+                else [p[0], p[1], p[2], p[3]]
             )
-            for q in range(5):
+            for q in range(4):
                 if syndrome[q] > (0.5 + self._epsilon):
-                    if q == 2:
-                        hq[q].x()
-                    else:
-                        self.sim[hq[q][0]].x(hq[q][1])
+                    self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
                 a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
-                a[3], i[3] = self._get_bloch_angles(hq[3])
-                a[4], i[4] = self._get_bloch_angles(hq[4])
+                a[2], i[2] = self._get_bloch_angles(hq[3])
+                a[3], i[3] = self._get_bloch_angles(hq[4])
 
                 a_target = 0
                 i_target = 0
-                for x in range(5):
-                    if x == 2:
-                        continue
+                for x in range(4):
                     a_target += a[x]
                     i_target += i[x]
 
                 a_target /= 4
                 i_target /= 4
-                for x in range(5):
-                    if x == 2:
-                        continue
+                for x in range(4):
                     self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         else:
@@ -595,19 +374,15 @@ class QrackAceBackend:
             p = [
                 self.sim[hq[0][0]].prob(hq[0][1]),
                 self.sim[hq[1][0]].prob(hq[1][1]),
-                hq[2].prob(),
             ]
             # Balancing suggestion from Elara (the custom OpenAI GPT)
-            prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
-            qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
+            prms = math.sqrt((p[0] ** 2 + p[1] ** 2) / 3)
+            qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2) / 3)
             result = ((prms + (1 - qrms)) / 2) >= 0.5
-            syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
-            for q in range(3):
+            syndrome = [1 - p[0], 1 - p[1]] if result else [p[0], p[1]]
+            for q in range(2):
                 if syndrome[q] > (0.5 + self._epsilon):
-                    if q == 2:
-                        hq[q].x()
-                    else:
-                        self.sim[hq[q][0]].x(hq[q][1])
+                    self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
                 a, i = [0, 0, 0], [0, 0, 0]
@@ -616,25 +391,19 @@ class QrackAceBackend:
 
                 a_target = 0
                 i_target = 0
-                for x in range(3):
-                    if x == 2:
-                        continue
+                for x in range(2):
                     a_target += a[x]
                     i_target += i[x]
 
                 a_target /= 2
                 i_target /= 2
-                for x in range(3):
-                    if x == 2:
-                        continue
+                for x in range(2):
                     self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         if phase:
             for q in qb:
                 b = hq[q]
                 self.sim[b[0]].h(b[1])
-            b = hq[lhv]
-            b.h()
 
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
@@ -643,14 +412,11 @@ class QrackAceBackend:
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].u(b[1], th, ph, lm)
-
-        b = hq[lhv]
-        b.u(th, ph, lm)
 
         self._correct(lq, False, True)
         self._correct(lq, True, False)
@@ -662,19 +428,11 @@ class QrackAceBackend:
             self.sim[b[0]].r(p, th, b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].r(p, th, b[1])
-
-        b = hq[lhv]
-        if p == Pauli.PauliX:
-            b.rx(th)
-        elif p == Pauli.PauliY:
-            b.ry(th)
-        elif p == Pauli.PauliZ:
-            b.rz(th)
 
         if p != Pauli.PauliZ:
             self._correct(lq, False, p != Pauli.PauliX)
@@ -690,14 +448,11 @@ class QrackAceBackend:
 
         self._correct(lq)
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].h(b[1])
-
-        b = hq[lhv]
-        b.h()
 
         self._correct(lq)
 
@@ -708,14 +463,11 @@ class QrackAceBackend:
             self.sim[b[0]].s(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].s(b[1])
-
-        b = hq[lhv]
-        b.s()
 
     def adjs(self, lq):
         hq = self._unpack(lq)
@@ -724,14 +476,11 @@ class QrackAceBackend:
             self.sim[b[0]].adjs(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].adjs(b[1])
-
-        b = hq[lhv]
-        b.adjs()
 
     def x(self, lq):
         hq = self._unpack(lq)
@@ -740,14 +489,11 @@ class QrackAceBackend:
             self.sim[b[0]].x(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].x(b[1])
-
-        b = hq[lhv]
-        b.x()
 
     def y(self, lq):
         hq = self._unpack(lq)
@@ -756,14 +502,11 @@ class QrackAceBackend:
             self.sim[b[0]].y(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].y(b[1])
-
-        b = hq[lhv]
-        b.y()
 
     def z(self, lq):
         hq = self._unpack(lq)
@@ -772,14 +515,11 @@ class QrackAceBackend:
             self.sim[b[0]].z(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].z(b[1])
-
-        b = hq[lhv]
-        b.z()
 
     def t(self, lq):
         hq = self._unpack(lq)
@@ -788,14 +528,11 @@ class QrackAceBackend:
             self.sim[b[0]].t(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].t(b[1])
-
-        b = hq[lhv]
-        b.t()
 
     def adjt(self, lq):
         hq = self._unpack(lq)
@@ -804,14 +541,11 @@ class QrackAceBackend:
             self.sim[b[0]].adjt(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
             self.sim[b[0]].adjt(b[1])
-
-        b = hq[lhv]
-        b.adjt()
 
     def _get_gate(self, pauli, anti, sim_id):
         gate = None
@@ -853,15 +587,11 @@ class QrackAceBackend:
 
         return connected, boundary
 
-    def _apply_coupling(self, pauli, anti, qb1, lhv1, hq1, qb2, lhv2, hq2, lq1_lr):
+    def _apply_coupling(self, pauli, anti, qb1, hq1, qb2, hq2, lq1_lr):
         for q1 in qb1:
-            if q1 == lhv1:
-                continue
             b1 = hq1[q1]
             gate_fn, shadow_fn = self._get_gate(pauli, anti, b1[0])
             for q2 in qb2:
-                if q2 == lhv2:
-                    continue
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
                     gate_fn([b1[1]], b2[1])
@@ -886,18 +616,10 @@ class QrackAceBackend:
 
         self._correct(lq1)
 
-        qb1, lhv1 = self._get_qb_lhv_indices(hq1)
-        qb2, lhv2 = self._get_qb_lhv_indices(hq2)
+        qb1 = self._get_qb_indices(hq1)
+        qb2 = self._get_qb_indices(hq2)
         # Apply cross coupling on hardware qubits first
-        self._apply_coupling(pauli, anti, qb1, lhv1, hq1, qb2, lhv2, hq2, lq1_lr)
-        # Apply coupling to the local-hidden-variable target
-        if lhv2 >= 0:
-            _cpauli_lhv(
-                hq1[lhv1].prob() if lhv1 >= 0 else self.sim[hq1[0][0]].prob(hq1[0][1]),
-                hq2[lhv2],
-                pauli,
-                anti,
-            )
+        self._apply_coupling(pauli, anti, qb1, hq1, qb2, hq2, lq1_lr)
 
         self._correct(lq1, True)
         if pauli != Pauli.PauliZ:
@@ -999,29 +721,20 @@ class QrackAceBackend:
                 self.sim[hq[4][0]].prob(hq[4][1]),
             ]
             # Balancing suggestion from Elara (the custom OpenAI GPT)
-            prms = math.sqrt(
-                (p[0] ** 2 + p[1] ** 2 + 3 * (p[2] ** 2) + p[3] ** 2 + p[4] ** 2) / 7
-            )
+            prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2 + p[3] ** 2) / 4)
             qrms = math.sqrt(
-                (
-                    (1 - p[0]) ** 2
-                    + (1 - p[1]) ** 2
-                    + 3 * ((1 - p[2]) ** 2)
-                    + (1 - p[3]) ** 2
-                    + (1 - p[4]) ** 2
-                )
-                / 7
+                ((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2 + (1 - p[3]) ** 2)
+                / 4
             )
         else:
             # RMS
             p = [
                 self.sim[hq[0][0]].prob(hq[0][1]),
                 self.sim[hq[1][0]].prob(hq[1][1]),
-                hq[2].prob(),
             ]
             # Balancing suggestion from Elara (the custom OpenAI GPT)
-            prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
-            qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
+            prms = math.sqrt((p[0] ** 2 + p[1] ** 2) / 3)
+            qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2) / 3)
 
         return (prms + (1 - qrms)) / 2
 
@@ -1034,7 +747,7 @@ class QrackAceBackend:
         p = self.prob(lq)
         result = ((p + self._epsilon) >= 1) or (random.random() < p)
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -1044,11 +757,6 @@ class QrackAceBackend:
                     self.sim[b[0]].x(b[1])
             else:
                 self.sim[b[0]].force_m(b[1], result)
-
-        b = hq[lhv]
-        b.reset()
-        if result:
-            b.x()
 
         return result
 
@@ -1060,7 +768,7 @@ class QrackAceBackend:
 
         self._correct(lq)
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb = self._get_qb_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -1070,11 +778,6 @@ class QrackAceBackend:
                     self.sim[b[0]].x(b[1])
             else:
                 self.sim[b[0]].force_m(b[1], result)
-
-        b = hq[1]
-        b.reset()
-        if result:
-            b.x()
 
         return c
 
