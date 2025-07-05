@@ -650,29 +650,21 @@ class QrackAceBackend:
     def apply_magnetic_bias(self, q, b):
         if b == 0:
             return
-        b = math.exp(b) - 1
+        b = math.exp(b)
         for x in q:
             hq = self._unpack(x)
             for c in range(len(hq)):
                 h = hq[c]
                 if c == 2:
                     a, i = self._get_lhv_bloch_angles(h)
-                    self._rotate_lhv_to_bloch(h, a * b - 1, i * b - 1)
+                    self._rotate_lhv_to_bloch(
+                        h, math.atan(math.tan(a) * b) - a, math.atan(math.tan(i) * b) - i
+                    )
                 else:
                     a, i = self._get_bloch_angles(h)
-                    self._rotate_to_bloch(h, a * b - 1, i * b - 1)
-
-    def apply_tangent_magnetic_bias(self, q, b):
-        if b == 0:
-            return
-        b = math.exp(b)
-        for x in q:
-            hq = self._unpack(x)
-            for h in hq:
-                a, i = self._get_bloch_angles(h)
-                self._rotate_to_bloch(
-                    h, math.atan(math.tan(a) * b) - a, math.atan(math.tan(i) * b) - i
-                )
+                    self._rotate_to_bloch(
+                        h, math.atan(math.tan(a) * b) - a, math.atan(math.tan(i) * b) - i
+                    )
 
     def u(self, lq, th, ph, lm):
         hq = self._unpack(lq)
