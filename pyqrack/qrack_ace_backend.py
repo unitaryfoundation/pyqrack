@@ -621,8 +621,8 @@ class QrackAceBackend:
                     a_target += a[x]
                     i_target += i[x]
 
-                a_target /= 5
-                i_target /= 5
+                a_target /= 3
+                i_target /= 3
                 for x in range(3):
                     if x == 2:
                         self._rotate_lhv_to_bloch(hq[x], a_target - a[x], i_target - i[x])
