@@ -572,23 +572,23 @@ class QrackAceBackend:
                 a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
-                a[2], i[2] = self._get_lhv_bloch_angles(hq[2])
                 a[3], i[3] = self._get_bloch_angles(hq[3])
                 a[4], i[4] = self._get_bloch_angles(hq[4])
 
                 a_target = 0
                 i_target = 0
                 for x in range(5):
+                    if x == 2:
+                        continue
                     a_target += a[x]
                     i_target += i[x]
 
-                a_target /= 5
-                i_target /= 5
+                a_target /= 4
+                i_target /= 4
                 for x in range(5):
                     if x == 2:
-                        self._rotate_lhv_to_bloch(hq[x], a_target - a[x], i_target - i[x])
-                    else:
-                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                        continue
+                    self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         else:
             # RMS
@@ -613,21 +613,21 @@ class QrackAceBackend:
                 a, i = [0, 0, 0], [0, 0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
-                a[2], i[2] = self._get_lhv_bloch_angles(hq[2])
 
                 a_target = 0
                 i_target = 0
                 for x in range(3):
+                    if x == 2:
+                        continue
                     a_target += a[x]
                     i_target += i[x]
 
-                a_target /= 3
-                i_target /= 3
+                a_target /= 2
+                i_target /= 2
                 for x in range(3):
                     if x == 2:
-                        self._rotate_lhv_to_bloch(hq[x], a_target - a[x], i_target - i[x])
-                    else:
-                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                        continue
+                    self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         if phase:
             for q in qb:
