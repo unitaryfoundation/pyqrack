@@ -208,7 +208,6 @@ class QrackAceBackend:
         sim(QrackSimulator): Array of simulators corresponding to "patches" between boundary rows.
         long_range_columns(int): How many ideal rows between QEC boundary rows?
         is_transpose(bool): Rows are long if False, columns are long if True
-        correction_bias(float): Bias magnitude and direction during pseudo-QEC
     """
 
     def __init__(
@@ -217,7 +216,6 @@ class QrackAceBackend:
         long_range_columns=4,
         long_range_rows=4,
         is_transpose=False,
-        correction_bias=0,
         isTensorNetwork=False,
         isSchmidtDecomposeMulti=False,
         isSchmidtDecompose=True,
@@ -597,8 +595,6 @@ class QrackAceBackend:
                     else:
                         self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
-                self.apply_magnetic_bias([lq], self.correction_bias)
-
         else:
             # RMS
             p = [
@@ -641,8 +637,6 @@ class QrackAceBackend:
                         )
                     else:
                         self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
-
-                self.apply_magnetic_bias([lq], self.correction_bias)
 
         if phase:
             for q in qb:
