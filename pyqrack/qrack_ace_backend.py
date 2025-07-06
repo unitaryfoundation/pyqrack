@@ -244,7 +244,6 @@ class QrackAceBackend:
         self.long_range_columns = long_range_columns
         self.long_range_rows = long_range_rows
         self.is_transpose = is_transpose
-        self.correction_bias = correction_bias
 
         fppow = 5
         if "QRACK_FPPOW" in os.environ:
