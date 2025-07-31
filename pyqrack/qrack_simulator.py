@@ -65,8 +65,6 @@ class QrackSimulator:
         qiskitCircuit=None,
     ):
         self.sid = None
-        self.is_sd = isSchmidtDecompose
-        self.is_bdt = isBinaryDecisionTree
 
         if pyzxCircuit is not None:
             qubitCount = pyzxCircuit.qubits
@@ -201,7 +199,7 @@ class QrackSimulator:
         self._throw_if_error()
 
     def clone(self):
-        return QrackSimulator(cloneSid=self.sid, isSchmidtDecompose=self.is_sd, isBinaryDecisionTree=self.is_bdt)
+        return QrackSimulator(cloneSid=self.sid)
 
     # standard gates
 
@@ -2263,8 +2261,6 @@ class QrackSimulator:
         Returns:
             list representing the state vector.
         """
-        if self.is_sd and self.is_bdt:
-            raise NotImplementedError("out_ket() with isSchmidtDecompose=True and isBinaryDecisionTree=True would be undefined behavior! (The implementation would be impractically difficult and expensive.) Disable at least one or the other.")
         amp_count = 1 << self.num_qubits()
         ket = self._qrack_complex_byref([complex(0, 0)] * amp_count)
         Qrack.qrack_lib.OutKet(self.sid, ket)
