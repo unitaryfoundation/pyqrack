@@ -790,6 +790,9 @@ class QrackSystem:
         self.qrack_lib.MAll.restype = c_ulonglong
         self.qrack_lib.MAll.argtypes = [c_ulonglong]
 
+        self.qrack_lib.MAllLong.restype = None
+        self.qrack_lib.MAllLong.argtypes = [c_ulonglong, POINTER(c_ulonglong)]
+
         self.qrack_lib.Measure.restype = c_ulonglong
         self.qrack_lib.Measure.argtypes = [
             c_ulonglong,
