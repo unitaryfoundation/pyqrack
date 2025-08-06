@@ -23,7 +23,7 @@ jobs:
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers python3-venv
+          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers python3-venv libboost-dev
 
       - name: Install Python Dependencies
         run: |
@@ -57,7 +57,7 @@ jobs:
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers python3-venv
+          sudo apt-get install -y build-essential cmake ocl-icd-opencl-dev opencl-headers python3-venv libboost-dev
 
       - name: Install Python Dependencies
         run: |
@@ -104,7 +104,7 @@ jobs:
       - name: Prepare Build Environment (MacOS)
         run: |
           brew upgrade
-          brew install cmake
+          brew install cmake boost
 
       - name: Build Wheel
         run: |
@@ -142,7 +142,7 @@ jobs:
       - name: Prepare Build Environment (MacOS)
         run: |
           brew upgrade
-          brew install cmake
+          brew install cmake boost
 
       - name: Build Wheel
         run: |
@@ -180,7 +180,7 @@ jobs:
       - name: Prepare Build Environment (MacOS)
         run: |
           brew upgrade rustup
-          brew install cmake opencl-clhpp-headers
+          brew install cmake opencl-clhpp-headers boost
 
       - name: Build Wheel
         run: |
@@ -193,7 +193,7 @@ jobs:
           path: dist/
 
   build_windows:
-    runs-on: windows-latest  # Use a Linux runner
+    runs-on: windows-latest  # Use a Windows runner
     strategy:
       matrix:
         platform:
@@ -223,6 +223,14 @@ jobs:
         run: |
           vcpkg install opencl
 
+      - name: Install Boost
+        uses: MarkusJx/install-boost@v1.0.1
+        id: install-boost
+        with:
+          boost_version: 1.73.0
+          toolset: msvc14.2
+          boost_install_dir: D:/a/pyqrack/pyqrack
+
       - name: Build Qrack Windows x86-64
         run: |
           cd qrack
@@ -230,7 +238,7 @@ jobs:
           cd build
           powershell -c "Invoke-WebRequest -Uri 'https://github.com/ckormanyos/xxd/releases/download/v1.1/xxd-win64-msvc.zip' -OutFile 'xxd-win64-msvc.zip'"
           powershell -c "Expand-Archive -Path xxd-win64-msvc.zip -DestinationPath ."
-          cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DXXD_BIN="xxd.exe" -DQBCAPPOW=8 -DCPP_STD=14
+          cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DXXD_BIN="xxd.exe" -DQBCAPPOW=8 -DCPP_STD=14 -DBoost_INCLUDE_DIR="D:/a/pyqrack/pyqrack" -DBoost_LIBRARY_DIRS="D:/a/pyqrack/pyqrack"
           cmake --build . --config Release --target qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel
