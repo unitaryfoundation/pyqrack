@@ -2292,6 +2292,26 @@ class QrackSimulator:
         self._throw_if_error()
         return list(probs)
 
+    def out_rdm(self, q):
+        """Get reduced density matrix
+
+        Returns the raw reduced density matrix of the simulator, for the qubit list.
+        Warning: State vector or is not always the internal representation leading
+        to sub-optimal performance of the method.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            flat list structure representing the reduced density matrix.
+        """
+        amp_count = 1 << len(q)
+        sqr_amp_count = amp_count * amp_count
+        flat_rdm = self._qrack_complex_byref([complex(0, 0)] * sqr_amp_count)
+        Qrack.qrack_lib.OutReducedDensityMatrix(self.sid, len(q), self._ulonglong_byref(q), flat_rdm)
+        self._throw_if_error()
+        return [complex(r, i) for r, i in self._pairwise(flat_rdm)]
+
     def prob_all(self, q):
         """Probabilities of all subset permutations
 
