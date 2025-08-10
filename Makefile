@@ -16,6 +16,8 @@ help:
 
 .PHONY: build-deps
 build-deps:
+	rm -rf pyqrack/qrack_system/qrack_lib
+	rm -rf pyqrack/qrack_system/qrack_cl_precompile
 ifneq ($(OS),Windows_NT)
 ifeq ($(QRACK_PRESENT),)
 	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout 5d04b51c373cdd6e033df0189d35fb27f2fc13df; cd ..
