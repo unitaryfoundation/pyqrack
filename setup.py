@@ -68,7 +68,7 @@ setup(
     ],
     keywords="pyqrack qrack simulator quantum gpu",
     install_requires=[],
-    setup_requires=['cmake'],
+    setup_requires=[],
     extras_require={
         "dev": [
             "pytest>=7.3.1",
