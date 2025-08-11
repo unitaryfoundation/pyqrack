@@ -1,7 +1,7 @@
 Source: pyqrack
 Priority: optional
 Maintainer: Daniel Strano <dan@unitary.fund>
-Build-Depends: debhelper-compat (= 11),dh-python,python3,python3-setuptools,libqrack-dev
+Build-Depends: debhelper-compat (= 11),dh-python,python3,python3-setuptools,python3-all-dev,cmake,libqrack-dev
 Standards-Version: 4.4.1
 X-Python3-Version: >= 3.6
 Section: libs
