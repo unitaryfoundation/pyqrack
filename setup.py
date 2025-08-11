@@ -7,7 +7,7 @@ from setuptools import setup
 from setuptools.command.build_py import build_py
 
 
-VERSION = "1.66.1"
+VERSION = "1.66.5"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
@@ -15,20 +15,10 @@ with open(README_PATH) as readme_file:
     README = readme_file.read()
 
 
-class Build(build_py):
-    def run(self):
-        protoc_command = ["make", "build-deps"]
-        if os.name != "nt":
-            if subprocess.call(protoc_command) != 0:
-                sys.exit(-1)
-        super().run()
-
-
 setup(
     name='pyqrack',
     version=VERSION,
     packages=['pyqrack', 'pyqrack.qrack_system', 'pyqrack.stats'],
-    cmdclass={"build_py": Build},
     description="pyqrack - Pure Python vm6502q/qrack Wrapper",
     long_description=README,
     long_description_content_type='text/markdown',
