@@ -1,3 +1,9 @@
+pyqrack (1.66.1) noble; urgency=medium
+
+  * Reduced density matrices (Noble 1/4)
+
+ -- Dan Strano <stranoj@gmail.com>  Sun, 10 Aug 2025 13:02:03 -0400
+
 pyqrack (1.58.4) bionic; urgency=medium
 
   * QrackAceBackend (Bionic 4/4)
