@@ -144,14 +144,18 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          vcpkg install boost
+          vcpkg install boost-dynamic-bitset
 
       - name: Build Qrack Windows x86-64
+        env:
+          BOOST_ROOT: ${{ env.VCPKG_INSTALLATION_ROOT }}installed/x64-windows
+          BOOST_INCLUDEDIR: ${{ env.VCPKG_INSTALLATION_ROOT }}/installed/x64-windows/include
+          BOOST_LIBRARYDIR: ${{ env.VCPKG_INSTALLATION_ROOT }}/installed/x64-windows/lib
         run: |
           cd qrack
           mkdir build
           cd build
-          cmake .. -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF
+          cmake .. -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBoost_NO_SYSTEM_PATHS=TRUE
           cmake --build . --config Release --target qrack_pinvoke
 
       - name: Build Wheel
