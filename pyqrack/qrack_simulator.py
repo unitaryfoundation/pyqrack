@@ -2312,6 +2312,28 @@ class QrackSimulator:
         self._throw_if_error()
         return [complex(r, i) for r, i in self._pairwise(flat_rdm)]
 
+    def highest_prob_perm(self):
+        """Get the permutation (bit string) with the highest probability
+
+        Returns the single highest-probability bit string in the Hilbert space
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Highest probability dimension index
+        """
+        num_q = self.num_qubits()
+        num_words = (num_q + 63) // 64
+        _r = (ctypes.c_ulonglong * num_words)()
+        Qrack.qrack_lib.HighestProbAll(self.sid, _r)
+        self._throw_if_error()
+        r = 0
+        for w in range(num_words):
+            r <<= 64
+            r |= _r[w]
+        return r
+
     def prob_all(self, q):
         """Probabilities of all subset permutations
 
