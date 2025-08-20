@@ -2132,9 +2132,7 @@ class QrackSimulator:
     def decompose(self, q):
         """Decompose system
 
-        Decompose the given qubit out of the system.
-        Warning: The qubit subsystem state must be separable, or the behavior
-        of this method is undefined.
+        Factorize a set of contiguous bits with minimal fidelity loss.
 
         Args:
             q: qubit id
@@ -2144,7 +2142,7 @@ class QrackSimulator:
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot decompose()! (Turn off just this option, in the constructor.)
 
         Returns:
-            State of the systems.
+            Decomposed subsystem simulator.
         """
         if self.is_tensor_network:
             raise RuntimeError(
@@ -2161,10 +2159,8 @@ class QrackSimulator:
     def dispose(self, q):
         """Dispose qubits
 
-        Minimally decompose a set of contiguous bits from the separably
-        composed unit, and discard the separable bits.
-        Warning: The qubit subsystem state must be separable, or the behavior
-        of this method is undefined.
+        Factorize a set of contiguous bits with minimal fidelity loss,
+        and discard the separable bits.
 
         Args:
             q: qubit
@@ -2172,9 +2168,6 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
             RuntimeError: QrackSimulator with isTensorNetwork=True option cannot dispose()! (Turn off just this option, in the constructor.)
-
-        Returns:
-            State of the systems.
         """
         if self.is_tensor_network:
             raise RuntimeError(
@@ -2332,6 +2325,30 @@ class QrackSimulator:
         for w in range(num_words):
             r <<= 64
             r |= _r[w]
+        return r
+
+    def highest_n_prob_perm(self, n):
+        """Get the top n permutations (bit strings) with the highest probability
+
+        Returns the top n highest-probability bit strings in the Hilbert space
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+
+        Returns:
+            Top n highest probability dimension indices
+        """
+        num_q = self.num_qubits()
+        num_words = (num_q + 63) // 64
+        _r = (ctypes.c_ulonglong * (num_words * n))()
+        Qrack.qrack_lib.HighestProbAllN(self.sid, n, _r)
+        self._throw_if_error()
+        r = [0] * n
+        for i in range(n):
+            r[i] = 0
+            for w in range(num_words):
+                r[i] <<= 64
+                r[i] |= _r[(i * num_words) + w]
         return r
 
     def prob_all(self, q):
