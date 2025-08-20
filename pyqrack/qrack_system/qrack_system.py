@@ -161,6 +161,9 @@ class QrackSystem:
         self.qrack_lib.HighestProbAll.restype = None
         self.qrack_lib.HighestProbAll.argtypes = [c_ulonglong, POINTER(c_ulonglong)]
 
+        self.qrack_lib.HighestProbAllN.restype = None
+        self.qrack_lib.HighestProbAllN.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
+
         self.qrack_lib.ProbAll.restype = None
         if self.fppow == 5:
             self.qrack_lib.ProbAll.argtypes = [
