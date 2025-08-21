@@ -37,7 +37,6 @@ else
 	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=11 -DFPPOW=6 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke
 endif
 endif
-endif
 	mkdir pyqrack/qrack_system/qrack_lib; cp qrack/build/libqrack_pinvoke.* pyqrack/qrack_system/qrack_lib/; cd ../../..
 	mkdir pyqrack/qrack_system/qrack_cl_precompile; cp qrack/build/qrack_cl_precompile pyqrack/qrack_system/qrack_cl_precompile/; cd ../../..
 
