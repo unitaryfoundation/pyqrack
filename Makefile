@@ -20,21 +20,21 @@ build-deps:
 	rm -rf pyqrack/qrack_system/qrack_cl_precompile
 ifneq ($(OS),Windows_NT)
 ifeq ($(QRACK_PRESENT),)
-	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout 462e986d7ac60e68c3999996aa11400223453e03; cd ..
+	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout b6d3ab98d5d89bfff2cc9ad7d6e7a30c231c62a9; cd ..
 endif
 	mkdir -p qrack/build
 ifeq ($(UNAME_S),Linux)
 ifeq ($(UNAME_P),x86_64)
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=9 -DFPPOW=6 ..; make qrack_pinvoke
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=11 -DFPPOW=6 ..; make qrack_pinvoke
 else
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=9 -DFPPOW=6 ..; make qrack_pinvoke
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=11 -DFPPOW=6 ..; make qrack_pinvoke
 endif
 endif
 ifeq ($(UNAME_S),Darwin)
 ifeq ($(UNAME_P),x86_64)
-	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=9 -DFPPOW=6 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=11 -DFPPOW=6 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke
 else
-	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=9 -DFPPOW=6 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke
+	cd qrack/build; cmake -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=11 -DFPPOW=6 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke
 endif
 endif
 endif
