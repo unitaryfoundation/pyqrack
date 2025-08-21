@@ -221,7 +221,7 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          vcpkg install opencl boost-dynamic-bitset
+          vcpkg install opencl boost-dynamic-bitset boost-multiprecision
 
       - name: Build Qrack Windows x86-64
         env:
