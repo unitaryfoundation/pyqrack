@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main  # Trigger on pushes to the main branch (adjust if needed)
+      - complex128 # fp64 PyQrack build
 
   workflow_dispatch: # Allow manual triggering of the workflow
 
@@ -220,7 +221,7 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          vcpkg install opencl boost-dynamic-bitset
+          vcpkg install opencl boost-dynamic-bitset boost-multiprecision
 
       - name: Build Qrack Windows x86-64
         env:
