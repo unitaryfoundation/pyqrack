@@ -78,6 +78,82 @@ jobs:
           name: pyqrack-${{ matrix.platform }}
           path: dist/
 
+  build_mac_15:
+    runs-on: macos-15  # Use a Mac OS runner
+    strategy:
+      matrix:
+        platform:
+          - macosx_15_0_arm64
+    steps:
+      - name: Checkout PyQrack
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install wheel setuptools
+
+      - name: Install Homebrew (MacOS)
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Prepare Build Environment (MacOS)
+        run: |
+          brew upgrade
+          brew install cmake boost
+
+      - name: Build Wheel
+        run: |
+          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyqrack-${{ matrix.platform }}
+          path: dist/
+
+  build_mac_14:
+    runs-on: macos-14  # Use a Mac OS runner
+    strategy:
+      matrix:
+        platform:
+          - macosx_14_0_arm64
+    steps:
+      - name: Checkout PyQrack
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install Python Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install wheel setuptools
+
+      - name: Install Homebrew (MacOS)
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Prepare Build Environment (MacOS)
+        run: |
+          brew upgrade
+          brew install cmake boost
+
+      - name: Build Wheel
+        run: |
+          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pyqrack-${{ matrix.platform }}
+          path: dist/
+
   build_mac_13:
     runs-on: macos-13  # Use a Mac OS runner
     strategy:
@@ -156,7 +232,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake .. -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBoost_NO_SYSTEM_PATHS=TRUE -DBoost_INCLUDE_DIR="C:/vcpkg/installed/x64-windows/include"
+          cmake .. -DFPPOW=6 -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBoost_NO_SYSTEM_PATHS=TRUE -DBoost_INCLUDE_DIR="C:/vcpkg/installed/x64-windows/include"
           cmake --build . --config Release --target qrack_pinvoke
 
       - name: Build Wheel
