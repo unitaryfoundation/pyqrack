@@ -111,10 +111,10 @@ class QrackSystem:
         self.qrack_lib.get_error.argtypes = [c_ulonglong]
 
         self.qrack_lib.init_count.restype = c_ulonglong
-        self.qrack_lib.init_count.argtypes = [c_ulonglong, c_bool]
+        self.qrack_lib.init_count.argtypes = [c_ulonglong, c_bool, c_bool]
 
         self.qrack_lib.init_count_pager.restype = c_ulonglong
-        self.qrack_lib.init_count_pager.argtypes = [c_ulonglong, c_bool]
+        self.qrack_lib.init_count_pager.argtypes = [c_ulonglong, c_bool, c_bool]
 
         self.qrack_lib.init_count_type.restype = c_ulonglong
         self.qrack_lib.init_count_type.argtypes = [
@@ -129,6 +129,7 @@ class QrackSystem:
             c_bool,
             c_bool,
             c_bool,
+            c_bool
         ]
 
         self.qrack_lib.init_count_stabilizer.restype = c_ulonglong
