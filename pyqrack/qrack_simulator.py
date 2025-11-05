@@ -60,6 +60,7 @@ class QrackSimulator:
         isHostPointer=(
             True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False
         ),
+        isSparse=False,
         noise=0,
         pyzxCircuit=None,
         qiskitCircuit=None,
@@ -99,6 +100,7 @@ class QrackSimulator:
                 isCpuGpuHybrid,
                 isOpenCL,
                 isHostPointer,
+                isSparse
             )
 
         self._throw_if_error()
