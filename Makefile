@@ -34,7 +34,7 @@ ifeq ($(UNAME_S),Darwin)
 ifeq ($(UNAME_P),x86_64)
 	cd qrack/build; cmake -DQBCAPPOW=11 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
 else
-	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=11 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_OPENCL=OFF -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=11 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
 endif
 endif
 endif
