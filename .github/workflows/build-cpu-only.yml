@@ -111,7 +111,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
@@ -149,7 +149,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
@@ -187,7 +187,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
@@ -232,7 +232,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
@@ -252,7 +252,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake .. -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBoost_NO_SYSTEM_PATHS=TRUE -DBoost_INCLUDE_DIR="C:/vcpkg/installed/x64-windows/include"
+          cmake .. -DQBCAPPOW=6 -DCPP_STD=14 -DENABLE_OPENCL=OFF -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBoost_NO_SYSTEM_PATHS=TRUE -DBoost_INCLUDE_DIR="C:/vcpkg/installed/x64-windows/include"
           cmake --build . --config Release --target qrack_pinvoke
 
       - name: Build Wheel
