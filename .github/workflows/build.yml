@@ -175,11 +175,11 @@ jobs:
           path: dist/
 
   build_mac_intel:
-    runs-on: macos-14-intel  # Use a Mac OS runner
+    runs-on: macos-15-intel  # Use a Mac OS runner
     strategy:
       matrix:
         platform:
-          - macosx_14_0_x86_64
+          - macosx_15_0_x86_64
     steps:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
