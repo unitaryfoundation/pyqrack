@@ -41,10 +41,10 @@ else
 endif
 endif
 ifeq ($(UNAME_S),Darwin)
-ifeq ($(UNAME_P),arm64)
-	cd qrack/build; cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_OPENCL=OFF -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 -DFPPOW=6 ..; make qrack_pinvoke qrack_cl_precompile
+ifeq ($(UNAME_P),x86_64)
+	cd qrack/build; cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
 else
-	cd qrack/build; cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DQBCAPPOW=8 -DFPPOW=6 ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_OPENCL=OFF -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
 endif
 endif
 endif
