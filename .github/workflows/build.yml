@@ -174,12 +174,12 @@ jobs:
           name: pyqrack-${{ matrix.platform }}
           path: dist/
 
-  build_mac_13:
-    runs-on: macos-13  # Use a Mac OS runner
+  build_mac_intel:
+    runs-on: macos-14-intel  # Use a Mac OS runner
     strategy:
       matrix:
         platform:
-          - macosx_13_0_x86_64
+          - macosx_14_0_x86_64
     steps:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
