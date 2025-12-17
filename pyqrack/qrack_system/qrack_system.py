@@ -1219,6 +1219,12 @@ class QrackSystem:
         self.qrack_lib.SetNoiseParameter.restype = None
         self.qrack_lib.SetNoiseParameter.argtypes = [c_ulonglong, c_double]
 
+        self.qrack_lib.SetAceMaxQb.restype = None
+        self.qrack_lib.SetAceMaxQb.argtypes = [c_ulonglong, c_ulonglong]
+
+        self.qrack_lib.SetSparseAceMaxMb.restype = None
+        self.qrack_lib.SetSparseAceMaxMb.argtypes = [c_ulonglong, c_size_t]
+
         self.qrack_lib.Normalize.restype = None
         self.qrack_lib.Normalize.argtypes = [c_ulonglong]
 
