@@ -3322,6 +3322,41 @@ class QrackSimulator:
         Qrack.qrack_lib.SetNoiseParameter(self.sid, np)
         self._throw_if_error()
 
+    def set_ace_max_qb(self, qb):
+        """Set "automatic circuit elision" (ACE) max qubits
+
+        If isSchmidtDecompose=True, maximum entangled subsytem size
+        of this simulator will be capped to 'qb', and entangling
+        gates that would exceed that size are replaced with gate
+        shadows.
+
+        Args:
+            qb: maximum subsystem qubits
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetAceMaxQb(self.sid, qb)
+        self._throw_if_error()
+
+    def set_sparse_ace_max_mb(self, mb):
+        """Set sparse "automatic circuit elision" (ACE) max memory
+
+        If isSchmidtDecompose=True, isSparse=True, and
+        isOpenCL=False, maximum subsytem size memory MB of this
+        simulator will be capped to 'mb', and entangling gates
+        that would exceed that size are replaced with gate
+        shadows.
+
+        Args:
+            mb: maximum subsystem memory in MB
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetSparseAceMaxMb(self.sid, mb)
+        self._throw_if_error()
+
     def normalize(self):
         """Normalize the state
 
