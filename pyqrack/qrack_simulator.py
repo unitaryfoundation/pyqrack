@@ -49,7 +49,7 @@ class QrackSimulator:
         self,
         qubitCount=-1,
         cloneSid=-1,
-        isTensorNetwork=True,
+        isTensorNetwork=False,
         isSchmidtDecomposeMulti=False,
         isSchmidtDecompose=True,
         isStabilizerHybrid=False,
