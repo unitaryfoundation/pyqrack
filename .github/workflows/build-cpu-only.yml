@@ -3,8 +3,7 @@ name: Build PyQrack Wheels
 on:
   push:
     branches:
-      - cpu-only  # Trigger on pushes to the cpu-only branch (adjust if needed)
-      - cpu-only_complex128 # fp64 CPU-only branch
+      - cpu-only_complex128
 
   workflow_dispatch: # Allow manual triggering of the workflow
 
@@ -199,7 +198,7 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
-          brew upgrade rustup
+          brew upgrade
           brew install cmake boost
 
       - name: Build Wheel
@@ -239,6 +238,10 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel setuptools
 
+      - name: Install vcpkg dependencies
+        run: |
+          vcpkg install boost-dynamic-bitset boost-multiprecision
+
       - name: Build Qrack Windows x86-64
         env:
           BOOST_ROOT: C:/vcpkg/installed/x64-windows
@@ -248,7 +251,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake .. -DFPPOW=6 -DQBCAPPOW=6 -DCPP_STD=14 -DENABLE_OPENCL=OFF
+          cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBoost_NO_SYSTEM_PATHS=TRUE -DFPPOW=6 -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF
           cmake --build . --config Release --target qrack_pinvoke
 
       - name: Build Wheel
