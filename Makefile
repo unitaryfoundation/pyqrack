@@ -30,21 +30,21 @@ build-deps:
 	rm -rf pyqrack/qrack_system/qrack_cl_precompile
 ifneq ($(OS),Windows_NT)
 ifeq ($(QRACK_PRESENT),)
-	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout eb3bc20394414568ce16dec8edb68d565205db78; cd ..
+	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout 63d57384a1df28288a39c32d0e41f2ff47360e0b; cd ..
 endif
 	mkdir -p qrack/build
 ifeq ($(UNAME_S),Linux)
-ifeq ($(UNAME_P),x86_64)
-	cd qrack/build; $(CMAKE_L) -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 -DCPP_STD=17 ..; make qrack_pinvoke qrack_cl_precompile
+ifneq ($(filter $(UNAME_P),x86_64 i386),)
+	cd qrack/build; $(CMAKE_L) -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
 else
-	cd qrack/build; $(CMAKE_L) -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 -DCPP_STD=17 ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; $(CMAKE_L) -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
 endif
 endif
 ifeq ($(UNAME_S),Darwin)
-ifeq ($(UNAME_P),x86_64)
-	cd qrack/build; cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
+ifneq ($(filter $(UNAME_P),x86_64 i386),)
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
 else
-	cd qrack/build; cmake -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DENABLE_OPENCL=OFF -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
 endif
 endif
 endif
