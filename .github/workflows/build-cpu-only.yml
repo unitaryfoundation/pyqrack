@@ -199,7 +199,7 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
-          brew upgrade rustup
+          brew upgrade
           brew install cmake boost
 
       - name: Build Wheel
@@ -248,7 +248,7 @@ jobs:
           cd qrack
           mkdir build
           cd build
-          cmake .. -DQBCAPPOW=6 -DCPP_STD=14 -DENABLE_OPENCL=OFF
+          cmake .. -DQBCAPPOW=8 -DCPP_STD=14 -DENABLE_OPENCL=OFF
           cmake --build . --config Release --target qrack_pinvoke
 
       - name: Build Wheel
