@@ -1,3 +1,51 @@
+pyqrack (1.75.8) bionic; urgency=medium
+
+  * Programmatic ACE limit controls, fix Debian build (Bionic 4/4)
+
+ -- Daniel Strano <stranoj@gmail.com>  Wed, 24 Dec 2025 01:02:42 -0500
+
+pyqrack (1.75.7) focal; urgency=medium
+
+  * Programmatic ACE limit controls, fix Debian build (Focal 3/4)
+
+ -- Daniel Strano <stranoj@gmail.com>  Wed, 24 Dec 2025 01:01:09 -0500
+
+pyqrack (1.75.6) jammy; urgency=medium
+
+  * Programmatic ACE limit controls, fix Debian build (Jammy 2/4)
+
+ -- Daniel Strano <stranoj@gmail.com>  Wed, 24 Dec 2025 00:59:05 -0500
+
+pyqrack (1.75.5) noble; urgency=medium
+
+  * Programmatic ACE limit controls, fix Debian build (Noble 1/4)
+
+ -- Daniel Strano <stranoj@gmail.com>  Wed, 24 Dec 2025 00:56:54 -0500
+
+pyqrack (1.75.4) bionic; urgency=medium
+
+  * Programmatic ACE limit controls (Bionic 4/4)
+
+ -- Daniel Strano <stranoj@gmail.com>  Wed, 24 Dec 2025 00:37:07 -0500
+
+pyqrack (1.75.3) focal; urgency=medium
+
+  * Programmatic ACE limit controls (Focal 3/4)
+
+ -- Daniel Strano <stranoj@gmail.com>  Wed, 24 Dec 2025 00:35:10 -0500
+
+pyqrack (1.75.2) jammy; urgency=medium
+
+  * Programmatic ACE limit controls (Jammy 2/4)
+
+ -- Daniel Strano <stranoj@gmail.com>  Wed, 24 Dec 2025 00:33:20 -0500
+
+pyqrack (1.75.1) noble; urgency=medium
+
+  * Programmatic ACE limit controls (Noble 1/4)
+
+ -- Daniel Strano <stranoj@gmail.com>  Wed, 24 Dec 2025 00:15:45 -0500
+
 pyqrack (1.66.1) noble; urgency=medium
 
   * Reduced density matrices (Noble 1/4)
