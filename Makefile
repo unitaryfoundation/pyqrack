@@ -42,9 +42,9 @@ endif
 endif
 ifeq ($(UNAME_S),Darwin)
 ifneq ($(filter $(UNAME_P),x86_64 i386),)
-	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DQBCAPPOW=8 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
 else
-	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_CUDA=ON -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
 endif
 endif
 endif
