@@ -261,12 +261,40 @@ class QrackNeuron:
         Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, e, r)
         self._throw_if_error()
 
-    def discretize(vec, bits):
+    def quantile_bounds(vec, bits):
+        """ Calculate vector quantile bounds
+
+        This is a static helper method to calculate the quantile
+        bounds of 2 ** bits worth of quantiles. (It does not include
+        the highest or lowest values in the returned list.)
+
+        Args:
+            vec: numerical vector
+            bits: log2() of quantile count
+        """
+
         bins = 1 << bits
         n = len(vec)
         vec_sorted = sorted(vec)
-        bounds = [vec_sorted[(k * n) // bins] for k in range(1, bins)]
+
+        return [vec_sorted[(k * n) // bins] for k in range(1, bins)]
+
+    def discretize(vec, bounds):
+        """ Discretize vector by quantile bounds
+
+        This is a static helper method to discretize a numerical
+        vector according to quantile bounds calculated by the
+        quantile_bounds(vec, bits) static method.
+
+        Args:
+            vec: numerical vector
+            bounds: (n - 1) n-quantile bounds excluding extrema
+        """
+
         bounds_len = len(bounds)
+        bits = bounds_len + 1
+        bins = 1 << bits
+        n = len(vec)
         vec_discrete = [[False] * n for _ in range(bits)]
         for i, v in enumerate(vec):
             p = 0
