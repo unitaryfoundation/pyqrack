@@ -260,3 +260,22 @@ class QrackNeuron:
         """
         Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, e, r)
         self._throw_if_error()
+
+    def discretize(vec, bits):
+        bins = 1 << bits
+        n = len(vec)
+        vec_sorted = sorted(vec)
+        bounds = [vec_sorted[(k * n) // bins] for k in range(1, bins)]
+        bounds_len = len(bounds)
+        vec_discrete = [[False] * n for _ in range(bits)]
+        for i, v in enumerate(vec):
+            p = 0
+            while p < bounds_len and v > bounds[p]:
+                p += 1
+            for b in range(bits):
+                vec_discrete[-(b + 1)][i] = bool((p >> b) & 1)
+
+        return vec_discrete
+
+    def flatten_and_transpose(list_of_lists):
+        return list(zip(*[item for sublist in list_of_lists for item in sublist]))
