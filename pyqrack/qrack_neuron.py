@@ -260,3 +260,85 @@ class QrackNeuron:
         """
         Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, e, r)
         self._throw_if_error()
+
+    def quantile_bounds(vec, bits):
+        """ Calculate vector quantile bounds
+
+        This is a static helper method to calculate the quantile
+        bounds of 2 ** bits worth of quantiles.
+
+        Args:
+            vec: numerical vector
+            bits: log2() of quantile count
+
+        Returns:
+            Quantile (n + 1) bounds for n-quantile division, including
+            minimum and maximum values
+        """
+
+        bins = 1 << bits
+        n = len(vec)
+        vec_sorted = sorted(vec)
+
+        return [vec_sorted[0]] + [vec_sorted[(k * n) // bins] for k in range(1, bins)] + [vec_sorted[-1]]
+
+    def discretize(vec, bounds):
+        """ Discretize vector by quantile bounds
+
+        This is a static helper method to discretize a numerical
+        vector according to quantile bounds calculated by the
+        quantile_bounds(vec, bits) static method.
+
+        Args:
+            vec: numerical vector
+            bounds: (n + 1) n-quantile bounds including extrema
+
+        Returns:
+            Discretized bit-row vector, least-significant first
+        """
+
+        bounds = bounds[1:]
+        bounds_len = len(bounds)
+        bits = bounds_len.bit_length() - 1
+        n = len(vec)
+        vec_discrete = [[False] * n for _ in range(bits)]
+        for i, v in enumerate(vec):
+            p = 0
+            while (p < bounds_len) and (v > bounds[p]):
+                p += 1
+            for b in range(bits):
+                vec_discrete[b][i] = bool((p >> b) & 1)
+
+        return vec_discrete
+
+    def flatten_and_transpose(arr):
+        """ Flatten and transpose feature matrix
+
+        This is a static helper method to convert a multi-feature
+        bit-row matrix to an observation-row matrix with flat
+        feature columns.
+
+        Args:
+            arr: bit-row matrix
+
+        Returns:
+            Observation-row matrix with flat feature columns
+        """
+        return list(zip(*[item for sublist in arr for item in sublist]))
+
+    def bin_endpoints_average(bounds):
+        """ Bin endpoints average
+
+        This is a static helper method that accepts the output
+        bins from quantile_bounds() and returns the average points
+        between the bin endpoints. (This is NOT always necessarily
+        the best heuristic for how to convert binned results back
+        to numerical results, but it is often a reasonable way.)
+
+        Args:
+            bounds: (n + 1) n-quantile bounds including extrema
+
+        Returns:
+            List of average points between the bin endpoints
+        """
+        return [((bounds[i] + bounds[i + 1]) / 2) for i in range(len(bounds) - 1)]
