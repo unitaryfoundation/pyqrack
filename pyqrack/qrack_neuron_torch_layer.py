@@ -130,7 +130,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             neuron = neuron_wrapper.neuron
             p_count = 1 << len(neuron.controls)
             neuron.set_angles(
-                parameters[param_count : (param_count + p_count + 1)]
+                parameters[param_count : (param_count + p_count)]
                 if parameters
                 else ([0.0] * p_count)
             )
