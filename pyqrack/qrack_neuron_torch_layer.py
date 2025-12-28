@@ -196,4 +196,4 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             if self.simulator.m(input_id):
                 self.simulator.x(input_id)
 
-        return torch.tensor(outputs, dtype=torch.float32)
+        return y
