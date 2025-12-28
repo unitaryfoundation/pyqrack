@@ -6,6 +6,9 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
+import math
+import sys
+
 _IS_TORCH_AVAILABLE = True
 try:
     import torch
@@ -14,6 +17,7 @@ try:
 except ImportError:
     _IS_TORCH_AVAILABLE = False
 
+from .pauli import Pauli
 from .qrack_neuron import QrackNeuron
 from .neuron_activation_fn import NeuronActivationFn
 
@@ -139,12 +143,27 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                 nn.Parameter(torch.tensor(parameters[pid] if parameters else 0.0))
             )
 
-    def forward(self, _):
+    def forward(self, x):
+        B = x.shape[0]
+        x = x.view(B, -1)
+
+        perm_0_prob = self.simulator.prob_perm(self.input_indices,
+            [False] * len(self.input_indices)
+        )
+
         # Assume quantum outputs should overwrite the simulator state
         for output_id in self.output_indices:
             if self.simulator.m(output_id):
                 self.simulator.x(output_id)
             self.simulator.h(output_id)
+
+        # If the inputs are not reset, they're effectively the input from the last layer.
+        if perm_0_prob <= sys.float_info.epsilon:
+            # The simulator is effectively reset and we need to re-prepare the input.
+            for q, input_id in enumerate(self.input_indices):
+                if self.simulator.m(input_id):
+                    self.simulator.x(input_id)
+                self.simulator.r(Pauli.PauliY, math.pi *  x[b, q].item(), q)
 
         # Set Qrack's internal parameters:
         param_count = 0
@@ -157,11 +176,24 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             neuron.set_angles(angles)
             param_count += p_count
 
-        # Assume quantum inputs already loaded into simulator state
         for neuron_wrapper in self.neurons:
             self.fn(neuron_wrapper.neuron)
 
-        # These are classical views over quantum state; simulator still maintains full coherence
-        outputs = [self.simulator.prob(output_id) for output_id in self.output_indices]
+        n_out = len(self.out_qubits)
+        y = torch.empty((B, n_out), dtype=x.dtype, device=x.device)
+        b = 0
+        q = 0
+        for output_id in self.output_indices:
+            y[b, q] = self.simulator.prob(output_id)
+            b += 1
+            if b >= B:
+                q += 1
+                b = 0
+
+
+        # Reset the inputs when we exit.
+        for input_id in self.input_indices:
+            if self.simulator.m(input_id):
+                self.simulator.x(input_id)
 
         return torch.tensor(outputs, dtype=torch.float32)
