@@ -280,7 +280,7 @@ class QrackNeuron:
         n = len(vec)
         vec_sorted = sorted(vec)
 
-        return [vec_sorted[0]] + [vec_sorted[(k * n) // bins] for k in range(1, bins - 1)] + [vec_sorted[-1]]
+        return [vec_sorted[0]] + [vec_sorted[(k * n) // bins] for k in range(1, bins)] + [vec_sorted[-1]]
 
     def discretize(vec, bounds):
         """ Discretize vector by quantile bounds
@@ -297,15 +297,14 @@ class QrackNeuron:
             Discretized bit-column vector, least-significant first
         """
 
-        bins = len(bounds)
-        bits = bins.bit_length() - 1
-        n = len(vec)
         bounds = bounds[1:]
-        bounds_len = bins - 1
+        bounds_len = len(bounds)
+        bits = bounds_len.bit_length() - 1
+        n = len(vec)
         vec_discrete = [[False] * n for _ in range(bits)]
         for i, v in enumerate(vec):
             p = 0
-            while p < bounds_len and v > bounds[p]:
+            while (p < bounds_len) and (v > bounds[p]):
                 p += 1
             for b in range(bits):
                 vec_discrete[b][i] = bool((p >> b) & 1)
