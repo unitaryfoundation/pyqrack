@@ -265,8 +265,7 @@ class QrackNeuron:
         """ Calculate vector quantile bounds
 
         This is a static helper method to calculate the quantile
-        bounds of 2 ** bits worth of quantiles. (It does not include
-        the highest or lowest values in the returned list.)
+        bounds of 2 ** bits worth of quantiles.
 
         Args:
             vec: numerical vector
@@ -277,7 +276,7 @@ class QrackNeuron:
         n = len(vec)
         vec_sorted = sorted(vec)
 
-        return [vec_sorted[(k * n) // bins] for k in range(1, bins)]
+        return [vec_sorted[0]] + [vec_sorted[(k * n) // bins] for k in range(1, bins - 1)] + [vec_sorted[-1]]
 
     def discretize(vec, bounds):
         """ Discretize vector by quantile bounds
@@ -291,17 +290,18 @@ class QrackNeuron:
             bounds: (n - 1) n-quantile bounds excluding extrema
         """
 
-        bounds_len = len(bounds)
-        bits = bounds_len + 1
-        bins = 1 << bits
+        bins = len(bounds)
+        bits = bins.bit_length() - 1
         n = len(vec)
+        bounds = bounds[1:]
+        bounds_len = bins - 1
         vec_discrete = [[False] * n for _ in range(bits)]
         for i, v in enumerate(vec):
             p = 0
             while p < bounds_len and v > bounds[p]:
                 p += 1
             for b in range(bits):
-                vec_discrete[-(b + 1)][i] = bool((p >> b) & 1)
+                vec_discrete[b][i] = bool((p >> b) & 1)
 
         return vec_discrete
 
