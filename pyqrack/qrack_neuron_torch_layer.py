@@ -179,7 +179,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         for neuron_wrapper in self.neurons:
             self.fn(neuron_wrapper.neuron)
 
-        n_out = len(self.out_qubits)
+        n_out = len(self.output_indices)
         y = torch.empty((B, n_out), dtype=x.dtype, device=x.device)
         b = 0
         q = 0
