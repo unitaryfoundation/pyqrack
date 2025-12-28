@@ -270,6 +270,10 @@ class QrackNeuron:
         Args:
             vec: numerical vector
             bits: log2() of quantile count
+
+        Returns:
+            Quantile (n + 1) bounds for n-quantile division, including
+            minimum and maximum values
         """
 
         bins = 1 << bits
@@ -288,6 +292,9 @@ class QrackNeuron:
         Args:
             vec: numerical vector
             bounds: (n - 1) n-quantile bounds excluding extrema
+
+        Returns:
+            Discretized bit-column vector, least-significant first
         """
 
         bins = len(bounds)
