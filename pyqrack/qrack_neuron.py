@@ -294,7 +294,7 @@ class QrackNeuron:
             bounds: (n + 1) n-quantile bounds including extrema
 
         Returns:
-            Discretized bit-column vector, least-significant first
+            Discretized bit-row vector, least-significant first
         """
 
         bounds = bounds[1:]
@@ -311,5 +311,34 @@ class QrackNeuron:
 
         return vec_discrete
 
-    def flatten_and_transpose(list_of_lists):
-        return list(zip(*[item for sublist in list_of_lists for item in sublist]))
+    def flatten_and_transpose(arr):
+        """ Flatten and transpose feature matrix
+
+        This is a static helper method to convert a multi-feature
+        bit-row matrix to an observation-row matrix with flat
+        feature columns.
+
+        Args:
+            arr: bit-row matrix
+
+        Returns:
+            Observation-row matrix with flat feature columns
+        """
+        return list(zip(*[item for sublist in arr for item in sublist]))
+
+    def bin_endpoints_average(bounds):
+        """ Bin endpoints average
+
+        This is a static helper method that accepts the output
+        bins from quantile_bounds() and returns the average points
+        between the bin endpoints. (This is NOT always necessarily
+        the best heuristic for how to convert binned results back
+        to numerical results, but it is often a reasonable way.)
+
+        Args:
+            bounds: (n + 1) n-quantile bounds including extrema
+
+        Returns:
+            List of average points between the bin endpoints
+        """
+        return [((bounds[i] + bounds[i + 1]) / 2) for i in range(len(bounds) - 1)]
