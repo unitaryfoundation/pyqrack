@@ -291,7 +291,7 @@ class QrackNeuron:
 
         Args:
             vec: numerical vector
-            bounds: (n - 1) n-quantile bounds excluding extrema
+            bounds: (n + 1) n-quantile bounds including extrema
 
         Returns:
             Discretized bit-column vector, least-significant first
