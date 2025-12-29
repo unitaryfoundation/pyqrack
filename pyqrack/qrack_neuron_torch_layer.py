@@ -38,12 +38,10 @@ class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
         neuron.predict(True, False)
 
         p = neuron.simulator.prob(neuron.target)
+        if _IS_TORCH_AVAILABLE:
+            p = torch.tensor([p], dtype=torch.float32, requires_grad=True)
 
-        return (
-            torch.tensor([p], dtype=torch.float32, device=x.device, requires_grad=True)
-            if _IS_TORCH_AVAILABLE
-            else p
-        )
+        return p
 
 
 class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
@@ -199,11 +197,10 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             for q, output_id in enumerate(self.output_indices):
                 y[b][q] = simulator.prob(output_id)
 
-        return (
-            torch.tensor(y, dtype=torch.float32, device=x.device, requires_grad=True)
-            if _IS_TORCH_AVAILABLE
-            else y
-        )
+        if _IS_TORCH_AVAILABLE:
+            y = torch.tensor(y, dtype=torch.float32, device=x.device, requires_grad=True)
+
+        return y
 
 
 class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object):
@@ -232,11 +229,10 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
 
         delta = [[(f - i) for f, i in zip(row1, row2)] for row1, row2 in zip(final_probs, init_probs)]
 
-        return (
-            torch.tensor(delta, dtype=torch.float32, requires_grad=True)
-            if _IS_TORCH_AVAILABLE
-            else delta
-        )
+        if _IS_TORCH_AVAILABLE:
+            delta = torch.tensor(delta, dtype=torch.float32, requires_grad=True)
+
+        return delta
 
     @staticmethod
     def backward(ctx, grad_output):
