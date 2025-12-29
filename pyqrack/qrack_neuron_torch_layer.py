@@ -6,6 +6,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 
+import itertools
 import math
 import sys
 
@@ -90,6 +91,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         input_indices,
         output_indices,
         activation=int(NeuronActivationFn.Generalized_Logistic),
+        lowest_combo_count=0,
+        highest_combo_count=2,
         parameters=None,
     ):
         """
@@ -101,7 +104,9 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             input_indices (list[int]): List of input bits
             output_indices (list[int]): List of output bits
             activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
-            parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of all input indices, repeated for each output index
+            lowest_combo_count (int): Lowest combination count of input qubits iterated (0 is bias)
+            highest_combo_count (int): Highest combination count of input qubits iterated
+            parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of input qubits, repeated for ascending combo count, repeated for each output index
         """
         super(QrackNeuronTorchLayer, self).__init__()
         self.simulator = simulator
@@ -129,9 +134,11 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.neurons = nn.ModuleList(
             [
                 QrackNeuronTorch(
-                    QrackNeuron(simulator, input_indices, output_id, activation)
+                    QrackNeuron(simulator, input_subset, output_id, activation)
                 )
                 for output_id in output_indices
+                for k in range(lowest_combo_count, highest_combo_count)
+                for input_subset in itertools.combinations(input_indices, k)
             ]
         )   
 
