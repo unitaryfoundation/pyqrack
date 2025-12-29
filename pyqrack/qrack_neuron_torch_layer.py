@@ -49,7 +49,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         (x,) = ctx.saved_tensors
         neuron_wrapper = ctx.neuron_wrapper
         neuron = neuron_wrapper.neuron
-        angles = x.detach().cpu().numpy() if _IS_TORCH_AVAILABLE else x
+        angles = (x.numpy() if not x.requires_grad else x.detach().cpu().numpy()) if _IS_TORCH_AVAILABLE else x
 
         # Uncompute
         neuron.set_angles(angles)
@@ -58,19 +58,21 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         param_count = 1 << len(neuron.controls)
         delta = [0.0] * param_count
+        # Should be safe for 16-bit
+        angle_eps = math.pi * (2 ** -8)
         for param in range(param_count):
             angle = angles[param]
 
             # x + angle_eps
             angles[param] = angle + angle_eps
-            neuron.set_angles(single_angle)
+            neuron.set_angles(angles)
             neuron.predict(True, False)
             p_plus = neuron.simulator.prob(neuron.target)
             neuron.unpredict()
 
             # x - angle_eps
             angles[param] = angle - angle_eps
-            neuron.set_angles(single_angle)
+            neuron.set_angles(angles)
             neuron.predict(True, False)
             p_minus = neuron.simulator.prob(neuron.target)
             neuron.unpredict()
@@ -86,7 +88,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         else:
             grad_input = [o * d for o, d in zip(grad_output, delta)]
 
-        return grad_input
+        return grad_input, None
 
 
 class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
