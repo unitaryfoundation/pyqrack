@@ -137,7 +137,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                     QrackNeuron(simulator, input_subset, output_id, activation)
                 )
                 for output_id in output_indices
-                for k in range(lowest_combo_count, highest_combo_count)
+                for k in range(lowest_combo_count, highest_combo_count + 1)
                 for input_subset in itertools.combinations(input_indices, k)
             ]
         )   
