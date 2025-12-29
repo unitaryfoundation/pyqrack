@@ -51,36 +51,32 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
     def forward(ctx, x, neuron: QrackNeuron):
         neuron.set_angles([w.item() for w in x])
 
-        init_prob = neuron.simulator.prob(neuron.target)
+        pre_prob = neuron.simulator.prob(neuron.target)
         neuron.predict(True, False)
-        final_prob = neuron.simulator.prob(neuron.target)
+        post_prob = neuron.simulator.prob(neuron.target)
 
-        delta = final_prob - init_prob
+        delta = pre_prob - post_prob
         if _IS_TORCH_AVAILABLE:
             delta = torch.tensor([delta], dtype=torch.float32, requires_grad=True)
 
         # Save for backward
-        ctx.save_for_backward(x)
+        ctx.save_for_backward(x, delta)
         ctx.neuron = neuron
 
         return delta
 
     @staticmethod
     def backward(ctx, grad_output):
-        x = ctx.saved_tensors
+        x, delta = ctx.saved_tensors
         neuron = ctx.neuron
 
         neuron.set_angles(x)
-
-        pre_unpredict = neuron.simulator.prob(neuron.output_id)
         neuron.unpredict()
-        post_unpredict = neuron.simulator.prob(neuron.output_id)
 
-        reverse_delta = pre_unpredict - post_unpredict
         if _IS_TORCH_AVAILABLE:
-            reverse_delta = torch.tensor([reverse_delta], dtype=torch.float32, requires_grad=True)
-
-        grad_input = reverse_delta - grad_output
+            grad_input = grad_output * delta
+        else:
+            grad_input = [o * d for o, d in zip(grad_output, delta)]
 
         return grad_input
 
@@ -208,36 +204,21 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
 
     @staticmethod
     def forward(ctx, x, neuron_layer):
+        final_probs = neuron_layer.forward(x)
+
         # Save for backward
-        ctx.save_for_backward(x)
-        ctx.neuron_layer = neuron_layer
+        ctx.save_for_backward(x, final_probs)
+        ctx.neuron = neuron
 
-        if _IS_TORCH_AVAILABLE:
-            B = x.shape[0]
-            x = x.view(B, -1)
-        else:
-            B = len(x)
-
-        init_prob = [neuron_layer.simulator.prob(target) for target in neuron_layer.output_indices]
-        init_probs = [init_prob[:] for _ in range(B)]
-
-        neuron_layer.forward(x)
-
-        final_probs = []
-        for simulator in neuron_layer.simulators:
-            final_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
-
-        delta = [[(f - i) for f, i in zip(row1, row2)] for row1, row2 in zip(final_probs, init_probs)]
-
-        if _IS_TORCH_AVAILABLE:
-            delta = torch.tensor(delta, dtype=torch.float32, requires_grad=True)
-
-        return delta
+        return final_probs
 
     @staticmethod
     def backward(ctx, grad_output):
-        x = ctx.saved_tensors
+        x, final_probs = ctx.saved_tensors
         neuron_layer = ctx.neuron_layer
+        output_indices = neuron_layer.output_indices
+        simulators = neuron_layer.simulators
+        neurons = neuron_layer.neurons
 
         if _IS_TORCH_AVAILABLE:
             B = x.shape[0]
@@ -245,33 +226,26 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         else:
             B = len(x)
 
-        final_probs = []
-        for simulator in neuron_layer.simulators:
-            final_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
-        if _IS_TORCH_AVAILABLE:
-            final_probs = torch.tensor(final_probs, dtype=torch.float32, device=x.device, requires_grad=True)
-
         # Uncompute prediction
-        for neuron_wrapper in neuron_layer.neurons:
-            neuron_layer.backward_fn(neuron_wrapper.neuron)
+        if _IS_TORCH_AVAILABLE:
+            delta = torch.zeros((B, len(output_indices)), dtype=torch.float32, device=x.device, requires_grad=True)
+            for b in range(B):
+                for neuron in neurons:
+                    delta[b, output_indices.index(neuron.target)] += neuron_layer.backward_fn(neuron.neuron)
+        else:
+            delta = [[0.0] * len(output_indices) for _ in range(B)]
+            for b in range(B):
+                for neuron in neurons:
+                    delta[b][output_indices.index(neuron.target)] += neuron_layer.backward_fn(neuron.neuron)
 
         # Uncompute output state prep
-        for simulator in neuron_layer.simulators:
-            for output_id in neuron_layer.output_indices:
+        for simulator in simulators:
+            for output_id in output_indices:
                 simulator.h(output_id)
 
-        init_probs = []
-        for simulator in neuron_layer.simulators:
-            init_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
         if _IS_TORCH_AVAILABLE:
-            final_probs = torch.tensor(final_probs, dtype=torch.float32, device=x.device, requires_grad=True)
-
-        if _IS_TORCH_AVAILABLE:
-            grad_input = (final_probs - init_probs) - grad_output
+            grad_input = grad_output * delta
         else:
-            grad_input = [[0.0] * neuron_layer.output_indices for _ in range(B)]
-            for b in range(B):
-                for idx in range(len(init_probs)):
-                    grad_input[b][idx] = (final_probs[b][idx] - init_probs[b][idx]) - grad_output[b][idx]
+            grad_input = [o * d for o, d in zip(grad_output, delta)]
 
         return grad_input
