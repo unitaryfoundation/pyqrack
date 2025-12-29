@@ -52,7 +52,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         # Uncompute
         neuron.set_angles(angles)
         neuron.unpredict()
-        pre_sim = neuron.simulator.clone()
+        pre_sim = neuron.simulator
         pre_prob = pre_sim.prob(neuron.target)
 
         param_count = 1 << len(neuron.controls)
@@ -63,21 +63,23 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
             # x + angle_eps
             angles[param] = angle + angle_eps
             neuron.set_angles(angles)
+            neuron.simulator = pre_sim.clone()
             neuron.predict(True, False)
             p_plus = neuron.simulator.prob(neuron.target)
-            neuron.simulator = pre_sim.clone()
 
             # x - angle_eps
             angles[param] = angle - angle_eps
             neuron.set_angles(angles)
+            neuron.simulator = pre_sim.clone()
             neuron.predict(True, False)
             p_minus = neuron.simulator.prob(neuron.target)
-            neuron.simulator = pre_sim.clone()
 
             # Central difference
             delta[param] = (p_plus - p_minus) / (2 * angle_eps)
 
             angles[param] = angle
+
+        neuron.simulator = pre_sim
 
         if _IS_TORCH_AVAILABLE:
             delta = torch.tensor(delta, dtype=torch.float32, device=x.device)
