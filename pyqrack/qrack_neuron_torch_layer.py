@@ -23,6 +23,10 @@ from .qrack_neuron import QrackNeuron
 from .neuron_activation_fn import NeuronActivationFn
 
 
+# Should be safe for 16-bit
+angle_eps = math.pi * (2 ** -8)
+
+
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
@@ -54,29 +58,27 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         param_count = 1 << len(neuron.controls)
         delta = [0.0] * param_count
-        single_angle = [0.0] * param_count
         for param in range(param_count):
             angle = angles[param]
 
-            if abs(angle) < sys.float_info.epsilon:
-                # Avoid division by zero
-                continue
-
-            # Only this angle is nonzero
-            single_angle[param] = angle
-
-            # Predict with 1 nonzero angle
+            # x + angle_eps
+            angles[param] = angle + angle_eps
             neuron.set_angles(single_angle)
             neuron.predict(True, False)
-
-            # d(probability) / d(angle)
-            delta[param] = (neuron.simulator.prob(neuron.target) - pre_prob) / angle
-
-            # Uncompute
+            p_plus = neuron.simulator.prob(neuron.target)
             neuron.unpredict()
 
-            # Reset single_angle to all 0, for reuse
-            single_angle[param] = 0.0
+            # x - angle_eps
+            angles[param] = angle - angle_eps
+            neuron.set_angles(single_angle)
+            neuron.predict(True, False)
+            p_minus = neuron.simulator.prob(neuron.target)
+            neuron.unpredict()
+
+            # Central difference
+            delta[param] = (p_plus - p_minus) / (2 * angle_eps)
+
+            angles[param] = angle
 
         if _IS_TORCH_AVAILABLE:
             delta = torch.tensor(delta, dtype=torch.float32)
