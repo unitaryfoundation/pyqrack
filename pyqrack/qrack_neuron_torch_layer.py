@@ -185,14 +185,32 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
     """Static forward/backward/apply functions for QrackTorchNeuron"""
 
     @staticmethod
-    def forward(ctx, neuron_layer):
+    def forward(ctx, x, neuron_layer):
         # Save for backward
+        ctx.save_for_backward(x)
         ctx.neuron_layer = neuron_layer
 
-        init_probs = [neuron_layer.simulator.prob(target) for target in neuron_layer.output_indices]
-        neuron_layer.forward()
-        final_probs = [neuron_layer.simulator.prob(target) for target in neuron_layer.output_indices]
-        ctx.delta = [(f - i) for i, f in zip(init_probs, final_probs)]
+        if _IS_TORCH_AVAILABLE:
+            B = x.shape[0]
+            x = x.view(B, -1)
+        else:
+            B = len(x)
+
+        if B != len(neuron_layer.simulators):
+            init_prob = [neuron_layer.simulator.prob(target) for target in neuron_layer.output_indices]
+            init_probs = [init_prob[:] for _ in range(B)]
+        else:
+            init_probs = []
+            for simulator in neuron_layer.simulators:
+                init_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
+
+        neuron_layer.forward(x)
+
+        final_probs = []
+        for simulator in neuron_layer.simulators:
+            final_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
+
+        ctx.delta = [[(f - i) for f, i in zip(row1, row2)] for row1, row2 in zip(final_probs, init_probs)]
 
         return (
             torch.tensor(ctx.delta, dtype=torch.float32, requires_grad=True)
@@ -201,10 +219,19 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         )
 
     @staticmethod
-    def backward(ctx, x):
+    def backward(ctx, grad_output):
+        x = ctx.saved_tensors
         neuron_layer = ctx.neuron_layer
 
-        final_probs = [neuron_layer.simulator.prob(target) for target in neuron_layer.output_indices]
+        if _IS_TORCH_AVAILABLE:
+            B = x.shape[0]
+            x = x.view(B, -1)
+        else:
+            B = len(x)
+
+        final_probs = []
+        for simulator in neuron_layer.simulators:
+            final_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
 
         # Uncompute prediction
         for neuron_wrapper in neuron_layer.neurons:
@@ -214,9 +241,11 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         for output_id in neuron_layer.output_indices:
             neuron_layer.simulator.h(output_id)
 
-        init_probs = [neuron_layer.simulator.prob(target) for target in neuron_layer.output_indices]
+        init_probs = []
+        for simulator in neuron_layer.simulators:
+            init_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
 
-        grad = [0.0] * len(init_probs)
+        grad = [[0.0] * neuron_layer.output_indices for _ in range(B)]
         for idx in range(len(init_probs)):
             grad[idx] = (final_probs[idx] - init_probs[idx]) - ctx.delta[idx]
 
