@@ -21,15 +21,6 @@ from .pauli import Pauli
 from .qrack_neuron import QrackNeuron
 from .neuron_activation_fn import NeuronActivationFn
 
-from itertools import chain, combinations
-
-
-# From https://stackoverflow.com/questions/1482308/how-to-get-all-subsets-of-a-set-powerset#answer-1482316
-def powerset(iterable):
-    "powerset([1,2,3]) --> () (1,) (2,) (3,) (1,2) (1,3) (2,3,) (1,2,3)"
-    s = list(iterable)
-    return chain.from_iterable(combinations(s, r) for r in range(len(s) + 1))
-
 
 class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
     """Torch wrapper for QrackNeuron
@@ -93,7 +84,7 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
-    """Torch layer wrapper for QrackNeuron (with power set of neurons between inputs and outputs)"""
+    """Torch layer wrapper for QrackNeuron (with maximally expressive set of neurons between inputs and outputs)"""
 
     def __init__(
         self,
@@ -136,24 +127,23 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             else lambda x: QrackNeuronFunction.forward(object(), x)
         )
 
-        # Create neurons from all powerset input combinations, projecting to coherent output qubits
+        # Create neurons from all input combinations, projecting to coherent output qubits
         self.neurons = nn.ModuleList(
             [
                 QrackTorchNeuron(
-                    QrackNeuron(simulator, list(input_subset), output_id, activation)
+                    QrackNeuron(simulator, input_indices, output_id, activation)
                 )
-                for input_subset in powerset(input_indices)
                 for output_id in output_indices
             ]
         )   
 
         # Set Qrack's internal parameters:
         param_count = 0
+        p_count = 1 << len(input_indices)
         for neuron_wrapper in self.neurons:
             neuron = neuron_wrapper.neuron
-            p_count = 1 << len(neuron.controls)
             neuron.set_angles(
-                parameters[param_count : (param_count + p_count + 1)]
+                parameters[param_count : (param_count + p_count)]
                 if parameters
                 else ([0.0] * p_count)
             )
