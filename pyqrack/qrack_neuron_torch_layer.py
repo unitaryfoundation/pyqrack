@@ -55,10 +55,10 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
     @staticmethod
     def forward(ctx, x, neuron):
         # Save for backward
-        ctx.x = x
+        ctx.save_for_backward(x)
         ctx.neuron = neuron
 
-        neuron.set_angles(x)
+        neuron.set_angles([w.item() for w in x])
 
         init_prob = neuron.simulator.prob(neuron.target)
         neuron.predict(True, False)
@@ -72,7 +72,7 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
 
     @staticmethod
     def backward(ctx, grad_output):
-        x = ctx.x
+        x = ctx.saved_tensors
         neuron = ctx.neuron
 
         neuron.set_angles(x)
@@ -199,10 +199,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                 neuron = neuron_wrapper.neuron
                 neuron.simulator = simulator
                 p_count = 1 << len(neuron.controls)
-                angles = [
-                    w.item() for w in self.weights[param_count : (param_count + p_count)]
-                ]
-                self.apply_fn(angles, neuron_wrapper.neuron)
+                self.apply_fn(self.weights[param_count : (param_count + p_count)], neuron_wrapper.neuron)
                 param_count += p_count
 
             for q, output_id in enumerate(self.output_indices):
