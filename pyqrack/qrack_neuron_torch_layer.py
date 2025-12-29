@@ -55,7 +55,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         param_count = 1 << len(neuron.controls)
         delta = [0.0] * param_count
         for param in param_count:
-            neuron.set_angles([0.0] * (param - 1) + [angles[param]] + [0.0] * (param_count - param))
+            neuron.set_angles([0.0] * param + [angles[param]] + [0.0] * (param_count - (param + 1)))
             neuron.predict(True, False)
             delta[param] = neuron.simulator.prob(neuron.target) - pre_prob
             neuron.unpredict()
