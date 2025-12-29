@@ -37,14 +37,20 @@ class QrackTorchNeuron(nn.Module if _IS_TORCH_AVAILABLE else object):
         neuron = self.neuron
         neuron.predict(True, False)
 
-        return neuron.simulator.prob(neuron.target)
+        p = neuron.simulator.prob(neuron.target)
+
+        return (
+            torch.tensor([p], dtype=torch.float32, device=x.device, requires_grad=True)
+            if _IS_TORCH_AVAILABLE
+            else p
+        )
 
 
 class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackTorchNeuron"""
 
     @staticmethod
-    def forward(ctx, x, neuron):
+    def forward(ctx, x, neuron: QrackNeuron):
         # Save for backward
         ctx.save_for_backward(x)
         ctx.neuron = neuron
@@ -74,13 +80,13 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.unpredict()
         post_unpredict = neuron.simulator.prob(neuron.output_id)
 
-        grad = pre_unpredict - (post_unpredict + grad_output[0].item())
+        delta = pre_unpredict - post_unpredict
+        if _IS_TORCH_AVAILABLE:
+            delta = torch.tensor([delta], dtype=torch.float32, requires_grad=True)
 
-        return (
-            torch.tensor([grad], dtype=torch.float32, requires_grad=True)
-            if _IS_TORCH_AVAILABLE
-            else grad
-        )
+        grad_input = delta - grad_output
+
+        return grad_input
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
@@ -103,7 +109,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             input_indices (list[int]): List of input bits
             output_indices (list[int]): List of output bits
             activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
-            parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of power set of input indices, repeated for each output index (with empty set being constant bias)
+            parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of all input indices, repeated for each output index
         """
         super(QrackNeuronTorchLayer, self).__init__()
         self.simulator = simulator
@@ -201,6 +207,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             else y
         )
 
+
 class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackTorchNeuron"""
 
@@ -247,6 +254,8 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         final_probs = []
         for simulator in neuron_layer.simulators:
             final_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
+        if _IS_TORCH_AVAILABLE:
+            final_probs = torch.tensor(final_probs, dtype=torch.float32, device=x.device, requires_grad=True)
 
         # Uncompute prediction
         for neuron_wrapper in neuron_layer.neurons:
@@ -260,19 +269,15 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         init_probs = []
         for simulator in neuron_layer.simulators:
             init_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
-
-        grad = [[0.0] * neuron_layer.output_indices for _ in range(B)]
         if _IS_TORCH_AVAILABLE:
-            for b in range(B):
-                for idx in range(len(init_probs)):
-                    grad[b][idx] = (final_probs[b][idx] - init_probs[b][idx]) - grad_output[b, idx]
-        else:
-            for b in range(B):
-                for idx in range(len(init_probs)):
-                    grad[b][idx] = (final_probs[b][idx] - init_probs[b][idx]) - grad_output[b][idx]
+            final_probs = torch.tensor(final_probs, dtype=torch.float32, device=x.device, requires_grad=True)
 
-        return (
-            torch.tensor(grad, dtype=torch.float32, requires_grad=True)
-            if _IS_TORCH_AVAILABLE
-            else grad
-        )
+        if _IS_TORCH_AVAILABLE:
+            grad_input = (final_probs - init_probs) - grad_output
+        else:
+            grad_input = [[0.0] * neuron_layer.output_indices for _ in range(B)]
+            for b in range(B):
+                for idx in range(len(init_probs)):
+                    grad_input[b][idx] = (final_probs[b][idx] - init_probs[b][idx]) - grad_output[b][idx]
+
+        return grad_input
