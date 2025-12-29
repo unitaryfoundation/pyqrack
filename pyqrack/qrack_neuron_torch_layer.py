@@ -58,12 +58,13 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
         delta = pre_prob - post_prob
         if _IS_TORCH_AVAILABLE:
             delta = torch.tensor([delta], dtype=torch.float32, requires_grad=True)
+            post_prob = torch.tensor([post_prob], dtype=torch.float32, requires_grad=True)
 
         # Save for backward
         ctx.save_for_backward(x, delta)
         ctx.neuron = neuron
 
-        return delta
+        return post_prob
 
     @staticmethod
     def backward(ctx, grad_output):
