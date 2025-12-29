@@ -58,8 +58,6 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         param_count = 1 << len(neuron.controls)
         delta = [0.0] * param_count
-        # Should be safe for 16-bit
-        angle_eps = math.pi * (2 ** -8)
         for param in range(param_count):
             angle = angles[param]
 
