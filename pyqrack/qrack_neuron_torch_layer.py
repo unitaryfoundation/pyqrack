@@ -108,6 +108,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         """
         super(QrackNeuronTorchLayer, self).__init__()
         self.simulator = simulator
+        self.simulators = []
         self.input_indices = input_indices
         self.output_indices = output_indices
         self.activation = NeuronActivationFn(activation)
@@ -139,52 +140,40 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         )   
 
     def forward(self, x):
-        perm_0_prob = self.simulator.prob_perm(self.input_indices,
-            [False] * len(self.input_indices)
-        )
-
         if _IS_TORCH_AVAILABLE:
             B = x.shape[0]
             x = x.view(B, -1)
         else:
             B = len(x)
 
-        # If the inputs are not reset, they're effectively the input from the last layer.
-        if (1.0 - perm_0_prob) <= sys.float_info.epsilon:
-            b = 0
-            q = 0
-            # The simulator is effectively reset and we need to re-prepare the input
+        if B != len(self.simulators):
+            # We need to reset the simulator batch and re-prepare the input.
+            self.simulators.clear()
             if _IS_TORCH_AVAILABLE:
-                for q, input_id in enumerate(self.input_indices):
-                    self.simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), q)
-                    b += 1
-                    if b == B:
-                        q += 1
-                        b = 0
+                for b in range(B):
+                    simulator = self.simulator.clone()
+                    self.simulators.append(simulator)
+                    for q, input_id in enumerate(self.input_indices):
+                        simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), q)
             else:
-                for q, input_id in enumerate(self.input_indices):
-                    self.simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
-                    b += 1
-                    if b == B:
-                        q += 1
-                        b = 0
+                for b in range(B):
+                    simulator = self.simulator.clone()
+                    self.simulators.append(simulator)
+                    for q, input_id in enumerate(self.input_indices):
+                        simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
 
-        # Prepare a maximally uncertain output state.
-        for output_id in self.output_indices:
-            self.simulator.h(output_id)
-
-        for neuron_wrapper in self.neurons:
-            self.apply_fn(neuron_wrapper.neuron)
-
-        b = 0
-        q = 0
         y = [([0.0] * len(self.output_indices)) for _ in range(B)]
-        for output_id in self.output_indices:
-            y[b][q] = self.simulator.prob(output_id)
-            b += 1
-            if b == B:
-                q += 1
-                b = 0
+        for b in range(B):
+            simulator = self.simulators[b]
+            # Prepare a maximally uncertain output state.
+            for output_id in self.output_indices:
+                simulator.h(output_id)
+
+            for neuron_wrapper in self.neurons:
+                self.apply_fn(neuron_wrapper.neuron)
+
+            for q, output_id in enumerate(self.output_indices):
+                y[b][q] = simulator.prob(output_id)
 
         return (
             torch.tensor(y, dtype=torch.float32, device=x.device, requires_grad=True)
