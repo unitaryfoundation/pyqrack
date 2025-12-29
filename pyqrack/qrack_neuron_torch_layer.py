@@ -99,6 +99,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
                 for col in zip(*delta)
             ]
 
+        return grad_input, None
 
 class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
     """Torch wrapper for QrackNeuron
@@ -296,6 +297,7 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 for neuron_wrapper in neurons:
                     neuron = neuron_wrapper.neuron
                     neuron.simulator = simulator
+                    angles = neuron.get_angles()
                     o = output_indices.index(neuron.target)
                     neuron_grad = backward_fn(angles, neuron_wrapper)
                     for idx, c in enumerate(neuron.controls):
@@ -308,10 +310,7 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 simulator.h(output_id)
 
         if _IS_TORCH_AVAILABLE:
-            grad_input = torch.bmm(
-                grad_output.unsqueeze(1),  # (B, 1, O)
-                delta                      # (B, O, I)
-            ).squeeze(1)
+            grad_input = torch.matmul(grad_output.view(B, 1, -1), delta).view_as(x)
         else:
             grad_input = [[0.0] * output_count for _ in range(B)]
             for b in range(B):
