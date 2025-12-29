@@ -103,7 +103,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             input_indices (list[int]): List of input bits
             output_indices (list[int]): List of output bits
             activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
-            parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of power set of input indices, repeated for each output index (with empty set being constant bias)
+            parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of all input indices, repeated for each output index
         """
         super(QrackNeuronTorchLayer, self).__init__()
         self.simulator = simulator
