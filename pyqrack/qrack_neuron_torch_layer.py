@@ -51,10 +51,6 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
 
     @staticmethod
     def forward(ctx, x, neuron: QrackNeuron):
-        # Save for backward
-        ctx.save_for_backward(x)
-        ctx.neuron = neuron
-
         neuron.set_angles([w.item() for w in x])
 
         init_prob = neuron.simulator.prob(neuron.target)
@@ -62,12 +58,14 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
         final_prob = neuron.simulator.prob(neuron.target)
 
         delta = final_prob - init_prob
+        if _IS_TORCH_AVAILABLE:
+            delta = torch.tensor([delta], dtype=torch.float32, requires_grad=True)
 
-        return (
-            torch.tensor([delta], dtype=torch.float32, requires_grad=True)
-            if _IS_TORCH_AVAILABLE
-            else delta
-        )
+        # Save for backward
+        ctx.save_for_backward(x)
+        ctx.neuron = neuron
+
+        return delta
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -80,11 +78,11 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.unpredict()
         post_unpredict = neuron.simulator.prob(neuron.output_id)
 
-        delta = pre_unpredict - post_unpredict
+        reverse_delta = pre_unpredict - post_unpredict
         if _IS_TORCH_AVAILABLE:
-            delta = torch.tensor([delta], dtype=torch.float32, requires_grad=True)
+            reverse_delta = torch.tensor([reverse_delta], dtype=torch.float32, requires_grad=True)
 
-        grad_input = delta - grad_output
+        grad_input = reverse_delta - grad_output
 
         return grad_input
 
