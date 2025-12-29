@@ -32,12 +32,9 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         ctx.save_for_backward(x)
         neuron = neuron_wrapper.neuron
 
-        pre_prob = neuron.simulator.prob(neuron.target)
         neuron.set_angles(x.detach().cpu().numpy() if _IS_TORCH_AVAILABLE else x)
         neuron.predict(True, False)
         post_prob = neuron.simulator.prob(neuron.target)
-
-        ctx.delta = pre_prob - post_prob
         if _IS_TORCH_AVAILABLE:
             post_prob = torch.tensor([post_prob], dtype=torch.float32)
 
@@ -48,14 +45,26 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         (x,) = ctx.saved_tensors
         neuron_wrapper = ctx.neuron_wrapper
         neuron = neuron_wrapper.neuron
+        angles = x.detach().cpu().numpy() if _IS_TORCH_AVAILABLE else x
 
-        neuron.set_angles(x.detach().cpu().numpy() if _IS_TORCH_AVAILABLE else x)
+        # Uncompute
+        neuron.set_angles(angles)
         neuron.unpredict()
+        pre_prob = neuron.simulator.prob(neuron.target)
+
+        param_count = 1 << len(neuron.controls)
+        delta = [0.0] * param_count
+        for param in param_count:
+            neuron.set_angles([0.0] * (param - 1) + [angles[param]] + [0.0] * (param_count - param))
+            neuron.predict(True, False)
+            delta[param] = neuron.simulator.prob(neuron.target) - pre_prob
+            neuron.unpredict()
 
         if _IS_TORCH_AVAILABLE:
-            grad_input = grad_output * ctx.delta
+            delta = torch.tensor(delta, dtype=torch.float32)
+            grad_input = grad_output * delta
         else:
-            grad_input = [o * d for o, d in zip(grad_output, ctx.delta)]
+            grad_input = [o * d for o, d in zip(grad_output, delta)]
 
         return grad_input
 
