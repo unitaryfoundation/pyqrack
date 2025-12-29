@@ -23,29 +23,6 @@ from .qrack_neuron import QrackNeuron
 from .neuron_activation_fn import NeuronActivationFn
 
 
-class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
-    """Torch wrapper for QrackNeuron
-
-    Attributes:
-        neuron(QrackNeuron): QrackNeuron backing this torch wrapper
-    """
-
-    def __init__(self, neuron: QrackNeuron):
-        super().__init__()
-        self.neuron = neuron
-
-    def forward(self, x):
-        neuron = self.neuron
-
-        neuron.set_angles(x.detach().numpy() if _IS_TORCH_AVAILABLE else x)
-        neuron.predict(True, False)
-        p = neuron.simulator.prob(neuron.target)
-        if _IS_TORCH_AVAILABLE:
-            p = torch.tensor([p], dtype=torch.float32, requires_grad=True)
-
-        return p
-
-
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
@@ -53,9 +30,12 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     def forward(ctx, x, neuron_wrapper):
         ctx.neuron_wrapper = neuron_wrapper
         ctx.save_for_backward(x)
+        neuron = neuron_wrapper.neuron
 
         pre_prob = neuron.simulator.prob(neuron.target)
-        post_prob = neuron_wrapper.forward(x)
+        neuron.set_angles(x.detach().cpu().numpy() if _IS_TORCH_AVAILABLE else x)
+        neuron.predict(True, False)
+        post_prob = neuron.simulator.prob(neuron.target)
 
         ctx.delta = pre_prob - post_prob
         if _IS_TORCH_AVAILABLE:
@@ -69,7 +49,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron_wrapper = ctx.neuron_wrapper
         neuron = neuron_wrapper.neuron
 
-        neuron.set_angles(x.detach().numpy() if _IS_TORCH_AVAILABLE else x)
+        neuron.set_angles(x.detach().cpu().numpy() if _IS_TORCH_AVAILABLE else x)
         neuron.unpredict()
 
         if _IS_TORCH_AVAILABLE:
@@ -78,6 +58,21 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
             grad_input = [o * d for o, d in zip(grad_output, ctx.delta)]
 
         return grad_input
+
+
+class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
+    """Torch wrapper for QrackNeuron
+
+    Attributes:
+        neuron(QrackNeuron): QrackNeuron backing this torch wrapper
+    """
+
+    def __init__(self, neuron: QrackNeuron):
+        super().__init__()
+        self.neuron = neuron
+
+    def forward(self, x):
+        return QrackNeuronTorchFunction.apply(x, self.neuron)
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
@@ -141,19 +136,21 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         )   
 
         # Set Qrack's internal parameters:
-        p_count = 1 << len(input_indices)
         if parameters:
             param_count = 0
+            self.weights = nn.ParameterList()
             for neuron_wrapper in self.neurons:
                 neuron = neuron_wrapper.neuron
+                p_count = 1 << len(neuron.controls)
                 neuron.set_angles(parameters[param_count : (param_count + p_count)])
+                self.weights.append(nn.Parameter(torch.tensor(parameters[param_count : (param_count + p_count)])))
                 param_count += p_count
-            self.weights = nn.ParameterList()
-            for pid in range(param_count):
-                self.weights.append(nn.Parameter(torch.tensor(parameters[pid] if parameters else 0.0)))
         else:
-            param_count = p_count * len(output_indices)
-            self.weights = nn.ParameterList([nn.Parameter(torch.tensor(0.0)) for _ in range(param_count)])
+            self.weights = nn.ParameterList()
+            for neuron_wrapper in self.neurons:
+                neuron = neuron_wrapper.neuron
+                p_count = 1 << len(neuron.controls)
+                self.weights.append(nn.Parameter(torch.zeros(p_count)))
 
     def forward(self, x):
         if _IS_TORCH_AVAILABLE:
@@ -184,13 +181,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                 simulator.h(output_id)
 
             # Set Qrack's internal parameters:
-            param_count = 0
-            for neuron_wrapper in self.neurons:
-                neuron = neuron_wrapper.neuron
-                neuron.simulator = simulator
-                p_count = 1 << len(neuron.controls)
-                self.apply_fn(self.weights[param_count : (param_count + p_count)], neuron_wrapper)
-                param_count += p_count
+            for idx, neuron_wrapper in enumerate(self.neurons):
+                self.apply_fn(self.weights[idx], neuron_wrapper)
 
             for q, output_id in enumerate(self.output_indices):
                 y[b][q] = simulator.prob(output_id)
