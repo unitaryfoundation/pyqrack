@@ -64,10 +64,12 @@ class QrackNeuronFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.predict(True, False)
         final_prob = neuron.simulator.prob(neuron.target)
 
+        delta = final_prob - init_prob
+
         return (
-            torch.tensor([final_prob - init_prob], dtype=torch.float32, requires_grad=True)
+            torch.tensor([delta], dtype=torch.float32, requires_grad=True)
             if _IS_TORCH_AVAILABLE
-            else ctx.delta
+            else delta
         )
 
     @staticmethod
@@ -233,12 +235,12 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         for simulator in neuron_layer.simulators:
             final_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
 
-        ctx.delta = [[(f - i) for f, i in zip(row1, row2)] for row1, row2 in zip(final_probs, init_probs)]
+        delta = [[(f - i) for f, i in zip(row1, row2)] for row1, row2 in zip(final_probs, init_probs)]
 
         return (
-            torch.tensor(ctx.delta, dtype=torch.float32, requires_grad=True)
+            torch.tensor(delta, dtype=torch.float32, requires_grad=True)
             if _IS_TORCH_AVAILABLE
-            else ctx.delta
+            else delta
         )
 
     @staticmethod
@@ -270,8 +272,14 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
             init_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
 
         grad = [[0.0] * neuron_layer.output_indices for _ in range(B)]
-        for idx in range(len(init_probs)):
-            grad[idx] = (final_probs[idx] - init_probs[idx]) - ctx.delta[idx]
+        if _IS_TORCH_AVAILABLE:
+            for b in range(B):
+                for idx in range(len(init_probs)):
+                    grad[b][idx] = (final_probs[b][idx] - init_probs[b][idx]) - grad_output[b, idx]
+        else:
+            for b in range(B):
+                for idx in range(len(init_probs)):
+                    grad[b][idx] = (final_probs[b][idx] - init_probs[b][idx]) - grad_output[b][idx]
 
         return (
             torch.tensor(grad, dtype=torch.float32, requires_grad=True)
