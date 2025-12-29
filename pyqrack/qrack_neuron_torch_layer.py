@@ -90,11 +90,14 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron_wrapper = ctx.neuron_wrapper
         delta = _backward(x, neuron_wrapper, grad_output)
         if _IS_TORCH_AVAILABLE:
-            grad_input = grad_output * delta
+            # grad_output: (O,)
+            # delta:       (O, I)
+            grad_input = torch.matmul(grad_output, delta)  # result: (I,)
         else:
-            grad_input = [o * d for o, d in zip(grad_output, delta)]
-
-        return grad_input, None
+            grad_input = [
+                sum(o * d for o, d in zip(grad_output, col))
+                for col in zip(*delta)
+            ]
 
 
 class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
@@ -305,12 +308,15 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 simulator.h(output_id)
 
         if _IS_TORCH_AVAILABLE:
-            grad_input = grad_output * delta
+            grad_input = torch.bmm(
+                grad_output.unsqueeze(1),  # (B, 1, O)
+                delta                      # (B, O, I)
+            ).squeeze(1)
         else:
-            grad_input = [[[0.0] * input_count for _ in range(output_count)] for _ in range(B)]
+            grad_input = [[0.0] * output_count for _ in range(B)]
             for b in range(B):
                 for o in range(output_indices):
                     for i in range(input_indices):
-                        grad_input[b][o][i] = grad_output[b][o][i] * delta[b][o][i]
+                        grad_input[b][o] += grad_output[b][o] * delta[b][o][i]
 
         return grad_input, None
