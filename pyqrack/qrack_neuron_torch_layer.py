@@ -55,13 +55,27 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         param_count = 1 << len(neuron.controls)
         delta = [0.0] * param_count
         single_angle = [0.0] * param_count
-        for param in param_count:
+        for param in range(param_count):
             angle = angles[param]
+
+            if abs(angle) < sys.float_info.epsilon:
+                # Avoid division by zero
+                continue
+
+            # Only this angle is nonzero
             single_angle[param] = angle
+
+            # Predict with 1 nonzero angle
             neuron.set_angles(single_angle)
             neuron.predict(True, False)
+
+            # d(probability) / d(angle)
             delta[param] = (neuron.simulator.prob(neuron.target) - pre_prob) / angle
+
+            # Uncompute
             neuron.unpredict()
+
+            # Reset single_angle to all 0, for reuse
             single_angle[param] = 0.0
 
         if _IS_TORCH_AVAILABLE:
