@@ -23,6 +23,10 @@ from .qrack_neuron import QrackNeuron
 from .neuron_activation_fn import NeuronActivationFn
 
 
+# Should be safe for 16-bit
+angle_eps = math.pi * (2 ** -8)
+
+
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
@@ -36,55 +40,64 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.predict(True, False)
         post_prob = neuron.simulator.prob(neuron.target)
         if _IS_TORCH_AVAILABLE:
-            post_prob = torch.tensor([post_prob], dtype=torch.float32)
+            post_prob = torch.tensor([post_prob], dtype=torch.float32, device=x.device)
 
         return post_prob
+
+    @staticmethod
+    def _backward(x, neuron_wrapper):
+        neuron = neuron_wrapper.neuron
+        angles = (x.numpy() if not x.requires_grad else x.detach().cpu().numpy()) if _IS_TORCH_AVAILABLE else x
+
+        # Uncompute
+        neuron.set_angles(angles)
+        neuron.unpredict()
+        pre_sim = neuron.simulator.clone()
+        pre_prob = pre_sim.prob(neuron.target)
+
+        param_count = 1 << len(neuron.controls)
+        delta = [0.0] * param_count
+        for param in range(param_count):
+            angle = angles[param]
+
+            # x + angle_eps
+            angles[param] = angle + angle_eps
+            neuron.set_angles(angles)
+            neuron.predict(True, False)
+            p_plus = neuron.simulator.prob(neuron.target)
+            neuron.simulator = pre_sim.clone()
+
+            # x - angle_eps
+            angles[param] = angle - angle_eps
+            neuron.set_angles(angles)
+            neuron.predict(True, False)
+            p_minus = neuron.simulator.prob(neuron.target)
+            neuron.simulator = pre_sim.clone()
+
+            # Central difference
+            delta[param] = (p_plus - p_minus) / (2 * angle_eps)
+
+            angles[param] = angle
+
+        if _IS_TORCH_AVAILABLE:
+            delta = torch.tensor(delta, dtype=torch.float32, device=x.device)
+
+        return delta
 
     @staticmethod
     def backward(ctx, grad_output):
         (x,) = ctx.saved_tensors
         neuron_wrapper = ctx.neuron_wrapper
-        neuron = neuron_wrapper.neuron
-        angles = x.detach().cpu().numpy() if _IS_TORCH_AVAILABLE else x
-
-        # Uncompute
-        neuron.set_angles(angles)
-        neuron.unpredict()
-        pre_prob = neuron.simulator.prob(neuron.target)
-
-        param_count = 1 << len(neuron.controls)
-        delta = [0.0] * param_count
-        single_angle = [0.0] * param_count
-        for param in range(param_count):
-            angle = angles[param]
-
-            if abs(angle) < sys.float_info.epsilon:
-                # Avoid division by zero
-                continue
-
-            # Only this angle is nonzero
-            single_angle[param] = angle
-
-            # Predict with 1 nonzero angle
-            neuron.set_angles(single_angle)
-            neuron.predict(True, False)
-
-            # d(probability) / d(angle)
-            delta[param] = (neuron.simulator.prob(neuron.target) - pre_prob) / angle
-
-            # Uncompute
-            neuron.unpredict()
-
-            # Reset single_angle to all 0, for reuse
-            single_angle[param] = 0.0
-
+        delta = _backward(x, neuron_wrapper, grad_output)
         if _IS_TORCH_AVAILABLE:
-            delta = torch.tensor(delta, dtype=torch.float32)
-            grad_input = grad_output * delta
+            # grad_output: (O,)
+            # delta:       (O, I)
+            grad_input = torch.matmul(grad_output, delta)  # result: (I,)
         else:
-            grad_input = [o * d for o, d in zip(grad_output, delta)]
-
-        return grad_input
+            grad_input = [
+                sum(o * d for o, d in zip(grad_output, col))
+                for col in zip(*delta)
+            ]
 
 
 class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
@@ -147,7 +160,12 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.backward_fn = (
             QrackNeuronTorchFunction.backward
             if _IS_TORCH_AVAILABLE
-            else lambda x: QrackNeuronTorchFunction.forward(object(), x)
+            else lambda x: QrackNeuronTorchFunction.backward(object(), x)
+        )
+        self._backward_fn = (
+            QrackNeuronTorchFunction._backward
+            if _IS_TORCH_AVAILABLE
+            else lambda x: QrackNeuronTorchFunction._backward(object(), x)
         )
 
         # Create neurons from all input combinations, projecting to coherent output qubits
@@ -180,44 +198,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                 self.weights.append(nn.Parameter(torch.zeros(p_count)))
 
     def forward(self, x):
-        if _IS_TORCH_AVAILABLE:
-            B = x.shape[0]
-            x = x.view(B, -1)
-        else:
-            B = len(x)
-
-        self.simulators.clear()
-        if _IS_TORCH_AVAILABLE:
-            for b in range(B):
-                simulator = self.simulator.clone()
-                self.simulators.append(simulator)
-                for q, input_id in enumerate(self.input_indices):
-                    simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), q)
-        else:
-            for b in range(B):
-                simulator = self.simulator.clone()
-                self.simulators.append(simulator)
-                for q, input_id in enumerate(self.input_indices):
-                    simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
-
-        y = [([0.0] * len(self.output_indices)) for _ in range(B)]
-        for b in range(B):
-            simulator = self.simulators[b]
-            # Prepare a maximally uncertain output state.
-            for output_id in self.output_indices:
-                simulator.h(output_id)
-
-            # Set Qrack's internal parameters:
-            for idx, neuron_wrapper in enumerate(self.neurons):
-                self.apply_fn(self.weights[idx], neuron_wrapper)
-
-            for q, output_id in enumerate(self.output_indices):
-                y[b][q] = simulator.prob(output_id)
-
-        if _IS_TORCH_AVAILABLE:
-            y = torch.tensor(y, dtype=torch.float32, device=x.device, requires_grad=True)
-
-        return y
+        return QrackNeuronTorchLayerFunction.apply(x, self)
 
 
 class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object):
@@ -225,21 +206,68 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
 
     @staticmethod
     def forward(ctx, x, neuron_layer):
-        final_probs = neuron_layer.forward(x)
-
         # Save for backward
-        ctx.save_for_backward(x, final_probs)
+        ctx.save_for_backward(x)
         ctx.neuron_layer = neuron_layer
 
-        return final_probs
+        input_indices = neuron_layer.input_indices
+        output_indices = neuron_layer.output_indices
+        simulators = neuron_layer.simulators
+        weights = neuron_layer.weights
+
+        if _IS_TORCH_AVAILABLE:
+            B = x.shape[0]
+            x = x.view(B, -1)
+        else:
+            B = len(x)
+
+        simulators.clear()
+        if _IS_TORCH_AVAILABLE:
+            for b in range(B):
+                simulator = neuron_layer.simulator.clone()
+                simulators.append(simulator)
+                for q, input_id in enumerate(input_indices):
+                    simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), q)
+        else:
+            for b in range(B):
+                simulator = neuron_layer.simulator.clone()
+                simulators.append(simulator)
+                for q, input_id in enumerate(input_indices):
+                    simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
+
+        y = [([0.0] * len(output_indices)) for _ in range(B)]
+        for b in range(B):
+            simulator = simulators[b]
+            # Prepare a maximally uncertain output state.
+            for output_id in output_indices:
+                simulator.h(output_id)
+
+            # Set Qrack's internal parameters:
+            for idx, neuron_wrapper in enumerate(neuron_layer.neurons):
+                neuron_wrapper.neuron.simulator = simulator
+                neuron_layer.apply_fn(weights[idx], neuron_wrapper)
+
+            for q, output_id in enumerate(output_indices):
+                y[b][q] = simulator.prob(output_id)
+
+        if _IS_TORCH_AVAILABLE:
+            y = torch.tensor(y, dtype=torch.float32, device=x.device)
+
+        return y
 
     @staticmethod
     def backward(ctx, grad_output):
-        x, final_probs = ctx.saved_tensors
+        (x,) = ctx.saved_tensors
         neuron_layer = ctx.neuron_layer
+
+        input_indices = neuron_layer.input_indices
         output_indices = neuron_layer.output_indices
         simulators = neuron_layer.simulators
         neurons = neuron_layer.neurons
+        backward_fn = neuron_layer._backward_fn
+
+        input_count = len(input_indices)
+        output_count = len(output_indices)
 
         if _IS_TORCH_AVAILABLE:
             B = x.shape[0]
@@ -249,17 +277,30 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
 
         # Uncompute prediction
         if _IS_TORCH_AVAILABLE:
-            delta = torch.zeros((B, len(output_indices)), dtype=torch.float32, device=x.device, requires_grad=True)
+            delta = torch.zeros((B, output_count, input_count), dtype=torch.float32, device=x.device)
             for b in range(B):
+                simulator = simulators[b]
                 for neuron_wrapper in neurons:
                     neuron = neuron_wrapper.neuron
-                    delta[b, output_indices.index(neuron.target)] += neuron_layer.backward_fn(neuron.neuron)
+                    neuron.simulator = simulator
+                    angles = torch.tensor(neuron.get_angles(), dtype=torch.float32, device=x.device, requires_grad=True)
+                    o = output_indices.index(neuron.target)
+                    neuron_grad = backward_fn(angles, neuron_wrapper)
+                    for idx, c in enumerate(neuron.controls):
+                        i = input_indices.index(c)
+                        delta[b, o, i] += neuron_grad[idx]
         else:
-            delta = [[0.0] * len(output_indices) for _ in range(B)]
+            delta = [[[0.0] * input_count for _ in range(output_count)] for _ in range(B)]
             for b in range(B):
+                simulator = simulators[b]
                 for neuron_wrapper in neurons:
                     neuron = neuron_wrapper.neuron
-                    delta[b][output_indices.index(neuron.target)] += neuron_layer.backward_fn(neuron.neuron)
+                    neuron.simulator = simulator
+                    o = output_indices.index(neuron.target)
+                    neuron_grad = backward_fn(angles, neuron_wrapper)
+                    for idx, c in enumerate(neuron.controls):
+                        i = input_indices.index(c)
+                        delta[b][o][i] += neuron_grad[idx]
 
         # Uncompute output state prep
         for simulator in simulators:
@@ -267,8 +308,15 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 simulator.h(output_id)
 
         if _IS_TORCH_AVAILABLE:
-            grad_input = grad_output * delta
+            grad_input = torch.bmm(
+                grad_output.unsqueeze(1),  # (B, 1, O)
+                delta                      # (B, O, I)
+            ).squeeze(1)
         else:
-            grad_input = [o * d for o, d in zip(grad_output, delta)]
+            grad_input = [[0.0] * output_count for _ in range(B)]
+            for b in range(B):
+                for o in range(output_indices):
+                    for i in range(input_indices):
+                        grad_input[b][o] += grad_output[b][o] * delta[b][o][i]
 
-        return grad_input
+        return grad_input, None
