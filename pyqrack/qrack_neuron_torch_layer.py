@@ -170,21 +170,19 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         else:
             B = len(x)
 
-        if B != len(self.simulators):
-            # We need to reset the simulator batch and re-prepare the input.
-            self.simulators.clear()
-            if _IS_TORCH_AVAILABLE:
-                for b in range(B):
-                    simulator = self.simulator.clone()
-                    self.simulators.append(simulator)
-                    for q, input_id in enumerate(self.input_indices):
-                        simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), q)
-            else:
-                for b in range(B):
-                    simulator = self.simulator.clone()
-                    self.simulators.append(simulator)
-                    for q, input_id in enumerate(self.input_indices):
-                        simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
+        self.simulators.clear()
+        if _IS_TORCH_AVAILABLE:
+            for b in range(B):
+                simulator = self.simulator.clone()
+                self.simulators.append(simulator)
+                for q, input_id in enumerate(self.input_indices):
+                    simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), q)
+        else:
+            for b in range(B):
+                simulator = self.simulator.clone()
+                self.simulators.append(simulator)
+                for q, input_id in enumerate(self.input_indices):
+                    simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
 
         y = [([0.0] * len(self.output_indices)) for _ in range(B)]
         for b in range(B):
@@ -226,13 +224,8 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         else:
             B = len(x)
 
-        if B != len(neuron_layer.simulators):
-            init_prob = [neuron_layer.simulator.prob(target) for target in neuron_layer.output_indices]
-            init_probs = [init_prob[:] for _ in range(B)]
-        else:
-            init_probs = []
-            for simulator in neuron_layer.simulators:
-                init_probs.append([simulator.prob(target) for target in neuron_layer.output_indices])
+        init_prob = [neuron_layer.simulator.prob(target) for target in neuron_layer.output_indices]
+        init_probs = [init_prob[:] for _ in range(B)]
 
         neuron_layer.forward(x)
 
