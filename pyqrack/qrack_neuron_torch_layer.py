@@ -280,9 +280,12 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 for neuron_wrapper in neurons:
                     neuron = neuron_wrapper.neuron
                     neuron.simulator = simulator
-                    identity = torch.ones(1 << len(neuron.controls), dtype=torch.float32, device=x.device)
                     angles = torch.tensor(neuron.get_angles(), dtype=torch.float32, device=x.device, requires_grad=True)
-                    delta[b, output_indices.index(neuron.target)] += backward_fn(angles, neuron_wrapper)
+                    o = output_indices.index(neuron.target)
+                    neuron_grad = backward_fn(angles, neuron_wrapper)
+                    for idx, c in enumerate(neuron.controls):
+                        i = input_indices.index(c)
+                        delta[b, o, i] += neuron_grad[idx]
         else:
             delta = [[[0.0] * input_count for _ in range(output_count)] for _ in range(B)]
             for b in range(B):
@@ -290,10 +293,11 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 for neuron_wrapper in neurons:
                     neuron = neuron_wrapper.neuron
                     neuron.simulator = simulator
-                    angles = neuron.get_angles()
+                    o = output_indices.index(neuron.target)
                     neuron_grad = backward_fn(angles, neuron_wrapper)
-                    for i in range(input_count):
-                        delta[b][output_indices.index(neuron.target)][i] += neuron_grad[i]
+                    for idx, c in enumerate(neuron.controls):
+                        i = input_indices.index(c)
+                        delta[b][o][i] += neuron_grad[idx]
 
         # Uncompute output state prep
         for simulator in simulators:
