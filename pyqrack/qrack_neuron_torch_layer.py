@@ -37,8 +37,8 @@ class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
     def forward(self, x):
         neuron = self.neuron
 
+        neuron.set_angles(x.detach().numpy() if _IS_TORCH_AVAILABLE else x)
         neuron.predict(True, False)
-
         p = neuron.simulator.prob(neuron.target)
         if _IS_TORCH_AVAILABLE:
             p = torch.tensor([p], dtype=torch.float32, requires_grad=True)
@@ -50,34 +50,32 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
     @staticmethod
-    def forward(ctx, x, neuron_wrapper: QrackNeuronTorch):
-        neuron = neuron_wrapper.neuron
+    def forward(ctx, x, neuron_wrapper):
+        ctx.neuron_wrapper = neuron_wrapper
+        ctx.save_for_backward(x)
+
         pre_prob = neuron.simulator.prob(neuron.target)
         post_prob = neuron_wrapper.forward(x)
 
-        delta = pre_prob - post_prob
+        ctx.delta = pre_prob - post_prob
         if _IS_TORCH_AVAILABLE:
-            post_prob = torch.tensor([post_prob], dtype=torch.float32, requires_grad=True)
-
-        # Save for backward
-        ctx.save_for_backward(x, delta)
-        ctx.neuron_wrapper = neuron_wrapper
+            post_prob = torch.tensor([post_prob], dtype=torch.float32)
 
         return post_prob
 
     @staticmethod
     def backward(ctx, grad_output):
-        x, delta = ctx.saved_tensors
+        (x,) = ctx.saved_tensors
         neuron_wrapper = ctx.neuron_wrapper
         neuron = neuron_wrapper.neuron
 
-        neuron.set_angles(x)
+        neuron.set_angles(x.detach().numpy() if _IS_TORCH_AVAILABLE else x)
         neuron.unpredict()
 
         if _IS_TORCH_AVAILABLE:
-            grad_input = grad_output * delta
+            grad_input = grad_output * ctx.delta
         else:
-            grad_input = [o * d for o, d in zip(grad_output, delta)]
+            grad_input = [o * d for o, d in zip(grad_output, ctx.delta)]
 
         return grad_input
 
