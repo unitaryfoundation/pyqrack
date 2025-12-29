@@ -169,7 +169,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         if perm_0_prob <= sys.float_info.epsilon:
             # The simulator is effectively reset and we need to re-prepare the input.
             for q, input_id in enumerate(self.input_indices):
-                self.simulator.r(Pauli.PauliY, math.pi *  x[b, q].item(), q)
+                self.simulator.r(Pauli.PauliY, math.pi *  x[q].item(), q)
 
         # Set Qrack's internal parameters.
         param_count = 0
@@ -240,5 +240,7 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
             grad[idx] = (final_probs[idx] - init_probs[idx]) - ctx.delta[idx]
 
         return (
-            torch.tensor(grad, dtype=torch.float32, requires_grad=True) if _IS_TORCH_AVAILABLE else grad
+            torch.tensor(grad, dtype=torch.float32, requires_grad=True)
+            if _IS_TORCH_AVAILABLE
+            else grad
         )
