@@ -36,7 +36,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         ctx.save_for_backward(x)
         neuron = neuron_wrapper.neuron
 
-        angles = (x.numpy() if not x.requires_grad else x.detach().cpu().numpy()) if _IS_TORCH_AVAILABLE else x
+        angles = (x.detach().cpu().numpy() if x.requires_grad else x.numpy()) if _IS_TORCH_AVAILABLE else x
         neuron.set_angles(angles)
         neuron.predict(True, False)
         post_prob = neuron.simulator.prob(neuron.target)
@@ -48,7 +48,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     @staticmethod
     def _backward(x, neuron_wrapper):
         neuron = neuron_wrapper.neuron
-        angles = (x.numpy() if not x.requires_grad else x.detach().cpu().numpy()) if _IS_TORCH_AVAILABLE else x
+        angles = (x.detach().cpu().numpy() if x.requires_grad else x.numpy()) if _IS_TORCH_AVAILABLE else x
 
         # Uncompute
         neuron.set_angles(angles)
