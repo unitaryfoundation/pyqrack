@@ -126,6 +126,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         simulator,
         input_indices,
         output_indices,
+        eta=1.0,
+        tolerance=sys.float_info.epsilon,
         activation=int(NeuronActivationFn.Generalized_Logistic),
         lowest_combo_count=0,
         highest_combo_count=2,
@@ -139,6 +141,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             sim (QrackSimulator): Simulator into which predictor features are loaded
             input_indices (list[int]): List of input bits
             output_indices (list[int]): List of output bits
+            eta (float): Learning volatility of neurons
+            tolerance( (float): Neuron rounding tolerance
             activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
             lowest_combo_count (int): Lowest combination count of input qubits iterated (0 is bias)
             highest_combo_count (int): Highest combination count of input qubits iterated
@@ -175,7 +179,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.neurons = nn.ModuleList(
             [
                 QrackNeuronTorch(
-                    QrackNeuron(simulator, input_subset, output_id, activation)
+                    QrackNeuron(simulator, input_subset, output_id, activation, eta, tolerance)
                 )
                 for output_id in output_indices
                 for k in range(lowest_combo_count, highest_combo_count + 1)
