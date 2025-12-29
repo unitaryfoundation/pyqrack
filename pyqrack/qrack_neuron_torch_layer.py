@@ -136,22 +136,19 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         )   
 
         # Set Qrack's internal parameters:
-        param_count = 0
         p_count = 1 << len(input_indices)
-        for neuron_wrapper in self.neurons:
-            neuron = neuron_wrapper.neuron
-            neuron.set_angles(
-                parameters[param_count : (param_count + p_count)]
-                if parameters
-                else ([0.0] * p_count)
-            )
-            param_count += p_count
-
-        self.weights = nn.ParameterList()
-        for pid in range(param_count):
-            self.weights.append(
-                nn.Parameter(torch.tensor(parameters[pid] if parameters else 0.0))
-            )
+        if parameters:
+            param_count = 0
+            for neuron_wrapper in self.neurons:
+                neuron = neuron_wrapper.neuron
+                neuron.set_angles(parameters[param_count : (param_count + p_count)])
+                param_count += p_count
+            self.weights = nn.ParameterList()
+            for pid in range(param_count):
+                self.weights.append(nn.Parameter(torch.tensor(parameters[pid] if parameters else 0.0)))
+        else:
+            param_count = p_count * len(output_indices)
+            self.weights = nn.ParameterList([nn.Parameter(torch.tensor(0.0)) for _ in range(param_count)])
 
     def forward(self, x):
         if _IS_TORCH_AVAILABLE:
