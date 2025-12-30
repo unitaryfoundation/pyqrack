@@ -128,9 +128,9 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         input_qubits,
         output_qubits,
         hidden_qubits=None,
-        activation=int(NeuronActivationFn.Generalized_Logistic),
         lowest_combo_count=0,
         highest_combo_count=2,
+        activation=int(NeuronActivationFn.Generalized_Logistic),
         parameters=None,
     ):
         """
@@ -142,9 +142,9 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             input_qubits (int): Count of inputs (1 per qubit)
             output_qubits (int): Count of outputs (1 per qubit)
             hidden_qubits (int): Count of "hidden" inputs (1 per qubit, always initialized to |+>, suggested to be same a highest_combo_count)
-            activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
             lowest_combo_count (int): Lowest combination count of input qubits iterated (0 is bias)
             highest_combo_count (int): Highest combination count of input qubits iterated
+            activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
             parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of input + hidden qubits, repeated for ascending combo count, repeated for each output index
         """
         super(QrackNeuronTorchLayer, self).__init__()
