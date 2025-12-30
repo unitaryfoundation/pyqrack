@@ -20,6 +20,7 @@ except ImportError:
 
 from .pauli import Pauli
 from .qrack_neuron import QrackNeuron
+from .qrack_simulator import QrackSimulator
 from .neuron_activation_fn import NeuronActivationFn
 
 
@@ -124,10 +125,9 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 
     def __init__(
         self,
-        simulator,
-        input_indices,
-        hidden_indices,
-        output_indices,
+        input_qubits,
+        output_qubits,
+        hidden_qubits=None,
         activation=int(NeuronActivationFn.Generalized_Logistic),
         lowest_combo_count=0,
         highest_combo_count=2,
@@ -139,20 +139,22 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 
         Args:
             sim (QrackSimulator): Simulator into which predictor features are loaded
-            input_indices (list[int]): List of input bits
-            hidden_indices (list[int]): List of "hidden" bits (always initialized to |+>)
-            output_indices (list[int]): List of output bits
+            input_qubits (int): Count of inputs (1 per qubit)
+            output_qubits (int): Count of outputs (1 per qubit)
+            hidden_qubits (int): Count of "hidden" inputs (1 per qubit, always initialized to |+>, suggested to be same a highest_combo_count)
             activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
             lowest_combo_count (int): Lowest combination count of input qubits iterated (0 is bias)
             highest_combo_count (int): Highest combination count of input qubits iterated
             parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of input + hidden qubits, repeated for ascending combo count, repeated for each output index
         """
         super(QrackNeuronTorchLayer, self).__init__()
-        self.simulator = simulator
+        if hidden_qubits is None:
+            hidden_qubits = highest_combo_count
+        self.simulator = QrackSimulator(input_qubits + hidden_qubits + output_qubits)
         self.simulators = []
-        self.input_indices = input_indices
-        self.hidden_indices = hidden_indices
-        self.output_indices = output_indices
+        self.input_indices = list(range(input_qubits))
+        self.hidden_indices = list(range(input_qubits, input_qubits + hidden_qubits))
+        self.output_indices = list(range(input_qubits + hidden_qubits, input_qubits + hidden_qubits + output_qubits))
         self.activation = NeuronActivationFn(activation)
         self.apply_fn = (
             QrackNeuronTorchFunction.apply
@@ -179,11 +181,11 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.neurons = nn.ModuleList(
             [
                 QrackNeuronTorch(
-                    QrackNeuron(simulator, input_subset, output_id, activation)
+                    QrackNeuron(self.simulator, input_subset, output_id, activation)
                 )
-                for output_id in output_indices
+                for output_id in self.output_indices
                 for k in range(lowest_combo_count, highest_combo_count + 1)
-                for input_subset in itertools.combinations(input_indices + hidden_indices, k)
+                for input_subset in itertools.combinations(self.input_indices + self.hidden_indices, k)
             ]
         )   
 
