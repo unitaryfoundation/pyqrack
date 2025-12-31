@@ -136,6 +136,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         hidden_indices (list[int], read-only): simulator qubit indices used as QrackNeuron hidden inputs (in maximal superposition)
         neurons (list[QrackNeuronTorch]): QrackNeuronTorch wrappers (for PyQrack QrackNeurons) in this layer, corresponding to weights
         weights (ParameterList): List of tensors corresponding one-to-one with weights of list of neurons
+        apply_fn (Callable[Tensor, QrackNeuronTorch]): Corresponds to QrackNeuronTorchFunction.apply(x, neuron_wrapper) (or override with a custom implementation)
+        backward_fn (Callable[Tensor, Tensor]): Corresponds to QrackNeuronTorchFunction._backward(x, neuron_wrapper) (or override with a custom implementation)
     """
 
     def __init__(
@@ -172,9 +174,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.output_indices = list(range(input_qubits + hidden_qubits, input_qubits + hidden_qubits + output_qubits))
         self.activation = NeuronActivationFn(activation)
         self.apply_fn = QrackNeuronTorchFunction.apply
-        self.forward_fn = QrackNeuronTorchFunction.forward
-        self.backward_fn = QrackNeuronTorchFunction.backward
-        self._backward_fn = QrackNeuronTorchFunction._backward
+        self.backward_fn = QrackNeuronTorchFunction._backward
 
         # Create neurons from all input combinations, projecting to coherent output qubits
         self.neurons = nn.ModuleList(
@@ -277,7 +277,7 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         output_indices = neuron_layer.output_indices
         simulators = neuron_layer.simulators
         neurons = neuron_layer.neurons
-        backward_fn = neuron_layer._backward_fn
+        backward_fn = neuron_layer.backward_fn
 
         input_count = len(input_indices)
         output_count = len(output_indices)
