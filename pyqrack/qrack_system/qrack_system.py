@@ -76,17 +76,6 @@ class QrackSystem:
 
         # Define function signatures, up front
 
-        # non-quantum
-
-        self.qrack_lib.DumpIds.restype = None
-        self.qrack_lib.DumpIds.argtypes = [c_ulonglong, CFUNCTYPE(None, c_ulonglong)]
-
-        self.qrack_lib.Dump.restype = None
-        self.qrack_lib.Dump.argtypes = [
-            c_ulonglong,
-            CFUNCTYPE(c_ulonglong, c_double, c_double),
-        ]
-
         # These next few methods need to have c_double pointers, if PyQrack is built with fp64.
         self.qrack_lib.InKet.restype = None
         self.qrack_lib.OutKet.restype = None

@@ -40,11 +40,9 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
     if not _IS_TORCH_AVAILABLE:
-        @staticmethod
         def apply(x, neuron_wrapper):
             return forward(TorchContextMock(), x, neuron_wrapper)
 
-    @staticmethod
     def forward(ctx, x, neuron_wrapper):
         ctx.neuron_wrapper = neuron_wrapper
         ctx.save_for_backward(x)
@@ -59,7 +57,6 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         return post_prob
 
-    @staticmethod
     def _backward(x, neuron_wrapper):
         neuron = neuron_wrapper.neuron
         angles = (x.detach().cpu().numpy() if x.requires_grad else x.numpy()) if _IS_TORCH_AVAILABLE else x
@@ -101,7 +98,6 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         return delta
 
-    @staticmethod
     def backward(ctx, grad_output):
         (x,) = ctx.saved_tensors
         neuron_wrapper = ctx.neuron_wrapper
@@ -222,7 +218,6 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
-    @staticmethod
     def forward(ctx, x, neuron_layer):
         # Save for backward
         ctx.save_for_backward(x)
@@ -277,7 +272,6 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
 
         return y
 
-    @staticmethod
     def backward(ctx, grad_output):
         (x,) = ctx.saved_tensors
         neuron_layer = ctx.neuron_layer

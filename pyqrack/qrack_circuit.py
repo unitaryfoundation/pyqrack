@@ -69,20 +69,16 @@ class QrackCircuit:
             Qrack.qrack_lib.destroy_qcircuit(self.cid)
             self.cid = None
 
-    @staticmethod
     def _ulonglong_byref(a):
         return (ctypes.c_ulonglong * len(a))(*a)
 
-    @staticmethod
     def _double_byref(a):
         return (ctypes.c_double * len(a))(*a)
 
-    @staticmethod
     def _complex_byref(a):
         t = [(c.real, c.imag) for c in a]
         return QrackCircuit._double_byref([float(item) for sublist in t for item in sublist])
 
-    @staticmethod
     def _mtrx_to_u4(m):
         nrm = abs(m[0])
         if (nrm * nrm) < sys.float_info.epsilon:
@@ -107,7 +103,6 @@ class QrackCircuit:
 
         return th, ph, lm, np.angle(phase)
 
-    @staticmethod
     def _u3_to_mtrx(params):
         th = float(params[0])
         ph = float(params[1])
@@ -120,7 +115,6 @@ class QrackCircuit:
 
         return [c + 0j, -el * s, ep * s, ep * el * c]
 
-    @staticmethod
     def _u4_to_mtrx(params):
         m = QrackCircuit._u3_to_mtrx(params)
         g = np.exp(1j * float(params[3]))
@@ -129,7 +123,6 @@ class QrackCircuit:
 
         return m
 
-    @staticmethod
     def _make_mtrx_unitary(m):
         return QrackCircuit._u4_to_mtrx(QrackCircuit._mtrx_to_u4(m))
 
@@ -282,7 +275,6 @@ class QrackCircuit:
 
         return QrackCircuit.string_to_qiskit_circuit(self.out_to_string())
 
-    @staticmethod
     def in_from_file(filename):
         """Read in optimized circuit from file
 
@@ -297,7 +289,6 @@ class QrackCircuit:
 
         return out
 
-    @staticmethod
     def file_gate_count(filename):
         """File gate count
 
@@ -311,7 +302,6 @@ class QrackCircuit:
             tokens = file.read().split()
         return int(tokens[1])
 
-    @staticmethod
     def file_to_qiskit_circuit(filename):
         """Convert an output file to a Qiskit circuit
 
@@ -335,7 +325,6 @@ class QrackCircuit:
         with open(filename, "r") as file:
             return QrackCircuit.string_to_qiskit_circuit(file.read())
 
-    @staticmethod
     def string_to_qiskit_circuit(circ_string):
         """Convert an output string to a Qiskit circuit
 
@@ -409,7 +398,6 @@ class QrackCircuit:
 
         return circ
 
-    @staticmethod
     def in_from_qiskit_circuit(circ):
         """Read a Qiskit circuit into a QrackCircuit
 
@@ -455,7 +443,6 @@ class QrackCircuit:
 
         return out
 
-    @staticmethod
     def file_to_quimb_circuit(
         filename,
         circuit_type=QuimbCircuitType.Circuit,
@@ -539,7 +526,6 @@ class QrackCircuit:
 
         return tcirc
 
-    @staticmethod
     def file_to_tensorcircuit(
         filename, inputs=None, circuit_params=None, binding_params=None
     ):
@@ -572,7 +558,6 @@ class QrackCircuit:
             qcirc, qcirc.num_qubits, inputs, circuit_params, binding_params
         )
 
-    @staticmethod
     def in_from_tensorcircuit(tcirc, enable_instruction=False, enable_inputs=False):
         """Convert a TensorCircuit circuit to a QrackCircuit
 

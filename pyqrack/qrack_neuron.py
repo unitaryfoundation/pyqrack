@@ -99,11 +99,9 @@ class QrackNeuron:
         self._throw_if_error()
         return result
 
-    @staticmethod
     def _ulonglong_byref(a):
         return (ctypes.c_ulonglong * len(a))(*a)
 
-    @staticmethod
     def _real1_byref(a):
         # This needs to be c_double, if PyQrack is built with fp64.
         if Qrack.fppow < 6:
@@ -263,7 +261,6 @@ class QrackNeuron:
         Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, e, r)
         self._throw_if_error()
 
-    @staticmethod
     def quantile_bounds(vec, bits):
         """ Calculate vector quantile bounds
 
@@ -285,7 +282,6 @@ class QrackNeuron:
 
         return [vec_sorted[0]] + [vec_sorted[(k * n) // bins] for k in range(1, bins)] + [vec_sorted[-1]]
 
-    @staticmethod
     def discretize(vec, bounds):
         """ Discretize vector by quantile bounds
 
@@ -315,7 +311,6 @@ class QrackNeuron:
 
         return vec_discrete
 
-    @staticmethod
     def flatten_and_transpose(arr):
         """ Flatten and transpose feature matrix
 
@@ -331,7 +326,6 @@ class QrackNeuron:
         """
         return list(zip(*[item for sublist in arr for item in sublist]))
 
-    @staticmethod
     def bin_endpoints_average(bounds):
         """ Bin endpoints average
 

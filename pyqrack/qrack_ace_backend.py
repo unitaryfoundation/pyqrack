@@ -432,7 +432,6 @@ class QrackAceBackend:
     def _unpack(self, lq):
         return self._qubits[lq]
 
-    @staticmethod
     def _get_qb_lhv_indices(hq):
         qb = []
         if len(hq) < 2:
@@ -447,7 +446,6 @@ class QrackAceBackend:
 
         return qb, lhv
 
-    @staticmethod
     def _get_lhv_bloch_angles(sim):
         # Z axis
         z = sim.bloch[2]
@@ -505,7 +503,6 @@ class QrackAceBackend:
 
         sim.mtrx([m00, m01, m10, m11], q)
 
-    @staticmethod
     def _rotate_lhv_to_bloch(sim, delta_azimuth, delta_inclination):
         # Apply rotation as "Azimuth, Inclination" (AI)
         cosA = math.cos(delta_azimuth)
@@ -1447,7 +1444,6 @@ class QrackAceBackend:
 
         return _data
 
-    @staticmethod
     def get_qiskit_basis_gates():
         return [
             "id",

@@ -118,44 +118,35 @@ class QrackSimulator:
             Qrack.qrack_lib.destroy(self.sid)
             self.sid = None
 
-    @staticmethod
     def _int_byref(a):
         return (ctypes.c_int * len(a))(*a)
 
-    @staticmethod
     def _ulonglong_byref(a):
         return (ctypes.c_ulonglong * len(a))(*a)
 
-    @staticmethod
     def _longlong_byref(a):
         return (ctypes.c_longlong * len(a))(*a)
 
-    @staticmethod
     def _double_byref(a):
         return (ctypes.c_double * len(a))(*a)
 
-    @staticmethod
     def _complex_byref(a):
         t = [(c.real, c.imag) for c in a]
         return QrackSimulator._double_byref([float(item) for sublist in t for item in sublist])
 
-    @staticmethod
     def _real1_byref(a):
         # This needs to be c_double, if PyQrack is built with fp64.
         if Qrack.fppow < 6:
             return (ctypes.c_float * len(a))(*a)
         return (ctypes.c_double * len(a))(*a)
 
-    @staticmethod
     def _bool_byref(a):
         return (ctypes.c_bool * len(a))(*a)
 
-    @staticmethod
     def _qrack_complex_byref(a):
         t = [(c.real, c.imag) for c in a]
         return QrackSimulator._real1_byref([float(item) for sublist in t for item in sublist])
 
-    @staticmethod
     def _to_ubyte(nv, v):
         c = math.floor((nv - 1) / 8) + 1
         b = (ctypes.c_ubyte * (c * (1 << nv)))()
@@ -168,7 +159,6 @@ class QrackSimulator:
 
         return b
 
-    @staticmethod
     def _to_ulonglong(m, v):
         b = (ctypes.c_ulonglong * (m * len(v)))()
         n = 0
@@ -181,7 +171,6 @@ class QrackSimulator:
         return b
 
     # See https://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list#answer-30426000
-    @staticmethod
     def _pairwise(it):
         it = iter(it)
         while True:
@@ -1134,7 +1123,6 @@ class QrackSimulator:
         self._throw_if_error()
 
     # arithmetic-logic-unit (ALU)
-    @staticmethod
     def _split_longs(a):
         """Split operation
 
@@ -1158,7 +1146,6 @@ class QrackSimulator:
             a = a >> 64
         return aParts
 
-    @staticmethod
     def _split_longs_2(a, m):
         """Split simultanoues operation
 
@@ -2194,59 +2181,6 @@ class QrackSimulator:
         self._throw_if_error()
 
     ## miscellaneous
-    def dump_ids(self):
-        """Dump all IDs
-
-        Dump all IDs from the selected simulator ID into the callback.
-
-        Returns:
-            List of ids
-        """
-        global ids_list
-        global ids_list_index
-        ids_list = [0] * self.num_qubits()
-        ids_list_index = 0
-        Qrack.qrack_lib.DumpIds(self.sid, self.dump_ids_callback)
-        return ids_list
-
-    @ctypes.CFUNCTYPE(None, ctypes.c_ulonglong)
-    def dump_ids_callback(i):
-        """C callback function"""
-        global ids_list
-        global ids_list_index
-        ids_list[ids_list_index] = i
-        ids_list_index = ids_list_index + 1
-
-    def dump(self):
-        """Dump state vector
-
-        Dump state vector from the selected simulator ID into the callback.
-
-        Returns:
-            State vector list
-        """
-        global state_vec_list
-        global state_vec_list_index
-        global state_vec_probability
-        state_vec_list = [complex(0, 0)] * (1 << self.num_qubits())
-        state_vec_list_index = 0
-        state_vec_probability = 0
-        Qrack.qrack_lib.Dump(self.sid, self.dump_callback)
-        return state_vec_list
-
-    @ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_double, ctypes.c_double)
-    def dump_callback(r, i):
-        """C callback function"""
-        global state_vec_list
-        global state_vec_list_index
-        global state_vec_probability
-        state_vec_list[state_vec_list_index] = complex(r, i)
-        state_vec_list_index = state_vec_list_index + 1
-        state_vec_probability = state_vec_probability + (r * r) + (i * i)
-        if (1.0 - state_vec_probability) <= (7.0 / 3 - 4.0 / 3 - 1):
-            return False
-        return True
-
     def in_ket(self, ket):
         """Set state vector
 
