@@ -64,7 +64,7 @@ class QrackNeuron:
         self.nid = Qrack.qrack_lib.init_qneuron(
             simulator.sid,
             len(controls),
-            self._ulonglong_byref(controls),
+            QrackNeuron._ulonglong_byref(controls),
             target,
             activation_fn,
             alpha,
@@ -99,10 +99,12 @@ class QrackNeuron:
         self._throw_if_error()
         return result
 
-    def _ulonglong_byref(self, a):
+    @staticmethod
+    def _ulonglong_byref(a):
         return (ctypes.c_ulonglong * len(a))(*a)
 
-    def _real1_byref(self, a):
+    @staticmethod
+    def _real1_byref(a):
         # This needs to be c_double, if PyQrack is built with fp64.
         if Qrack.fppow < 6:
             return (ctypes.c_float * len(a))(*a)
@@ -125,7 +127,7 @@ class QrackNeuron:
             raise ValueError(
                 "Angles 'a' in QrackNeuron.set_angles() must contain at least (2 ** len(self.controls)) elements."
             )
-        Qrack.qrack_lib.set_qneuron_angles(self.nid, self._real1_byref(a))
+        Qrack.qrack_lib.set_qneuron_angles(self.nid, QrackNeuron._real1_byref(a))
         self._throw_if_error()
 
     def get_angles(self):
@@ -137,7 +139,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        ket = self._real1_byref([0.0] * (1 << len(self.controls)))
+        ket = QrackNeuron._real1_byref([0.0] * (1 << len(self.controls)))
         Qrack.qrack_lib.get_qneuron_angles(self.nid, ket)
         self._throw_if_error()
         return list(ket)
