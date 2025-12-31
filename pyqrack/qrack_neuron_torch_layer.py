@@ -125,7 +125,7 @@ class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
         neuron(QrackNeuron): QrackNeuron backing this torch wrapper
     """
 
-    def __init__(self, neuron: QrackNeuron):
+    def __init__(self, neuron):
         super().__init__()
         self.neuron = neuron
 
