@@ -121,7 +121,17 @@ class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
-    """Torch layer wrapper for QrackNeuron (with maximally expressive set of neurons between inputs and outputs)"""
+    """Torch layer wrapper for QrackNeuron (with maximally expressive set of neurons between inputs and outputs)
+
+    Attributes:
+        simulator (QrackSimulator): Prototype simulator that batching copies to use with QrackNeuron instances
+        simulators (list[QrackSimulator]): In-flight copies of prototype simulator corresponding to batch count
+        input_indices (list[int], read-only): simulator qubit indices used as QrackNeuron inputs
+        output_indices (list[int], read-only): simulator qubit indices used as QrackNeuron outputs
+        hidden_indices (list[int], read-only): simulator qubit indices used as QrackNeuron hidden inputs (in maximal superposition)
+        neurons (list[QrackNeuron]): QrackNeurons in this layer, corresponding to weights
+        weights (ParameterList): List of tensors corresponding one-to-one with weights of list of neurons
+    """
 
     def __init__(
         self,
