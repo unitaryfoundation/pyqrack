@@ -31,6 +31,11 @@ angle_eps = math.pi * (2 ** -8)
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
+    if not _IS_TORCH_AVAILABLE:
+        @staticmethod
+        def apply(x, neuron_wrapper):
+            raise NotImplementedError("QrackNeuronTorchFunction.apply(x, neuron_wrapper) not implemented, without torch package!")
+
     @staticmethod
     def forward(ctx, x, neuron_wrapper):
         ctx.neuron_wrapper = neuron_wrapper
@@ -166,26 +171,10 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.hidden_indices = list(range(input_qubits, input_qubits + hidden_qubits))
         self.output_indices = list(range(input_qubits + hidden_qubits, input_qubits + hidden_qubits + output_qubits))
         self.activation = NeuronActivationFn(activation)
-        self.apply_fn = (
-            QrackNeuronTorchFunction.apply
-            if _IS_TORCH_AVAILABLE
-            else lambda x: QrackNeuronTorchFunction.forward(object(), x)
-        )
-        self.forward_fn = (
-            QrackNeuronTorchFunction.forward
-            if _IS_TORCH_AVAILABLE
-            else lambda x: QrackNeuronTorchFunction.forward(object(), x)
-        )
-        self.backward_fn = (
-            QrackNeuronTorchFunction.backward
-            if _IS_TORCH_AVAILABLE
-            else lambda x: QrackNeuronTorchFunction.backward(object(), x)
-        )
-        self._backward_fn = (
-            QrackNeuronTorchFunction._backward
-            if _IS_TORCH_AVAILABLE
-            else lambda x: QrackNeuronTorchFunction._backward(object(), x)
-        )
+        self.apply_fn = QrackNeuronTorchFunction.apply
+        self.forward_fn = QrackNeuronTorchFunction.forward
+        self.backward_fn = QrackNeuronTorchFunction.backward
+        self._backward_fn = QrackNeuronTorchFunction._backward
 
         # Create neurons from all input combinations, projecting to coherent output qubits
         self.neurons = nn.ModuleList(
