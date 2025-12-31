@@ -31,7 +31,7 @@ angle_eps = math.pi * (2 ** -8)
 if not _IS_TORCH_AVAILABLE:
     class TorchContextMock(object):
         def save_for_backward(*args):
-            pass
+            self.saved_tensors = args
 
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
