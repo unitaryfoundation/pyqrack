@@ -129,7 +129,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         input_indices (list[int], read-only): simulator qubit indices used as QrackNeuron inputs
         output_indices (list[int], read-only): simulator qubit indices used as QrackNeuron outputs
         hidden_indices (list[int], read-only): simulator qubit indices used as QrackNeuron hidden inputs (in maximal superposition)
-        neurons (list[QrackNeuron]): QrackNeurons in this layer, corresponding to weights
+        neurons (list[QrackNeuronTorch]): QrackNeuronTorch wrappers (for PyQrack QrackNeurons) in this layer, corresponding to weights
         weights (ParameterList): List of tensors corresponding one-to-one with weights of list of neurons
     """
 
