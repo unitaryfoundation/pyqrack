@@ -432,7 +432,8 @@ class QrackAceBackend:
     def _unpack(self, lq):
         return self._qubits[lq]
 
-    def _get_qb_lhv_indices(self, hq):
+    @staticmethod
+    def _get_qb_lhv_indices(hq):
         qb = []
         if len(hq) < 2:
             qb = [0]
@@ -446,7 +447,8 @@ class QrackAceBackend:
 
         return qb, lhv
 
-    def _get_lhv_bloch_angles(self, sim):
+    @staticmethod
+    def _get_lhv_bloch_angles(sim):
         # Z axis
         z = sim.bloch[2]
 
@@ -503,7 +505,8 @@ class QrackAceBackend:
 
         sim.mtrx([m00, m01, m10, m11], q)
 
-    def _rotate_lhv_to_bloch(self, sim, delta_azimuth, delta_inclination):
+    @staticmethod
+    def _rotate_lhv_to_bloch(sim, delta_azimuth, delta_inclination):
         # Apply rotation as "Azimuth, Inclination" (AI)
         cosA = math.cos(delta_azimuth)
         sinA = math.sin(delta_azimuth)
@@ -523,7 +526,7 @@ class QrackAceBackend:
         if len(hq) == 1:
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         if phase:
             for q in qb:
@@ -572,7 +575,7 @@ class QrackAceBackend:
                 a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
-                a[2], i[2] = self._get_lhv_bloch_angles(hq[2])
+                a[2], i[2] = QrackAceBackend._get_lhv_bloch_angles(hq[2])
                 a[3], i[3] = self._get_bloch_angles(hq[3])
                 a[4], i[4] = self._get_bloch_angles(hq[4])
 
@@ -588,7 +591,7 @@ class QrackAceBackend:
                 i_target /= 5
                 for x in range(5):
                     if x == 2:
-                        self._rotate_lhv_to_bloch(
+                        QrackAceBackend._rotate_lhv_to_bloch(
                             hq[x], a_target - a[x], i_target - i[x]
                         )
                     else:
@@ -617,7 +620,7 @@ class QrackAceBackend:
                 a, i = [0, 0, 0], [0, 0, 0]
                 a[0], i[0] = self._get_bloch_angles(hq[0])
                 a[1], i[1] = self._get_bloch_angles(hq[1])
-                a[2], i[2] = self._get_lhv_bloch_angles(hq[2])
+                a[2], i[2] = QrackAceBackend._get_lhv_bloch_angles(hq[2])
 
                 a_target = 0
                 i_target = 0
@@ -631,7 +634,7 @@ class QrackAceBackend:
                 i_target /= 3
                 for x in range(3):
                     if x == 2:
-                        self._rotate_lhv_to_bloch(
+                        QrackAceBackend._rotate_lhv_to_bloch(
                             hq[x], a_target - a[x], i_target - i[x]
                         )
                     else:
@@ -653,8 +656,8 @@ class QrackAceBackend:
             for c in range(len(hq)):
                 h = hq[c]
                 if c == 2:
-                    a, i = self._get_lhv_bloch_angles(h)
-                    self._rotate_lhv_to_bloch(
+                    a, i = QrackAceBackend._get_lhv_bloch_angles(h)
+                    QrackAceBackend._rotate_lhv_to_bloch(
                         h,
                         math.atan(math.tan(a) * b) - a,
                         math.atan(math.tan(i) * b) - i,
@@ -674,7 +677,7 @@ class QrackAceBackend:
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -693,7 +696,7 @@ class QrackAceBackend:
             self.sim[b[0]].r(p, th, b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -721,7 +724,7 @@ class QrackAceBackend:
 
         self._correct(lq)
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -739,7 +742,7 @@ class QrackAceBackend:
             self.sim[b[0]].s(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -755,7 +758,7 @@ class QrackAceBackend:
             self.sim[b[0]].adjs(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -771,7 +774,7 @@ class QrackAceBackend:
             self.sim[b[0]].x(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -787,7 +790,7 @@ class QrackAceBackend:
             self.sim[b[0]].y(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -803,7 +806,7 @@ class QrackAceBackend:
             self.sim[b[0]].z(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -819,7 +822,7 @@ class QrackAceBackend:
             self.sim[b[0]].t(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -835,7 +838,7 @@ class QrackAceBackend:
             self.sim[b[0]].adjt(b[1])
             return
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -917,8 +920,8 @@ class QrackAceBackend:
 
         self._correct(lq1)
 
-        qb1, lhv1 = self._get_qb_lhv_indices(hq1)
-        qb2, lhv2 = self._get_qb_lhv_indices(hq2)
+        qb1, lhv1 = QrackAceBackend._get_qb_lhv_indices(hq1)
+        qb2, lhv2 = QrackAceBackend._get_qb_lhv_indices(hq2)
         # Apply cross coupling on hardware qubits first
         self._apply_coupling(pauli, anti, qb1, lhv1, hq1, qb2, lhv2, hq2, lq1_lr)
         # Apply coupling to the local-hidden-variable target
@@ -1065,7 +1068,7 @@ class QrackAceBackend:
         p = self.prob(lq)
         result = ((p + self._epsilon) >= 1) or (random.random() < p)
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
@@ -1091,7 +1094,7 @@ class QrackAceBackend:
 
         self._correct(lq)
 
-        qb, lhv = self._get_qb_lhv_indices(hq)
+        qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
