@@ -134,7 +134,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         input_indices (list[int], read-only): simulator qubit indices used as QrackNeuron inputs
         output_indices (list[int], read-only): simulator qubit indices used as QrackNeuron outputs
         hidden_indices (list[int], read-only): simulator qubit indices used as QrackNeuron hidden inputs (in maximal superposition)
-        neurons (list[QrackNeuronTorch]): QrackNeuronTorch wrappers (for PyQrack QrackNeurons) in this layer, corresponding to weights
+        neurons (ModuleList[QrackNeuronTorch]): QrackNeuronTorch wrappers (for PyQrack QrackNeurons) in this layer, corresponding to weights
         weights (ParameterList): List of tensors corresponding one-to-one with weights of list of neurons
         apply_fn (Callable[Tensor, QrackNeuronTorch]): Corresponds to QrackNeuronTorchFunction.apply(x, neuron_wrapper) (or override with a custom implementation)
         backward_fn (Callable[Tensor, Tensor]): Corresponds to QrackNeuronTorchFunction._backward(x, neuron_wrapper) (or override with a custom implementation)
@@ -177,33 +177,35 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.backward_fn = QrackNeuronTorchFunction._backward
 
         # Create neurons from all input combinations, projecting to coherent output qubits
-        self.neurons = nn.ModuleList(
-            [
-                QrackNeuronTorch(
-                    QrackNeuron(self.simulator, input_subset, output_id, activation)
-                )
-                for output_id in self.output_indices
-                for k in range(lowest_combo_count, highest_combo_count + 1)
-                for input_subset in itertools.combinations(self.input_indices + self.hidden_indices, k)
-            ]
-        )   
+        neurons = [
+            QrackNeuronTorch(
+                QrackNeuron(self.simulator, input_subset, output_id, activation)
+            )
+            for output_id in self.output_indices
+            for k in range(lowest_combo_count, highest_combo_count + 1)
+            for input_subset in itertools.combinations(self.input_indices + self.hidden_indices, k)
+        ]
+        self.neurons = nn.ModuleList(neurons) if _IS_TORCH_AVAILABLE else neurons
 
         # Set Qrack's internal parameters:
         if parameters:
             param_count = 0
-            self.weights = nn.ParameterList()
+            self.weights = nn.ParameterList() if _IS_TORCH_AVAILABLE else []
             for neuron_wrapper in self.neurons:
                 neuron = neuron_wrapper.neuron
                 p_count = 1 << len(neuron.controls)
                 neuron.set_angles(parameters[param_count : (param_count + p_count)])
-                self.weights.append(nn.Parameter(torch.tensor(parameters[param_count : (param_count + p_count)])))
+                self.weights.append(
+                    nn.Parameter(torch.tensor(parameters[param_count : (param_count + p_count)]))
+                    if _IS_TORCH_AVAILABLE else parameters[param_count : (param_count + p_count)]
+                )
                 param_count += p_count
         else:
-            self.weights = nn.ParameterList()
+            self.weights = nn.ParameterList() if _IS_TORCH_AVAILABLE else []
             for neuron_wrapper in self.neurons:
                 neuron = neuron_wrapper.neuron
                 p_count = 1 << len(neuron.controls)
-                self.weights.append(nn.Parameter(torch.zeros(p_count)))
+                self.weights.append(nn.Parameter(torch.zeros(p_count)) if _IS_TORCH_AVAILABLE else ([0.0] * p_count))
 
     def forward(self, x):
         return QrackNeuronTorchLayerFunction.apply(x, self)
