@@ -1444,6 +1444,7 @@ class QrackAceBackend:
 
         return _data
 
+    @staticmethod
     def get_qiskit_basis_gates():
         return [
             "id",

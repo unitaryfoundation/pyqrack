@@ -28,13 +28,21 @@ from .neuron_activation_fn import NeuronActivationFn
 angle_eps = math.pi * (2 ** -8)
 
 
+if not _IS_TORCH_AVAILABLE:
+    class TorchContextMock(object):
+        def __init__(self):
+            pass
+
+        def save_for_backward(self, *args):
+            self.saved_tensors = args
+
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
     if not _IS_TORCH_AVAILABLE:
         @staticmethod
         def apply(x, neuron_wrapper):
-            raise NotImplementedError("QrackNeuronTorchFunction.apply(x, neuron_wrapper) not implemented, without torch package!")
+            return forward(TorchContextMock(), x, neuron_wrapper)
 
     @staticmethod
     def forward(ctx, x, neuron_wrapper):
