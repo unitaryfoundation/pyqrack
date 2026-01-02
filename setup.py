@@ -7,7 +7,7 @@ from setuptools import setup
 from setuptools.command.build_py import build_py
 
 
-VERSION = "1.78.3"
+VERSION = "1.78.4"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
@@ -62,6 +62,8 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
         "Topic :: Scientific/Engineering :: Quantum Computing",
     ],
     keywords="pyqrack qrack simulator quantum gpu",
