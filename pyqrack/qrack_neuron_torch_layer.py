@@ -53,7 +53,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.predict(True, False)
         post_prob = neuron.simulator.prob(neuron.target)
         if _IS_TORCH_AVAILABLE:
-            post_prob = torch.tensor([post_prob], dtype=torch.float32, device=x.device)
+            post_prob = torch.tensor([post_prob], dtype=torch.double, device=x.device)
 
         return post_prob
 
@@ -94,7 +94,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.simulator = pre_sim
 
         if _IS_TORCH_AVAILABLE:
-            delta = torch.tensor(delta, dtype=torch.float32, device=x.device)
+            delta = torch.tensor(delta, dtype=torch.double, device=x.device)
 
         return delta
 
@@ -268,7 +268,7 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 y[b][q] = simulator.prob(output_id)
 
         if _IS_TORCH_AVAILABLE:
-            y = torch.tensor(y, dtype=torch.float32, device=x.device)
+            y = torch.tensor(y, dtype=torch.double, device=x.device)
 
         return y
 
@@ -294,13 +294,13 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
 
         # Uncompute prediction
         if _IS_TORCH_AVAILABLE:
-            delta = torch.zeros((B, output_count, input_count), dtype=torch.float32, device=x.device)
+            delta = torch.zeros((B, output_count, input_count), dtype=torch.double, device=x.device)
             for b in range(B):
                 simulator = simulators[b]
                 for neuron_wrapper in neurons:
                     neuron = neuron_wrapper.neuron
                     neuron.simulator = simulator
-                    angles = torch.tensor(neuron.get_angles(), dtype=torch.float32, device=x.device, requires_grad=True)
+                    angles = torch.tensor(neuron.get_angles(), dtype=torch.double, device=x.device, requires_grad=True)
                     o = output_indices.index(neuron.target)
                     neuron_grad = backward_fn(angles, neuron_wrapper)
                     for idx, c in enumerate(neuron.controls):
