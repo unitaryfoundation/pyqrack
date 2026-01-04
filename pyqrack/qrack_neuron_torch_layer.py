@@ -53,7 +53,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.predict(True, False)
         post_prob = neuron.simulator.prob(neuron.target)
         if _IS_TORCH_AVAILABLE:
-            post_prob = torch.tensor([post_prob], dtype=torch.double, device=x.device)
+            post_prob = torch.tensor([post_prob], dtype=x.dtype, device=x.device)
 
         return post_prob
 
@@ -94,7 +94,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.simulator = pre_sim
 
         if _IS_TORCH_AVAILABLE:
-            delta = torch.tensor(delta, dtype=torch.double, device=x.device)
+            delta = torch.tensor(delta, dtype=x.dtype, device=x.device)
 
         return delta
 
@@ -152,6 +152,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         lowest_combo_count=0,
         highest_combo_count=2,
         activation=int(NeuronActivationFn.Generalized_Logistic),
+        dtype=torch.float,
         parameters=None,
     ):
         """
@@ -177,6 +178,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.hidden_indices = list(range(input_qubits, input_qubits + hidden_qubits))
         self.output_indices = list(range(input_qubits + hidden_qubits, input_qubits + hidden_qubits + output_qubits))
         self.activation = NeuronActivationFn(activation)
+        self.dtype = dtype
         self.apply_fn = QrackNeuronTorchFunction.apply
         self.backward_fn = QrackNeuronTorchFunction._backward
 
@@ -200,7 +202,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                 p_count = 1 << len(neuron.controls)
                 neuron.set_angles(parameters[param_count : (param_count + p_count)])
                 self.weights.append(
-                    nn.Parameter(torch.tensor(parameters[param_count : (param_count + p_count)]))
+                    nn.Parameter(torch.tensor(parameters[param_count : (param_count + p_count)], dtype=dtype))
                     if _IS_TORCH_AVAILABLE else parameters[param_count : (param_count + p_count)]
                 )
                 param_count += p_count
@@ -209,7 +211,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             for neuron_wrapper in self.neurons:
                 neuron = neuron_wrapper.neuron
                 p_count = 1 << len(neuron.controls)
-                self.weights.append(nn.Parameter(torch.zeros(p_count)) if _IS_TORCH_AVAILABLE else ([0.0] * p_count))
+                self.weights.append(nn.Parameter(torch.zeros(p_count, dtype=dtype)) if _IS_TORCH_AVAILABLE else ([0.0] * p_count))
 
     def forward(self, x):
         return QrackNeuronTorchLayerFunction.apply(x, self)
@@ -268,7 +270,7 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 y[b][q] = simulator.prob(output_id)
 
         if _IS_TORCH_AVAILABLE:
-            y = torch.tensor(y, dtype=torch.double, device=x.device)
+            y = torch.tensor(y, dtype=x.dtype, device=x.device)
 
         return y
 
@@ -294,13 +296,13 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
 
         # Uncompute prediction
         if _IS_TORCH_AVAILABLE:
-            delta = torch.zeros((B, output_count, input_count), dtype=torch.double, device=x.device)
+            delta = torch.zeros((B, output_count, input_count), dtype=x.dtype, device=x.device)
             for b in range(B):
                 simulator = simulators[b]
                 for neuron_wrapper in neurons:
                     neuron = neuron_wrapper.neuron
                     neuron.simulator = simulator
-                    angles = torch.tensor(neuron.get_angles(), dtype=torch.double, device=x.device, requires_grad=True)
+                    angles = torch.tensor(neuron.get_angles(), dtype=x.dtype, device=x.device, requires_grad=True)
                     o = output_indices.index(neuron.target)
                     neuron_grad = backward_fn(angles, neuron_wrapper)
                     for idx, c in enumerate(neuron.controls):
