@@ -55,9 +55,9 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.predict(True, False)
         post_prob = neuron.simulator.prob(neuron.target)
         if _IS_TORCH_AVAILABLE:
-            post_prob = torch.tensor([post_prob], dtype=x.dtype, device=x.device)
+            post_prob = torch.tensor([post_prob], dtype=x.dtype, device=x.device, requires_grad=True)
 
-        return post_prob
+        return post_prob + 0 * x.sum()
 
     @staticmethod
     def _backward(x, neuron_wrapper):
@@ -275,9 +275,9 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
                 y[b][q] = simulator.prob(output_id)
 
         if _IS_TORCH_AVAILABLE:
-            y = torch.tensor(y, dtype=x.dtype, device=x.device)
+            y = torch.tensor(y, dtype=x.dtype, device=x.device, requires_grad=True)
 
-        return y
+        return y + 0 * torch.sum(x, dim=1, keepdim=True)
 
     @staticmethod
     def backward(ctx, grad_output):
