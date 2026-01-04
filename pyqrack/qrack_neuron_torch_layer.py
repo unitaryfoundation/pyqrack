@@ -68,7 +68,6 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.set_angles(angles)
         neuron.unpredict()
         pre_sim = neuron.simulator
-        pre_prob = pre_sim.prob(neuron.target)
 
         param_count = 1 << len(neuron.controls)
         delta = [0.0] * param_count
@@ -243,18 +242,11 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
             B = len(x)
 
         simulators.clear()
-        if _IS_TORCH_AVAILABLE:
-            for b in range(B):
-                simulator = neuron_layer.simulator.clone()
-                simulators.append(simulator)
-                for q, input_id in enumerate(input_indices):
-                    simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), q)
-        else:
-            for b in range(B):
-                simulator = neuron_layer.simulator.clone()
-                simulators.append(simulator)
-                for q, input_id in enumerate(input_indices):
-                    simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
+        for b in range(B):
+            simulator = neuron_layer.simulator.clone()
+            simulators.append(simulator)
+            for q, input_id in enumerate(input_indices):
+                simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
 
         if _IS_TORCH_AVAILABLE:
             y = x.new_zeros((B, len(output_indices)))
@@ -324,16 +316,10 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
             for h in hidden_indices:
                 simulator.h(h)
 
-        if _IS_TORCH_AVAILABLE:
-            for b in range(B):
-                simulator = simulators[b]
-                for q, input_id in enumerate(input_indices):
-                    simulator.r(Pauli.PauliY, -math.pi * x[b, q].item(), q)
-        else:
-            for b in range(B):
-                simulator = simulators[b]
-                for q, input_id in enumerate(input_indices):
-                    simulator.r(Pauli.PauliY, -math.pi * x[b][q].item(), q)
+        for b in range(B):
+            simulator = simulators[b]
+            for q, input_id in enumerate(input_indices):
+                simulator.r(Pauli.PauliY, -math.pi * x[b][q].item(), q)
 
         if _IS_TORCH_AVAILABLE:
             grad_input = torch.matmul(grad_output.view(B, 1, -1), delta).view_as(x)
