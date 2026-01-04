@@ -272,7 +272,8 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
             # Set Qrack's internal parameters:
             for idx, neuron_wrapper in enumerate(neuron_layer.neurons):
                 neuron_wrapper.neuron.simulator = simulator
-                y[b][output_indices.index(neuron_wrapper.neuron.target)] = neuron_layer.apply_fn(weights[idx], neuron_wrapper)
+                o = output_indices.index(neuron_wrapper.neuron.target)
+                y[b][o] = neuron_layer.apply_fn(weights[idx], neuron_wrapper)
 
         return y
 
@@ -300,34 +301,21 @@ class QrackNeuronTorchLayerFunction(Function if _IS_TORCH_AVAILABLE else object)
         # Uncompute prediction
         if _IS_TORCH_AVAILABLE:
             delta = torch.zeros((B, output_count, input_count), dtype=x.dtype, device=x.device)
-            for b in range(B):
-                simulator = simulators[b]
-                for idx, neuron_wrapper in enumerate(neurons):
-                    neuron = neuron_wrapper.neuron
-                    neuron.simulator = simulator
-                    angles = self.weights[idx]
-                    o = output_indices.index(neuron.target)
-                    neuron_grad = backward_fn(angles, neuron_wrapper)
-                    for idx, c in enumerate(neuron.controls):
-                        if c not in input_indices:
-                            continue
-                        i = input_indices.index(c)
-                        delta[b, o, i] += neuron_grad[idx]
         else:
             delta = [[[0.0] * input_count for _ in range(output_count)] for _ in range(B)]
-            for b in range(B):
-                simulator = simulators[b]
-                for idx, neuron_wrapper in enumerate(neurons):
-                    neuron = neuron_wrapper.neuron
-                    neuron.simulator = simulator
-                    angles = self.weights[idx]
-                    o = output_indices.index(neuron.target)
-                    neuron_grad = backward_fn(angles, neuron_wrapper)
-                    for idx, c in enumerate(neuron.controls):
-                        if c not in input_indices:
-                            continue
-                        i = input_indices.index(c)
-                        delta[b][o][i] += neuron_grad[idx]
+        for b in range(B):
+            simulator = simulators[b]
+            for idx, neuron_wrapper in enumerate(neurons):
+                neuron = neuron_wrapper.neuron
+                neuron.simulator = simulator
+                angles = self.weights[idx]
+                o = output_indices.index(neuron.target)
+                neuron_grad = backward_fn(angles, neuron_wrapper)
+                for idx, c in enumerate(neuron.controls):
+                    if c not in input_indices:
+                        continue
+                    i = input_indices.index(c)
+                    delta[b][o][i] += neuron_grad[idx]
 
         # Uncompute output state prep
         for simulator in simulators:
