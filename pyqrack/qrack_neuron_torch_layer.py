@@ -97,7 +97,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.simulator = pre_sim
 
         if _IS_TORCH_AVAILABLE:
-            delta = torch.tensor(delta, dtype=x.dtype, device=x.device)
+            delta = x.new_tensor(delta)
 
         return delta
 
