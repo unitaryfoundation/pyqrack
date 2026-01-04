@@ -24,8 +24,8 @@ from .qrack_simulator import QrackSimulator
 from .neuron_activation_fn import NeuronActivationFn
 
 
-# Should be safe for 16-bit
-angle_eps = math.pi * (2 ** -8)
+# Parameter-shift rule
+angle_eps = math.pi / 2
 
 
 if not _IS_TORCH_AVAILABLE:
@@ -75,22 +75,22 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         for param in range(param_count):
             angle = angles[param]
 
-            # x + angle_eps
+            # x + π/2
             angles[param] = angle + angle_eps
             neuron.set_angles(angles)
             neuron.simulator = pre_sim.clone()
             neuron.predict(True, False)
             p_plus = neuron.simulator.prob(neuron.target)
 
-            # x - angle_eps
+            # x - π/2
             angles[param] = angle - angle_eps
             neuron.set_angles(angles)
             neuron.simulator = pre_sim.clone()
             neuron.predict(True, False)
             p_minus = neuron.simulator.prob(neuron.target)
 
-            # Central difference
-            delta[param] = (p_plus - p_minus) / (2 * angle_eps)
+            # Parameter-shift rule
+            delta[param] = 0.5 * (p_plus - p_minus)
 
             angles[param] = angle
 
