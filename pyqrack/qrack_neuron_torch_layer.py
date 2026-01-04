@@ -112,12 +112,13 @@ class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
         neuron(QrackNeuron): QrackNeuron backing this torch wrapper
     """
 
-    def __init__(self, neuron):
+    def __init__(self, neuron, x):
         super().__init__()
         self.neuron = neuron
+        self.weights = nn.Parameter(x) if _IS_TORCH_AVAILABLE else x
 
-    def forward(self, x):
-        return QrackNeuronTorchFunction.apply(x, self.neuron)
+    def forward(self):
+        return QrackNeuronTorchFunction.apply(self.weights, self.neuron)
 
 
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
@@ -173,35 +174,18 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.apply_fn = QrackNeuronTorchFunction.apply
 
         # Create neurons from all input combinations, projecting to coherent output qubits
-        neurons = [
-            QrackNeuronTorch(
-                QrackNeuron(self.simulator, input_subset, output_id, activation)
-            )
-            for output_id in self.output_indices
-            for k in range(lowest_combo_count, highest_combo_count + 1)
-            for input_subset in itertools.combinations(self.input_indices + self.hidden_indices, k)
-        ]
+        neurons = []
+        param_count = 0
+        for output_id in self.output_indices:
+            for k in range(lowest_combo_count, highest_combo_count + 1):
+                for input_subset in itertools.combinations(self.input_indices + self.hidden_indices, k):
+                    p_count = 1 << len(input_subset)
+                    neurons.append(QrackNeuronTorch(
+                        QrackNeuron(self.simulator, input_subset, output_id, activation),
+                        (torch.tensor(parameters[param_count : (param_count + p_count)], dtype=dtype) if parameters else torch.zeros(p_count, dtype=dtype)) if _IS_TORCH_AVAILABLE else ([0.0] * p_count)
+                    ))
+                    param_count += p_count
         self.neurons = nn.ModuleList(neurons) if _IS_TORCH_AVAILABLE else neurons
-
-        # Set Qrack's internal parameters:
-        if parameters:
-            param_count = 0
-            self.weights = nn.ParameterList() if _IS_TORCH_AVAILABLE else []
-            for neuron_wrapper in self.neurons:
-                neuron = neuron_wrapper.neuron
-                p_count = 1 << len(neuron.controls)
-                neuron.set_angles(parameters[param_count : (param_count + p_count)])
-                self.weights.append(
-                    nn.Parameter(torch.tensor(parameters[param_count : (param_count + p_count)], dtype=dtype))
-                    if _IS_TORCH_AVAILABLE else parameters[param_count : (param_count + p_count)]
-                )
-                param_count += p_count
-        else:
-            self.weights = nn.ParameterList() if _IS_TORCH_AVAILABLE else []
-            for neuron_wrapper in self.neurons:
-                neuron = neuron_wrapper.neuron
-                p_count = 1 << len(neuron.controls)
-                self.weights.append(nn.Parameter(torch.zeros(p_count, dtype=dtype)) if _IS_TORCH_AVAILABLE else ([0.0] * p_count))
 
     def forward(self, x):
         if _IS_TORCH_AVAILABLE:
@@ -234,6 +218,6 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             for idx, neuron_wrapper in enumerate(self.neurons):
                 neuron_wrapper.neuron.simulator = simulator
                 o = self.output_indices.index(neuron_wrapper.neuron.target)
-                y[b][o] = self.apply_fn(self.weights[idx], neuron_wrapper)
+                y[b][o] = self.apply_fn(neuron_wrapper.weights, neuron_wrapper)
 
         return y
