@@ -225,7 +225,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             self.simulators.append(simulator)
 
             for q, input_id in enumerate(self.input_indices):
-                simulator.r(Pauli.PauliY, math.pi * x[b][q].item(), input_id)
+                simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), input_id)
 
             row = []
             for out in self.output_indices:
