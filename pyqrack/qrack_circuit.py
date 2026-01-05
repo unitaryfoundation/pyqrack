@@ -494,9 +494,7 @@ class QrackCircuit:
             )
             if circuit_type == QuimbCircuitType.Circuit
             else (
-                qtn.CircuitDense(
-                    N=qcirc.num_qubits, psi0=psi0, gate_opts=gate_opts, tags=tags
-                )
+                qtn.CircuitDense(N=qcirc.num_qubits, psi0=psi0, gate_opts=gate_opts, tags=tags)
                 if circuit_type == QuimbCircuitType.CircuitDense
                 else qtn.CircuitMPS(
                     N=qcirc.num_qubits,
@@ -526,9 +524,8 @@ class QrackCircuit:
 
         return tcirc
 
-    def file_to_tensorcircuit(
-        filename, inputs=None, circuit_params=None, binding_params=None
-    ):
+    @staticmethod
+    def file_to_tensorcircuit(filename, inputs=None, circuit_params=None, binding_params=None):
         """Convert an output file to a TensorCircuit circuit
 
         Reads in an (optimized) circuit from a file named

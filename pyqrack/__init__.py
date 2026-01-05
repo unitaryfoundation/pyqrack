@@ -13,7 +13,6 @@ from .qrack_neuron_torch_layer import (
     QrackNeuronTorch,
     QrackNeuronTorchFunction,
     QrackNeuronTorchLayer,
-    QrackNeuronTorchLayerFunction,
 )
 from .qrack_simulator import QrackSimulator
 from .qrack_stabilizer import QrackStabilizer

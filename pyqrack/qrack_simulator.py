@@ -57,9 +57,7 @@ class QrackSimulator:
         isPaged=True,
         isCpuGpuHybrid=True,
         isOpenCL=True,
-        isHostPointer=(
-            True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False
-        ),
+        isHostPointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
         isSparse=False,
         noise=0,
         pyzxCircuit=None,
@@ -100,7 +98,7 @@ class QrackSimulator:
                 isCpuGpuHybrid,
                 isOpenCL,
                 isHostPointer,
-                isSparse
+                isSparse,
             )
 
         self._throw_if_error()
@@ -582,7 +580,11 @@ class QrackSimulator:
                 "2x2 matrix 'm' in QrackSimulator.mcmtrx() must contain at least 4 elements."
             )
         Qrack.qrack_lib.MCMtrx(
-            self.sid, len(c), QrackSimulator._ulonglong_byref(c), QrackSimulator._complex_byref(m), q
+            self.sid,
+            len(c),
+            QrackSimulator._ulonglong_byref(c),
+            QrackSimulator._complex_byref(m),
+            q,
         )
         self._throw_if_error()
 
@@ -760,7 +762,11 @@ class QrackSimulator:
                 "2x2 matrix 'm' in QrackSimulator.macmtrx() must contain at least 4 elements."
             )
         Qrack.qrack_lib.MACMtrx(
-            self.sid, len(c), QrackSimulator._ulonglong_byref(c), QrackSimulator._complex_byref(m), q
+            self.sid,
+            len(c),
+            QrackSimulator._ulonglong_byref(c),
+            QrackSimulator._complex_byref(m),
+            q,
         )
         self._throw_if_error()
 
@@ -785,7 +791,12 @@ class QrackSimulator:
                 "2x2 matrix 'm' in QrackSimulator.ucmtrx() must contain at least 4 elements."
             )
         Qrack.qrack_lib.UCMtrx(
-            self.sid, len(c), QrackSimulator._ulonglong_byref(c), QrackSimulator._complex_byref(m), q, p
+            self.sid,
+            len(c),
+            QrackSimulator._ulonglong_byref(c),
+            QrackSimulator._complex_byref(m),
+            q,
+            p,
         )
         self._throw_if_error()
 
@@ -809,7 +820,11 @@ class QrackSimulator:
                 "Multiplex matrix 'm' in QrackSimulator.multiplex1_mtrx() must contain at least (4 * 2 ** len(c)) elements."
             )
         Qrack.qrack_lib.Multiplex1Mtrx(
-            self.sid, len(c), QrackSimulator._ulonglong_byref(c), q, QrackSimulator._complex_byref(m)
+            self.sid,
+            len(c),
+            QrackSimulator._ulonglong_byref(c),
+            q,
+            QrackSimulator._complex_byref(m),
         )
         self._throw_if_error()
 
@@ -967,9 +982,7 @@ class QrackSimulator:
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
-        Qrack.qrack_lib.FSim(
-            self.sid, ctypes.c_double(th), ctypes.c_double(ph), qi1, qi2
-        )
+        Qrack.qrack_lib.FSim(self.sid, ctypes.c_double(th), ctypes.c_double(ph), qi1, qi2)
         self._throw_if_error()
 
     def cswap(self, c, qi1, qi2):
@@ -1818,7 +1831,10 @@ class QrackSimulator:
             )
 
         Qrack.qrack_lib.Hash(
-            self.sid, len(q), QrackSimulator._ulonglong_byref(q), QrackSimulator._to_ubyte(len(q), t)
+            self.sid,
+            len(q),
+            QrackSimulator._ulonglong_byref(q),
+            QrackSimulator._to_ubyte(len(q), t),
         )
         self._throw_if_error()
 
@@ -2250,7 +2266,9 @@ class QrackSimulator:
         amp_count = 1 << len(q)
         sqr_amp_count = amp_count * amp_count
         flat_rdm = QrackSimulator._qrack_complex_byref([complex(0, 0)] * sqr_amp_count)
-        Qrack.qrack_lib.OutReducedDensityMatrix(self.sid, len(q), QrackSimulator._ulonglong_byref(q), flat_rdm)
+        Qrack.qrack_lib.OutReducedDensityMatrix(
+            self.sid, len(q), QrackSimulator._ulonglong_byref(q), flat_rdm
+        )
         self._throw_if_error()
         return [complex(r, i) for r, i in QrackSimulator._pairwise(flat_rdm)]
 
@@ -2475,7 +2493,11 @@ class QrackSimulator:
             raise RuntimeError("factorized_expectation argument lengths do not match.")
         m = max([(x.bit_length() + 63) // 64 for x in c])
         result = Qrack.qrack_lib.FactorizedExpectation(
-            self.sid, len(q), QrackSimulator._ulonglong_byref(q), m, QrackSimulator._to_ulonglong(m, c)
+            self.sid,
+            len(q),
+            QrackSimulator._ulonglong_byref(q),
+            m,
+            QrackSimulator._to_ulonglong(m, c),
         )
         self._throw_if_error()
         return result
@@ -2500,12 +2522,15 @@ class QrackSimulator:
             Expectation value
         """
         if (len(q) << 1) != len(c):
-            raise RuntimeError(
-                "factorized_expectation_rdm argument lengths do not match."
-            )
+            raise RuntimeError("factorized_expectation_rdm argument lengths do not match.")
         m = max([(x.bit_length() + 63) // 64 for x in c])
         result = Qrack.qrack_lib.FactorizedExpectationRdm(
-            self.sid, len(q), QrackSimulator._ulonglong_byref(q), m, QrackSimulator._to_ulonglong(m, c), r
+            self.sid,
+            len(q),
+            QrackSimulator._ulonglong_byref(q),
+            m,
+            QrackSimulator._to_ulonglong(m, c),
+            r,
         )
         self._throw_if_error()
         return result
@@ -2528,9 +2553,7 @@ class QrackSimulator:
             Expectation value
         """
         if (len(q) << 1) != len(c):
-            raise RuntimeError(
-                "factorized_expectation_rdm argument lengths do not match."
-            )
+            raise RuntimeError("factorized_expectation_rdm argument lengths do not match.")
         result = Qrack.qrack_lib.FactorizedExpectationFp(
             self.sid, len(q), QrackSimulator._ulonglong_byref(q), QrackSimulator._real1_byref(c)
         )
@@ -2557,9 +2580,7 @@ class QrackSimulator:
             Expectation value
         """
         if (len(q) << 1) != len(c):
-            raise RuntimeError(
-                "factorized_expectation_fp_rdm argument lengths do not match."
-            )
+            raise RuntimeError("factorized_expectation_fp_rdm argument lengths do not match.")
         result = Qrack.qrack_lib.FactorizedExpectationFpRdm(
             self.sid, len(q), QrackSimulator._ulonglong_byref(q), QrackSimulator._real1_byref(c), r
         )
@@ -2770,7 +2791,11 @@ class QrackSimulator:
             raise RuntimeError("factorized_variance argument lengths do not match.")
         m = max([(x.bit_length() + 63) // 64 for x in c])
         result = Qrack.qrack_lib.FactorizedVariance(
-            self.sid, len(q), QrackSimulator._ulonglong_byref(q), m, QrackSimulator._to_ulonglong(m, c)
+            self.sid,
+            len(q),
+            QrackSimulator._ulonglong_byref(q),
+            m,
+            QrackSimulator._to_ulonglong(m, c),
         )
         self._throw_if_error()
         return result
@@ -2798,7 +2823,12 @@ class QrackSimulator:
             raise RuntimeError("factorized_variance_rdm argument lengths do not match.")
         m = max([(x.bit_length() + 63) // 64 for x in c])
         result = Qrack.qrack_lib.FactorizedVarianceRdm(
-            self.sid, len(q), QrackSimulator._ulonglong_byref(q), m, QrackSimulator._to_ulonglong(m, c), r
+            self.sid,
+            len(q),
+            QrackSimulator._ulonglong_byref(q),
+            m,
+            QrackSimulator._to_ulonglong(m, c),
+            r,
         )
         self._throw_if_error()
         return result
@@ -2848,9 +2878,7 @@ class QrackSimulator:
             variance
         """
         if (len(q) << 1) != len(c):
-            raise RuntimeError(
-                "factorized_variance_fp_rdm argument lengths do not match."
-            )
+            raise RuntimeError("factorized_variance_fp_rdm argument lengths do not match.")
         result = Qrack.qrack_lib.FactorizedVarianceFpRdm(
             self.sid, len(q), QrackSimulator._ulonglong_byref(q), QrackSimulator._real1_byref(c), r
         )
@@ -3485,9 +3513,7 @@ class QrackSimulator:
             "swap",
         ]
         try:
-            circ = transpile(
-                clifford_circ, basis_gates=basis_gates, optimization_level=2
-            )
+            circ = transpile(clifford_circ, basis_gates=basis_gates, optimization_level=2)
         except:
             circ = clifford_circ
 
@@ -3583,9 +3609,7 @@ class QrackSimulator:
                         )
                     elif op.name == "h":
                         non_clifford = np.matmul(
-                            np.array(
-                                [[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128
-                            ),
+                            np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128),
                             non_clifford,
                         )
                     elif op.name == "x":
@@ -3693,9 +3717,7 @@ class QrackSimulator:
                     j += 1
                     continue
 
-                if (q1 == i) and (
-                    (op.name == "cx") or (op.name == "cy") or (op.name == "cz")
-                ):
+                if (q1 == i) and ((op.name == "cx") or (op.name == "cy") or (op.name == "cz")):
                     if np.isclose(np.abs(non_clifford[0][1]), 0) and np.isclose(
                         np.abs(non_clifford[1][0]), 0
                     ):
@@ -3761,9 +3783,7 @@ class QrackSimulator:
                     elif op.name == "h":
                         non_clifford = np.matmul(
                             non_clifford,
-                            np.array(
-                                [[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128
-                            ),
+                            np.array([[sqrt1_2, sqrt1_2], [sqrt1_2, -sqrt1_2]], np.complex128),
                         )
                     elif op.name == "x":
                         non_clifford = np.matmul(
@@ -3953,12 +3973,8 @@ class QrackSimulator:
             qasm = qasm3.dumps(circ)
         except:
             qasm = circ.qasm()
-        qasm = qasm.replace(
-            "qreg q[" + str(circ.width()) + "];", "qreg q[" + str(width) + "];"
-        )
-        highest_index = max(
-            [int(x) for x in re.findall(r"\[(.*?)\]", qasm) if x.isdigit()]
-        )
+        qasm = qasm.replace("qreg q[" + str(circ.width()) + "];", "qreg q[" + str(width) + "];")
+        highest_index = max([int(x) for x in re.findall(r"\[(.*?)\]", qasm) if x.isdigit()])
         if highest_index != width:
             qasm = qasm.replace(
                 "qreg q[" + str(width) + "];", "qreg q[" + str(highest_index) + "];"
@@ -4073,17 +4089,11 @@ class QrackSimulator:
                 (-1 * float(operation.params[1])) + math.pi / 2,
             )
         elif name == "rx":
-            self._sim.r(
-                Pauli.PauliX, float(operation.params[0]), operation.qubits[0]._index
-            )
+            self._sim.r(Pauli.PauliX, float(operation.params[0]), operation.qubits[0]._index)
         elif name == "ry":
-            self._sim.r(
-                Pauli.PauliY, float(operation.params[0]), operation.qubits[0]._index
-            )
+            self._sim.r(Pauli.PauliY, float(operation.params[0]), operation.qubits[0]._index)
         elif name == "rz":
-            self._sim.r(
-                Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index
-            )
+            self._sim.r(Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index)
         elif name == "h":
             self._sim.h(operation.qubits[0]._index)
         elif name == "x":
@@ -4135,21 +4145,13 @@ class QrackSimulator:
                 float(operation.params[2]),
             )
         elif name == "cx":
-            self._sim.mcx(
-                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
-            )
+            self._sim.mcx([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
         elif name == "cy":
-            self._sim.mcy(
-                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
-            )
+            self._sim.mcy([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
         elif name == "cz":
-            self._sim.mcz(
-                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
-            )
+            self._sim.mcz([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
         elif name == "ch":
-            self._sim.mch(
-                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
-            )
+            self._sim.mch([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
         elif name == "cp":
             self._sim.mcmtrx(
                 [q._index for q in operation.qubits[0:1]],
@@ -4175,34 +4177,20 @@ class QrackSimulator:
                 operation.qubits[1]._index,
             )
         elif name == "dcx":
-            self._sim.mcx(
-                [q._index for q in operation.qubits[0:1]], operation.qubits[1]._index
-            )
+            self._sim.mcx([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
             self._sim.mcx(operation.qubits[1:2]._index, operation.qubits[0]._index)
         elif name == "ccx":
-            self._sim.mcx(
-                [q._index for q in operation.qubits[0:2]], operation.qubits[2]._index
-            )
+            self._sim.mcx([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
         elif name == "ccy":
-            self._sim.mcy(
-                [q._index for q in operation.qubits[0:2]], operation.qubits[2]._index
-            )
+            self._sim.mcy([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
         elif name == "ccz":
-            self._sim.mcz(
-                [q._index for q in operation.qubits[0:2]], operation.qubits[2]._index
-            )
+            self._sim.mcz([q._index for q in operation.qubits[0:2]], operation.qubits[2]._index)
         elif name == "mcx":
-            self._sim.mcx(
-                [q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index
-            )
+            self._sim.mcx([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
         elif name == "mcy":
-            self._sim.mcy(
-                [q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index
-            )
+            self._sim.mcy([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
         elif name == "mcz":
-            self._sim.mcz(
-                [q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index
-            )
+            self._sim.mcz([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
         elif name == "swap":
             self._sim.swap(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == "iswap":
@@ -4254,9 +4242,9 @@ class QrackSimulator:
                         cregbit = clbit
 
                     regbit = 1 << cregbit
-                    self._classical_register = (
-                        self._classical_register & (~regbit)
-                    ) | (qubit_outcome << cregbit)
+                    self._classical_register = (self._classical_register & (~regbit)) | (
+                        qubit_outcome << cregbit
+                    )
 
         elif name == "bfunc":
             mask = int(operation.mask, 16)
@@ -4371,9 +4359,7 @@ class QrackSimulator:
             if operation.name == "id" or operation.name == "barrier":
                 continue
 
-            if is_initializing and (
-                (operation.name == "measure") or (operation.name == "reset")
-            ):
+            if is_initializing and ((operation.name == "measure") or (operation.name == "reset")):
                 continue
 
             is_initializing = False
@@ -4431,9 +4417,7 @@ class QrackSimulator:
                 self._sample_cregbits = []
 
         if self._sample_measure and (len(self._sample_qubits) > 0):
-            _data = self._add_sample_measure(
-                self._sample_qubits, self._sample_clbits, self._shots
-            )
+            _data = self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots)
 
         del self._sim
 
