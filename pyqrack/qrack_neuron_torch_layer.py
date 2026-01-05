@@ -49,7 +49,6 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         post_prob = neuron.simulator.prob(neuron.target)
 
         delta = post_prob - pre_prob
-        delta = max(min(delta, 1.0 - 1e-6), -1.0 + 1e-6)
         ctx.delta = delta
 
         # Return shape: (1,)
@@ -228,18 +227,17 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 
             row = []
             for out in self.output_indices:
-                phi = torch.tensor(math.pi / 4, device=x.device, dtype=x.dtype)
+                dphi = torch.tensor(0.0, device=x.device, dtype=x.dtype)
 
                 for neuron_wrapper in by_out[out]:
                     neuron_wrapper.neuron.set_simulator(simulator)
-                    dphi = self.apply_fn(
+                    dphi += self.apply_fn(
                         neuron_wrapper.weights,
                         neuron_wrapper.neuron
                     ).squeeze()
-                    phi = phi + dphi
 
                 # Convert angle back to probability
-                p = torch.sin(phi) ** 2
+                p = 0.5 + torch.sin(dphi) / 2.0
                 row.append(p)
 
             batch_rows.append(torch.stack(row))
