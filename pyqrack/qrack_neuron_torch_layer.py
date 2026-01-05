@@ -33,12 +33,10 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
     @staticmethod
-    def forward(ctx, x, neuron_wrapper):
-        ctx.neuron_wrapper = neuron_wrapper
-        ctx.simulator = neuron_wrapper.neuron.simulator
+    def forward(ctx, x, neuron):
+        ctx.neuron = neuron
+        ctx.simulator = neuron.simulator
         ctx.save_for_backward(x)
-
-        neuron = neuron_wrapper.neuron
 
         # Baseline probability BEFORE applying this neuron's unitary
         pre_prob = neuron.simulator.prob(neuron.target)
@@ -58,8 +56,8 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     @staticmethod
     def backward(ctx, grad_output):
         (x,) = ctx.saved_tensors
-        neuron = ctx.neuron_wrapper.neuron
-        neuron.simulator = ctx.simulator
+        neuron = ctx.neuron
+        neuron.set_simulator(ctx.simulator)
 
         angles = x.detach().cpu().numpy() if x.requires_grad else x.numpy()
 
@@ -226,7 +224,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                 terms = []
                 for neuron_wrapper in by_out[out]:
                     neuron_wrapper.neuron.simulator = simulator
-                    terms.append(self.apply_fn(neuron_wrapper.weights, neuron_wrapper).squeeze())
+                    terms.append(self.apply_fn(neuron_wrapper.weights, neuron_wrapper.neuron).squeeze())
 
                 row.append(0.5 + torch.stack(terms).sum() if terms else torch.tensor(0.5, device=x.device, dtype=x.dtype))
 

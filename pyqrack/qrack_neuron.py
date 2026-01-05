@@ -110,6 +110,21 @@ class QrackNeuron:
             return (ctypes.c_float * len(a))(*a)
         return (ctypes.c_double * len(a))(*a)
 
+    def set_simulator(self, s):
+        """Set the neuron simulator
+
+        Set the simulator used by this neuron
+
+        Args:
+            s(QrackSimulator): The simulator to use
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.set_qneuron_sim(self.nid, s.sid)
+        self._throw_if_error()
+        self.simulator = s
+
     def set_angles(self, a):
         """Directly sets the neuron parameters.
 

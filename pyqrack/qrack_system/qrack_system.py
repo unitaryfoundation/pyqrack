@@ -1255,6 +1255,9 @@ class QrackSystem:
         self.qrack_lib.destroy_qneuron.restype = None
         self.qrack_lib.destroy_qneuron.argtypes = [c_ulonglong]
 
+        self.qrack_lib.set_qneuron_sim.restype = None
+        self.qrack_lib.set_qneuron_sim.argtypes = [c_ulonglong, c_ulonglong]
+
         self.qrack_lib.set_qneuron_angles.restype = None
         self.qrack_lib.get_qneuron_angles.restype = None
 
