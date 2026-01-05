@@ -49,22 +49,24 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         # Probability AFTER applying this neuron's unitary
         post_prob = neuron.simulator.prob(neuron.target)
+        ctx.post_prob = post_prob
 
-        delta = post_prob - pre_prob
+        delta = math.asin(post_prob) - math.asin(pre_prob)
         ctx.delta = delta
 
         # Return shape: (1,)
-        return x.new_tensor([math.asin(delta)])
+        return x.new_tensor([delta])
 
     @staticmethod
     def backward(ctx, grad_output):
         (x,) = ctx.saved_tensors
         neuron = ctx.neuron
         neuron.set_simulator(ctx.simulator)
+        post_prob = ctx.post_prob
 
         angles = x.detach().cpu().numpy() if x.requires_grad else x.numpy()
 
-        # IMPORTANT: restore simulator to the state *before* this neuron was applied
+        # Restore simulator to state BEFORE this neuron's unitary
         neuron.set_angles(angles)
         neuron.unpredict()
         pre_sim = neuron.simulator
@@ -74,32 +76,30 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         for i in range(x.shape[0]):
             angle = angles[i]
 
-            # x + π/2
+            # θ + π/2
             angles[i] = angle + angle_eps
             neuron.set_angles(angles)
             neuron.simulator = pre_sim.clone()
             neuron.predict(True, False)
             p_plus = neuron.simulator.prob(neuron.target)
 
-            # x − π/2
+            # θ − π/2
             angles[i] = angle - angle_eps
             neuron.set_angles(angles)
             neuron.simulator = pre_sim.clone()
             neuron.predict(True, False)
             p_minus = neuron.simulator.prob(neuron.target)
 
-            # parameter-shift rule (same as before)
+            # Parameter-shift gradient
             grad_x[i] = 0.5 * (p_plus - p_minus)
 
             angles[i] = angle
 
-        neuron.simulator = pre_sim
-        grad_x *= grad_output[0]
+        # Restore simulator
+        neuron.set_simulator(pre_sim)
 
-        # delta was asin(delta) in forward, so we need secant factor
-        delta = ctx.delta
-        scale = 1.0 / math.sqrt(max(1.0 - delta * delta, 1e-6))
-        grad_x *= scale
+        # Apply chain rule and upstream gradient
+        grad_x *= grad_output[0] / math.sqrt(max(1.0 - post_prob * post_prob, 1e-6))
 
         return grad_x, None
 
