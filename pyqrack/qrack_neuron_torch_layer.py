@@ -144,6 +144,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         activation=int(NeuronActivationFn.Generalized_Logistic),
         dtype=torch.float if _IS_TORCH_AVAILABLE else float,
         parameters=None,
+        **kwargs
     ):
         """
         Initialize a QrackNeuron layer for PyTorch with a power set of neurons connecting inputs to outputs.
@@ -162,7 +163,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         super(QrackNeuronTorchLayer, self).__init__()
         if hidden_qubits is None:
             hidden_qubits = highest_combo_count
-        self.simulator = QrackSimulator(input_qubits + hidden_qubits + output_qubits)
+        self.simulator = QrackSimulator(input_qubits + hidden_qubits + output_qubits, **kwargs)
         self.simulators = []
         self.input_indices = list(range(input_qubits))
         self.hidden_indices = list(range(input_qubits, input_qubits + hidden_qubits))
@@ -188,7 +189,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                                 parameters[param_count : (param_count + p_count)], dtype=dtype
                             )
                             if parameters
-                            else torch.zeros(p_count, dtype=dtype).uniform_(-1e-2, 1e-2)
+                            else torch.zeros(p_count, dtype=dtype)
                         )
                     )
                     neurons.append(
@@ -224,7 +225,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             self.simulators.append(simulator)
 
             for q, input_id in enumerate(self.input_indices):
-                simulator.r(Pauli.PauliY, math.pi * x[b][q], input_id)
+                simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), input_id)
 
             row = []
             for out in self.output_indices:
