@@ -49,9 +49,11 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         post_prob = neuron.simulator.prob(neuron.target)
 
         delta = post_prob - pre_prob
+        delta = max(min(delta, 1.0 - 1e-6), -1.0 + 1e-6)
+        ctx.delta = delta
 
         # Return shape: (1,)
-        return x.new_tensor([delta])
+        return x.new_tensor([math.asin(delta)])
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -92,6 +94,11 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         neuron.simulator = pre_sim
         grad_x *= grad_output[0]
+
+        # delta was asin(delta) in forward, so we need secant factor
+        delta = ctx.delta
+        scale = 1.0 / math.sqrt(max(1.0 - delta * delta, 1e-6))
+        grad_x *= scale
 
         return grad_x, None
 
@@ -221,12 +228,19 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 
             row = []
             for out in self.output_indices:
-                terms = []
+                phi = torch.tensor(math.pi / 4, device=x.device, dtype=x.dtype)
+
                 for neuron_wrapper in by_out[out]:
                     neuron_wrapper.neuron.set_simulator(simulator)
-                    terms.append(self.apply_fn(neuron_wrapper.weights, neuron_wrapper.neuron).squeeze())
+                    dphi = self.apply_fn(
+                        neuron_wrapper.weights,
+                        neuron_wrapper.neuron
+                    ).squeeze()
+                    phi = phi + dphi
 
-                row.append(0.5 + torch.stack(terms).sum() if terms else torch.tensor(0.5, device=x.device, dtype=x.dtype))
+                # Convert angle back to probability
+                p = torch.sin(phi) ** 2
+                row.append(p)
 
             batch_rows.append(torch.stack(row))
 
