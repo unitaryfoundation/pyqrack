@@ -27,12 +27,8 @@ from .neuron_activation_fn import NeuronActivationFn
 
 # Parameter-shift rule
 param_shift_eps = math.pi / 2
-# Should be safe for 16-bit
-angle_eps = math.pi / (1 << 8)
 # Neuron angle initialization
 init_phi = math.asin(0.5)
-# Random angle initialization epsilon
-init_eps = math.pi / (1 << 4)
 
 
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
@@ -77,54 +73,27 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         grad_x = torch.zeros_like(x)
 
-        if x.shape[0] <= 2:
-            # Bias or singly-controlled term,
-            # so parameter-shift rule applies
-            for i in range(x.shape[0]):
-                angle = angles[i]
+        for i in range(x.shape[0]):
+            angle = angles[i]
 
-                # θ + π/2
-                angles[i] = angle + param_shift_eps
-                neuron.set_angles(angles)
-                neuron.simulator = pre_sim.clone()
-                neuron.predict(True, False)
-                p_plus = neuron.simulator.prob(neuron.target)
+            # θ + π/2
+            angles[i] = angle + param_shift_eps
+            neuron.set_angles(angles)
+            neuron.simulator = pre_sim.clone()
+            neuron.predict(True, False)
+            p_plus = neuron.simulator.prob(neuron.target)
 
-                # θ − π/2
-                angles[i] = angle - param_shift_eps
-                neuron.set_angles(angles)
-                neuron.simulator = pre_sim.clone()
-                neuron.predict(True, False)
-                p_minus = neuron.simulator.prob(neuron.target)
+            # θ − π/2
+            angles[i] = angle - param_shift_eps
+            neuron.set_angles(angles)
+            neuron.simulator = pre_sim.clone()
+            neuron.predict(True, False)
+            p_minus = neuron.simulator.prob(neuron.target)
 
-                # Parameter-shift gradient
-                grad_x[i] = 0.5 * (p_plus - p_minus)
+            # Parameter-shift gradient
+            grad_x[i] = 0.5 * (p_plus - p_minus)
 
-                angles[i] = angle
-        else:
-            # Multiply-controlled term,
-            # so we use finite difference
-            for i in range(x.shape[0]):
-                angle = angles[i]
-
-                # θ + ε
-                angles[i] = angle + angle_eps
-                neuron.set_angles(angles)
-                neuron.simulator = pre_sim.clone()
-                neuron.predict(True, False)
-                p_plus = neuron.simulator.prob(neuron.target)
-
-                # θ − ε
-                angles[i] = angle - angle_eps
-                neuron.set_angles(angles)
-                neuron.simulator = pre_sim.clone()
-                neuron.predict(True, False)
-                p_minus = neuron.simulator.prob(neuron.target)
-
-                # Finite-difference gradient
-                grad_x[i] = (p_plus - p_minus) / (2 * angle_eps)
-
-                angles[i] = angle
+            angles[i] = angle
 
         # Restore simulator
         neuron.set_simulator(pre_sim)
@@ -220,7 +189,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                                 parameters[param_count : (param_count + p_count)], dtype=dtype
                             )
                             if parameters
-                            else torch.zeros(p_count, dtype=dtype).uniform_(-init_eps, init_eps)
+                            else torch.zeros(p_count, dtype=dtype)
                         )
                     )
                     neurons.append(
