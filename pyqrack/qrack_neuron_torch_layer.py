@@ -1,4 +1,4 @@
-# (C) Daniel Strano and the Qrack contributors 2017-2025. All rights reserved.
+# (C) Daniel Strano and the Qrack contributors 2017-2026. All rights reserved.
 #
 # Initial draft by Elara (OpenAI custom GPT)
 # Refined and architecturally clarified by Dan Strano
@@ -159,7 +159,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         lowest_combo_count=0,
         highest_combo_count=2,
         activation=int(NeuronActivationFn.Generalized_Logistic),
-        dtype=torch.float,
+        dtype=torch.float if _IS_TORCH_AVAILABLE else float,
         parameters=None,
     ):
         """
@@ -219,11 +219,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.neurons = nn.ModuleList(neurons) if _IS_TORCH_AVAILABLE else neurons
 
     def forward(self, x):
-        if _IS_TORCH_AVAILABLE:
-            B = x.shape[0]
-            x = x.view(B, -1)
-        else:
-            B = len(x)
+        B = x.shape[0]
+        x = x.view(B, -1)
 
         self.simulators.clear()
 
@@ -235,22 +232,28 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         for output_id in self.output_indices:
             self.simulator.h(output_id)
 
+        # Group neurons by output target once
+        by_out = {out: [] for out in self.output_indices}
+        for neuron_wrapper in self.neurons:
+            by_out[neuron_wrapper.neuron.target].append(neuron_wrapper)
+
+        batch_rows = []
         for b in range(B):
             simulator = self.simulator.clone()
             self.simulators.append(simulator)
+
             for q, input_id in enumerate(self.input_indices):
-                simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
+                simulator.r(Pauli.PauliY, math.pi * x[b][q], input_id)
 
-        if _IS_TORCH_AVAILABLE:
-            y = x.new_full((B, len(self.output_indices)), 0.5)
-        else:
-            y = [([0.5] * len(self.output_indices)) for _ in range(B)]
-        for b in range(B):
-            simulator = self.simulators[b]
-            # Set QrackNeurons' internal parameters:
-            for idx, neuron_wrapper in enumerate(self.neurons):
-                neuron_wrapper.neuron.simulator = simulator
-                o = self.output_indices.index(neuron_wrapper.neuron.target)
-                y[b][o] += self.apply_fn(neuron_wrapper.weights, neuron_wrapper)[0]
+            row = []
+            for out in self.output_indices:
+                terms = []
+                for neuron_wrapper in by_out[out]:
+                    neuron_wrapper.neuron.simulator = simulator
+                    terms.append(self.apply_fn(neuron_wrapper.weights, neuron_wrapper).squeeze())
 
-        return y
+                row.append(0.5 + torch.stack(terms).sum() if terms else torch.tensor(0.5, device=x.device, dtype=x.dtype))
+
+            batch_rows.append(torch.stack(row))
+
+        return torch.stack(batch_rows)
