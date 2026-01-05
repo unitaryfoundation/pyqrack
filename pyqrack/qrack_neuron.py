@@ -110,6 +110,21 @@ class QrackNeuron:
             return (ctypes.c_float * len(a))(*a)
         return (ctypes.c_double * len(a))(*a)
 
+    def set_simulator(self, s):
+        """Set the neuron simulator
+
+        Set the simulator used by this neuron
+
+        Args:
+            s(QrackSimulator): The simulator to use
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.set_qneuron_sim(self.nid, s.sid)
+        self._throw_if_error()
+        self.simulator = s
+
     def set_angles(self, a):
         """Directly sets the neuron parameters.
 
@@ -265,7 +280,7 @@ class QrackNeuron:
 
     @staticmethod
     def quantile_bounds(vec, bits):
-        """ Calculate vector quantile bounds
+        """Calculate vector quantile bounds
 
         This is a static helper method to calculate the quantile
         bounds of 2 ** bits worth of quantiles.
@@ -283,11 +298,15 @@ class QrackNeuron:
         n = len(vec)
         vec_sorted = sorted(vec)
 
-        return [vec_sorted[0]] + [vec_sorted[(k * n) // bins] for k in range(1, bins)] + [vec_sorted[-1]]
+        return (
+            [vec_sorted[0]]
+            + [vec_sorted[(k * n) // bins] for k in range(1, bins)]
+            + [vec_sorted[-1]]
+        )
 
     @staticmethod
     def discretize(vec, bounds):
-        """ Discretize vector by quantile bounds
+        """Discretize vector by quantile bounds
 
         This is a static helper method to discretize a numerical
         vector according to quantile bounds calculated by the
@@ -317,7 +336,7 @@ class QrackNeuron:
 
     @staticmethod
     def flatten_and_transpose(arr):
-        """ Flatten and transpose feature matrix
+        """Flatten and transpose feature matrix
 
         This is a static helper method to convert a multi-feature
         bit-row matrix to an observation-row matrix with flat
@@ -333,7 +352,7 @@ class QrackNeuron:
 
     @staticmethod
     def bin_endpoints_average(bounds):
-        """ Bin endpoints average
+        """Bin endpoints average
 
         This is a static helper method that accepts the output
         bins from quantile_bounds() and returns the average points
