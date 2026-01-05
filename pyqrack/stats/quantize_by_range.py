@@ -28,9 +28,7 @@ try:
                 min_val, max_val = data[:, i].min(), data[:, i].max()
                 thresholds = np.linspace(min_val, max_val, n_bins + 1)[1:-1]
                 bins = np.digitize(data[:, i], bins=thresholds)
-                bin_bits = ((bins[:, None] & (1 << np.arange(bits)[::-1])) > 0).astype(
-                    int
-                )
+                bin_bits = ((bins[:, None] & (1 << np.arange(bits)[::-1])) > 0).astype(int)
                 new_features.append(bin_bits)
             else:
                 new_features.append(data[:, i][:, None])  # Keep original
@@ -51,6 +49,4 @@ except ImportError:
         Returns:
             np.ndarray: Transformed data with selected features replaced by binary bit columns.
         """
-        raise NotImplementedError(
-            "You must have numpy installed to use quantize_by_percentile()!"
-        )
+        raise NotImplementedError("You must have numpy installed to use quantize_by_percentile()!")
