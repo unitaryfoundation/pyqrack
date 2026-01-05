@@ -8,6 +8,7 @@
 
 import itertools
 import math
+import random
 import sys
 
 _IS_TORCH_AVAILABLE = True
@@ -29,6 +30,7 @@ angle_eps = math.pi / 2
 
 
 if not _IS_TORCH_AVAILABLE:
+
     class TorchContextMock(object):
         def __init__(self):
             pass
@@ -41,6 +43,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
 
     if not _IS_TORCH_AVAILABLE:
+
         @staticmethod
         def apply(x, neuron_wrapper):
             return forward(TorchContextMock(), x, neuron_wrapper)
@@ -55,7 +58,11 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         # Baseline probability BEFORE applying this neuron's unitary
         pre_prob = neuron.simulator.prob(neuron.target)
 
-        angles = (x.detach().cpu().numpy() if x.requires_grad else x.numpy()) if _IS_TORCH_AVAILABLE else x
+        angles = (
+            (x.detach().cpu().numpy() if x.requires_grad else x.numpy())
+            if _IS_TORCH_AVAILABLE
+            else x
+        )
         neuron.set_angles(angles)
         neuron.predict(True, False)
 
@@ -72,7 +79,11 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         (x,) = ctx.saved_tensors
         neuron = ctx.neuron_wrapper.neuron
 
-        angles = (x.detach().cpu().numpy() if x.requires_grad else x.numpy()) if _IS_TORCH_AVAILABLE else x
+        angles = (
+            (x.detach().cpu().numpy() if x.requires_grad else x.numpy())
+            if _IS_TORCH_AVAILABLE
+            else x
+        )
 
         # IMPORTANT: restore simulator to the state *before* this neuron was applied
         neuron.set_angles(angles)
@@ -172,7 +183,9 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.simulators = []
         self.input_indices = list(range(input_qubits))
         self.hidden_indices = list(range(input_qubits, input_qubits + hidden_qubits))
-        self.output_indices = list(range(input_qubits + hidden_qubits, input_qubits + hidden_qubits + output_qubits))
+        self.output_indices = list(
+            range(input_qubits + hidden_qubits, input_qubits + hidden_qubits + output_qubits)
+        )
         self.activation = NeuronActivationFn(activation)
         self.dtype = dtype
         self.apply_fn = QrackNeuronTorchFunction.apply
@@ -182,12 +195,26 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         param_count = 0
         for output_id in self.output_indices:
             for k in range(lowest_combo_count, highest_combo_count + 1):
-                for input_subset in itertools.combinations(self.input_indices + self.hidden_indices, k):
+                for input_subset in itertools.combinations(
+                    self.input_indices + self.hidden_indices, k
+                ):
                     p_count = 1 << len(input_subset)
-                    neurons.append(QrackNeuronTorch(
-                        QrackNeuron(self.simulator, input_subset, output_id, activation),
-                        (torch.tensor(parameters[param_count : (param_count + p_count)], dtype=dtype) if parameters else torch.zeros(p_count, dtype=dtype)) if _IS_TORCH_AVAILABLE else ([0.0] * p_count)
-                    ))
+                    angles = (
+                        (
+                            torch.tensor(
+                                parameters[param_count : (param_count + p_count)], dtype=dtype
+                            )
+                            if parameters
+                            else torch.zeros(p_count, dtype=dtype).uniform_(-1e-2, 1e-2)
+                        )
+                        if _IS_TORCH_AVAILABLE
+                        else ([random.uniform(-1e-2, 1e-2) for _ in range(p_count)])
+                    )
+                    neurons.append(
+                        QrackNeuronTorch(
+                            QrackNeuron(self.simulator, input_subset, output_id, activation), angles
+                        )
+                    )
                     param_count += p_count
         self.neurons = nn.ModuleList(neurons) if _IS_TORCH_AVAILABLE else neurons
 
