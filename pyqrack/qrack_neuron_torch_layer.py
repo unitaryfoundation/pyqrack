@@ -223,7 +223,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             for out in self.output_indices:
                 terms = []
                 for neuron_wrapper in by_out[out]:
-                    neuron_wrapper.neuron.simulator = simulator
+                    neuron_wrapper.neuron.set_simulator(simulator)
                     terms.append(self.apply_fn(neuron_wrapper.weights, neuron_wrapper.neuron).squeeze())
 
                 row.append(0.5 + torch.stack(terms).sum() if terms else torch.tensor(0.5, device=x.device, dtype=x.dtype))
