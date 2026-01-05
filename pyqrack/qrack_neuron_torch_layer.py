@@ -239,7 +239,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                     ).squeeze()
 
                 # Convert angle back to probability
-                p = torch.sin(phi)
+                p = torch.clamp(torch.sin(phi), min=0.0)
                 row.append(p)
 
             batch_rows.append(torch.stack(row))
