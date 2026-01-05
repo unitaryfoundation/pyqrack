@@ -199,13 +199,20 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             B = len(x)
 
         self.simulators.clear()
+
+        self.simulator.reset_all()
+        # Prepare hidden predictors
+        for hidden_id in self.hidden_indices:
+            self.simulator.h(hidden_id)
+        # Prepare a maximally uncertain output state.
+        for output_id in self.output_indices:
+            self.simulator.h(output_id)
+
         for b in range(B):
             simulator = self.simulator.clone()
             self.simulators.append(simulator)
             for q, input_id in enumerate(self.input_indices):
                 simulator.r(Pauli.PauliY, math.pi * x[b][q], q)
-            for q, output_id in enumerate(self.output_indices):
-                simulator.h(q)
 
         if _IS_TORCH_AVAILABLE:
             y = x.new_full((B, len(self.output_indices)), 0.5)
@@ -213,13 +220,6 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             y = [([0.5] * len(self.output_indices)) for _ in range(B)]
         for b in range(B):
             simulator = self.simulators[b]
-            # Prepare a maximally uncertain output state.
-            for output_id in self.output_indices:
-                simulator.h(output_id)
-            # Prepare hidden predictors
-            for h in self.hidden_indices:
-                simulator.h(h)
-
             # Set QrackNeurons' internal parameters:
             for idx, neuron_wrapper in enumerate(self.neurons):
                 neuron_wrapper.neuron.simulator = simulator
