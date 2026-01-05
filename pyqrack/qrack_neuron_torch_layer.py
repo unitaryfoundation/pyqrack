@@ -29,24 +29,8 @@ from .neuron_activation_fn import NeuronActivationFn
 angle_eps = math.pi / 2
 
 
-if not _IS_TORCH_AVAILABLE:
-
-    class TorchContextMock(object):
-        def __init__(self):
-            pass
-
-        def save_for_backward(self, *args):
-            self.saved_tensors = args
-
-
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
     """Static forward/backward/apply functions for QrackNeuronTorch"""
-
-    if not _IS_TORCH_AVAILABLE:
-
-        @staticmethod
-        def apply(x, neuron_wrapper):
-            return forward(TorchContextMock(), x, neuron_wrapper)
 
     @staticmethod
     def forward(ctx, x, neuron_wrapper):
@@ -58,11 +42,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         # Baseline probability BEFORE applying this neuron's unitary
         pre_prob = neuron.simulator.prob(neuron.target)
 
-        angles = (
-            (x.detach().cpu().numpy() if x.requires_grad else x.numpy())
-            if _IS_TORCH_AVAILABLE
-            else x
-        )
+        angles = x.detach().cpu().numpy() if x.requires_grad else x.numpy()
         neuron.set_angles(angles)
         neuron.predict(True, False)
 
@@ -72,25 +52,21 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         delta = post_prob - pre_prob
 
         # Return shape: (1,)
-        return x.new_tensor([delta]) if _IS_TORCH_AVAILABLE else [delta]
+        return x.new_tensor([delta])
 
     @staticmethod
     def backward(ctx, grad_output):
         (x,) = ctx.saved_tensors
         neuron = ctx.neuron_wrapper.neuron
 
-        angles = (
-            (x.detach().cpu().numpy() if x.requires_grad else x.numpy())
-            if _IS_TORCH_AVAILABLE
-            else x
-        )
+        angles = x.detach().cpu().numpy() if x.requires_grad else x.numpy()
 
         # IMPORTANT: restore simulator to the state *before* this neuron was applied
         neuron.set_angles(angles)
         neuron.unpredict()
         pre_sim = neuron.simulator
 
-        grad_x = torch.zeros_like(x) if _IS_TORCH_AVAILABLE else ([0.0] * len(x))
+        grad_x = torch.zeros_like(x)
 
         for i in range(x.shape[0]):
             angle = angles[i]
@@ -130,7 +106,7 @@ class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
     def __init__(self, neuron, x):
         super().__init__()
         self.neuron = neuron
-        self.weights = nn.Parameter(x) if _IS_TORCH_AVAILABLE else x
+        self.weights = nn.Parameter(x)
 
     def forward(self):
         return QrackNeuronTorchFunction.apply(self.weights, self.neuron)
@@ -207,8 +183,6 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                             if parameters
                             else torch.zeros(p_count, dtype=dtype).uniform_(-1e-2, 1e-2)
                         )
-                        if _IS_TORCH_AVAILABLE
-                        else ([random.uniform(-1e-2, 1e-2) for _ in range(p_count)])
                     )
                     neurons.append(
                         QrackNeuronTorch(
@@ -216,7 +190,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                         )
                     )
                     param_count += p_count
-        self.neurons = nn.ModuleList(neurons) if _IS_TORCH_AVAILABLE else neurons
+        self.neurons = nn.ModuleList(neurons)
 
     def forward(self, x):
         B = x.shape[0]
