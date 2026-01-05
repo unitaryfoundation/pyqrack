@@ -27,6 +27,8 @@ from .neuron_activation_fn import NeuronActivationFn
 
 # Parameter-shift rule
 angle_eps = math.pi / 2
+# Neuron angle initialization
+init_phi = math.asin(0.5)
 
 
 class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
@@ -227,17 +229,17 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 
             row = []
             for out in self.output_indices:
-                dphi = torch.tensor(0.0, device=x.device, dtype=x.dtype)
+                phi = torch.tensor(init_phi, device=x.device, dtype=x.dtype)
 
                 for neuron_wrapper in by_out[out]:
                     neuron_wrapper.neuron.set_simulator(simulator)
-                    dphi += self.apply_fn(
+                    phi += self.apply_fn(
                         neuron_wrapper.weights,
                         neuron_wrapper.neuron
                     ).squeeze()
 
                 # Convert angle back to probability
-                p = 0.5 + torch.sin(dphi) / 2.0
+                p = torch.sin(phi)
                 row.append(p)
 
             batch_rows.append(torch.stack(row))
