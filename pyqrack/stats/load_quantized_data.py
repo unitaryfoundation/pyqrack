@@ -20,9 +20,7 @@ def load_data(sim, index_bits, value_bits, data):
         Value error: Length of value_bits does not match data feature column count!
     """
     if (len(data) > 0) and (len(value_bits) != len(data[0])):
-        raise ValueError(
-            "Length of value_bits does not match data feature column count!"
-        )
+        raise ValueError("Length of value_bits does not match data feature column count!")
 
     for i in range(index_bits):
         if sim.m(i):

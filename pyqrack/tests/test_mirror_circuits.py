@@ -19,10 +19,7 @@ def mc_gate(circ: QrackCircuit, c: List[int], mat: List[complex], q: int, p: int
 
 
 def gen_random_1q_gates(n_qubits, gate_count_1qb, depth):
-    return [
-        [random.randint(0, gate_count_1qb) for _ in range(n_qubits)]
-        for _ in range(depth)
-    ]
+    return [[random.randint(0, gate_count_1qb) for _ in range(n_qubits)] for _ in range(depth)]
 
 
 def gen_random_multiq_gates(n_qubits, gate_count_2qb, gate_count_multiqb, depth):
@@ -252,9 +249,7 @@ class TestMirrorCircuits:
                 bit_string,
                 depth,
                 gen_random_1q_gates(n_qubits, gate_count_1qb, depth),
-                gen_random_multiq_gates(
-                    n_qubits, gate_count_2qb, gate_count_multiqb, depth
-                ),
+                gen_random_multiq_gates(n_qubits, gate_count_2qb, gate_count_multiqb, depth),
                 n_shots,
             )
             assert all(k == bit_string for k in results.keys())
