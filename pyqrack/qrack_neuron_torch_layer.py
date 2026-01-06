@@ -164,6 +164,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         super(QrackNeuronTorchLayer, self).__init__()
         if hidden_qubits is None:
             hidden_qubits = highest_combo_count
+        elif hidden_qubits > highest_combo_count:
+            hidden_qubits = highest_combo_count
         self.simulator = QrackSimulator(input_qubits + hidden_qubits + output_qubits, **kwargs)
         self.simulators = []
         self.input_indices = list(range(input_qubits))
@@ -179,26 +181,26 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         neurons = []
         param_count = 0
         for output_id in self.output_indices:
-            for k in range(lowest_combo_count, highest_combo_count + 1):
-                for input_subset in itertools.combinations(
-                    self.input_indices + self.hidden_indices, k
-                ):
-                    p_count = 1 << len(input_subset)
-                    angles = (
-                        (
-                            torch.tensor(
-                                parameters[param_count : (param_count + p_count)], dtype=dtype
+            for h in range(hidden_qubits):
+                for k in range(lowest_combo_count, highest_combo_count - h + 1):
+                    for input_subset in itertools.combinations(self.input_indices, k):
+                        input_subset = list(input_subset) + self.hidden_indices[:h]
+                        p_count = 1 << len(input_subset)
+                        angles = (
+                            (
+                                torch.tensor(
+                                    parameters[param_count : (param_count + p_count)], dtype=dtype
+                                )
+                                if parameters
+                                else torch.zeros(p_count, dtype=dtype)
                             )
-                            if parameters
-                            else torch.zeros(p_count, dtype=dtype)
                         )
-                    )
-                    neurons.append(
-                        QrackNeuronTorch(
-                            QrackNeuron(self.simulator, input_subset, output_id, activation), angles
+                        neurons.append(
+                            QrackNeuronTorch(
+                                QrackNeuron(self.simulator, input_subset, output_id, activation), angles
+                            )
                         )
-                    )
-                    param_count += p_count
+                        param_count += p_count
         self.neurons = nn.ModuleList(neurons)
 
     def forward(self, x):
