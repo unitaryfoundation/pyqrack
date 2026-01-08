@@ -32,10 +32,20 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel setuptools
 
+      - name: Detect manylinux tag
+        id: abi
+        run: |
+          GLIBC_VER=$(ldd --version | head -n1 | grep -oE '[0-9]+\.[0-9]+$')
+          MAJOR=$(echo $GLIBC_VER | cut -d. -f1)
+          MINOR=$(echo $GLIBC_VER | cut -d. -f2)
+          PLATFORM_TAG="manylinux_${MAJOR}_${MINOR}_x86_64"
+          echo "Detected platform: $PLATFORM_TAG"
+          echo "platform=$PLATFORM_TAG" >> $GITHUB_OUTPUT
+
       - name: Build Wheel
         run: |
           source venv/bin/activate
-          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
+          python setup.py bdist_wheel --plat-name=${{ steps.abi.outputs.platform }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -66,10 +76,20 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install wheel setuptools
 
+      - name: Detect manylinux tag
+        id: abi
+        run: |
+          GLIBC_VER=$(ldd --version | head -n1 | grep -oE '[0-9]+\.[0-9]+$')
+          MAJOR=$(echo $GLIBC_VER | cut -d. -f1)
+          MINOR=$(echo $GLIBC_VER | cut -d. -f2)
+          PLATFORM_TAG="manylinux_${MAJOR}_${MINOR}_x86_64"
+          echo "Detected platform: $PLATFORM_TAG"
+          echo "platform=$PLATFORM_TAG" >> $GITHUB_OUTPUT
+
       - name: Build Wheel
         run: |
           source venv/bin/activate
-          python setup.py bdist_wheel --plat-name=${{ matrix.platform }}
+          python setup.py bdist_wheel --plat-name=${{ steps.abi.outputs.platform }}
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v4
@@ -90,7 +110,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
@@ -128,7 +148,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
@@ -153,12 +173,12 @@ jobs:
           name: pyqrack-${{ matrix.platform }}
           path: dist/
 
-  build_mac_13:
-    runs-on: macos-13  # Use a Mac OS runner
+  build_mac_intel:
+    runs-on: macos-15-intel  # Use a Mac OS runner
     strategy:
       matrix:
         platform:
-          - macosx_13_0_x86_64
+          - macosx_15_0_x86_64
     steps:
       - name: Checkout PyQrack
         uses: actions/checkout@v4
@@ -166,7 +186,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
@@ -178,8 +198,8 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
-          brew upgrade rustup
-          brew install cmake opencl-clhpp-headers boost
+          brew upgrade
+          brew install cmake boost
 
       - name: Build Wheel
         run: |
@@ -211,7 +231,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
       - name: Install Python Dependencies
         run: |
@@ -220,16 +240,20 @@ jobs:
 
       - name: Install vcpkg dependencies
         run: |
-          vcpkg install opencl boost
+          vcpkg install opencl boost-dynamic-bitset boost-multiprecision
 
       - name: Build Qrack Windows x86-64
+        env:
+          BOOST_ROOT: C:/vcpkg/installed/x64-windows
+          BOOST_INCLUDEDIR: C:/vcpkg/installed/x64-windows/include
+          BOOST_LIBRARYDIR: C:/vcpkg/installed/x64-windows/lib
         run: |
           cd qrack
           mkdir build
           cd build
           powershell -c "Invoke-WebRequest -Uri 'https://github.com/ckormanyos/xxd/releases/download/v1.1/xxd-win64-msvc.zip' -OutFile 'xxd-win64-msvc.zip'"
           powershell -c "Expand-Archive -Path xxd-win64-msvc.zip -DestinationPath ."
-          cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DXXD_BIN="xxd.exe" -DQBCAPPOW=8 -DCPP_STD=14
+          cmake .. -DCMAKE_TOOLCHAIN_FILE="C:/vcpkg/scripts/buildsystems/vcpkg.cmake" -DBoost_NO_SYSTEM_PATHS=TRUE -DXXD_BIN="xxd.exe" -DQBCAPPOW=8 -DCPP_STD=14 -DBoost_INCLUDE_DIR="C:/vcpkg/installed/x64-windows/include"
           cmake --build . --config Release --target qrack_pinvoke qrack_cl_precompile
 
       - name: Build Wheel

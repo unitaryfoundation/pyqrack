@@ -7,7 +7,7 @@ from setuptools import setup
 from setuptools.command.build_py import build_py
 
 
-VERSION = "1.66.5"
+VERSION = "1.80.3"
 
 # Read long description from README.
 README_PATH = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'README.md')
@@ -35,8 +35,6 @@ setup(
         "Operating System :: POSIX :: Linux",
         "Programming Language :: C++",
         "Programming Language :: Python :: 2",
-        "Programming Language :: Python :: 2.3",
-        "Programming Language :: Python :: 2.4",
         "Programming Language :: Python :: 2.5",
         "Programming Language :: Python :: 2.6",
         "Programming Language :: Python :: 2.7",
@@ -54,7 +52,9 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Programming Language :: Python :: 3.11",
         "Programming Language :: Python :: 3.12",
-        "Topic :: Scientific/Engineering",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.14",
+        "Topic :: Scientific/Engineering :: Quantum Computing",
     ],
     keywords="pyqrack qrack simulator quantum gpu",
     install_requires=[],

@@ -28,13 +28,9 @@ class QrackSystem:
         elif _platform == "win32":
             shared_lib_path = os.path.dirname(__file__) + "/qrack_lib/qrack_pinvoke.dll"
         elif _platform == "darwin":
-            shared_lib_path = (
-                os.path.dirname(__file__) + "/qrack_lib/libqrack_pinvoke.dylib"
-            )
+            shared_lib_path = os.path.dirname(__file__) + "/qrack_lib/libqrack_pinvoke.dylib"
         else:
-            shared_lib_path = (
-                os.path.dirname(__file__) + "/qrack_lib/libqrack_pinvoke.so"
-            )
+            shared_lib_path = os.path.dirname(__file__) + "/qrack_lib/libqrack_pinvoke.so"
 
         try:
             self.qrack_lib = CDLL(shared_lib_path)
@@ -50,9 +46,7 @@ class QrackSystem:
                 self.qrack_lib = CDLL(shared_lib_path)
             except Exception as e:
                 if _platform == "win32":
-                    shared_lib_path = (
-                        "C:/Program Files (x86)/Qrack/bin/qrack_pinvoke.dll"
-                    )
+                    shared_lib_path = "C:/Program Files (x86)/Qrack/bin/qrack_pinvoke.dll"
                 elif _platform == "darwin":
                     shared_lib_path = "/usr/lib/qrack/libqrack_pinvoke.dylib"
                 else:
@@ -97,12 +91,22 @@ class QrackSystem:
             self.qrack_lib.InKet.argtypes = [c_ulonglong, POINTER(c_float)]
             self.qrack_lib.OutKet.argtypes = [c_ulonglong, POINTER(c_float)]
             self.qrack_lib.OutProbs.argtypes = [c_ulonglong, POINTER(c_float)]
-            self.qrack_lib.OutReducedDensityMatrix.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_float)]
+            self.qrack_lib.OutReducedDensityMatrix.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_float),
+            ]
         else:
             self.qrack_lib.InKet.argtypes = [c_ulonglong, POINTER(c_double)]
             self.qrack_lib.OutKet.argtypes = [c_ulonglong, POINTER(c_double)]
             self.qrack_lib.OutProbs.argtypes = [c_ulonglong, POINTER(c_double)]
-            self.qrack_lib.OutReducedDensityMatrix.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong), POINTER(c_double)]
+            self.qrack_lib.OutReducedDensityMatrix.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_double),
+            ]
 
         self.qrack_lib.init.restype = c_ulonglong
         self.qrack_lib.init.argtypes = []
@@ -111,14 +115,15 @@ class QrackSystem:
         self.qrack_lib.get_error.argtypes = [c_ulonglong]
 
         self.qrack_lib.init_count.restype = c_ulonglong
-        self.qrack_lib.init_count.argtypes = [c_ulonglong, c_bool]
+        self.qrack_lib.init_count.argtypes = [c_ulonglong, c_bool, c_bool]
 
         self.qrack_lib.init_count_pager.restype = c_ulonglong
-        self.qrack_lib.init_count_pager.argtypes = [c_ulonglong, c_bool]
+        self.qrack_lib.init_count_pager.argtypes = [c_ulonglong, c_bool, c_bool]
 
         self.qrack_lib.init_count_type.restype = c_ulonglong
         self.qrack_lib.init_count_type.argtypes = [
             c_ulonglong,
+            c_bool,
             c_bool,
             c_bool,
             c_bool,
@@ -157,6 +162,12 @@ class QrackSystem:
         ]
 
         # pseudo-quantum
+
+        self.qrack_lib.HighestProbAll.restype = None
+        self.qrack_lib.HighestProbAll.argtypes = [c_ulonglong, POINTER(c_ulonglong)]
+
+        self.qrack_lib.HighestProbAllN.restype = None
+        self.qrack_lib.HighestProbAllN.argtypes = [c_ulonglong, c_ulonglong, POINTER(c_ulonglong)]
 
         self.qrack_lib.ProbAll.restype = None
         if self.fppow == 5:
@@ -1212,6 +1223,12 @@ class QrackSystem:
         self.qrack_lib.SetNoiseParameter.restype = None
         self.qrack_lib.SetNoiseParameter.argtypes = [c_ulonglong, c_double]
 
+        self.qrack_lib.SetAceMaxQb.restype = None
+        self.qrack_lib.SetAceMaxQb.argtypes = [c_ulonglong, c_ulonglong]
+
+        self.qrack_lib.SetSparseAceMaxMb.restype = None
+        self.qrack_lib.SetSparseAceMaxMb.argtypes = [c_ulonglong, c_size_t]
+
         self.qrack_lib.Normalize.restype = None
         self.qrack_lib.Normalize.argtypes = [c_ulonglong]
 
@@ -1237,6 +1254,9 @@ class QrackSystem:
 
         self.qrack_lib.destroy_qneuron.restype = None
         self.qrack_lib.destroy_qneuron.argtypes = [c_ulonglong]
+
+        self.qrack_lib.set_qneuron_sim.restype = None
+        self.qrack_lib.set_qneuron_sim.argtypes = [c_ulonglong, c_ulonglong]
 
         self.qrack_lib.set_qneuron_angles.restype = None
         self.qrack_lib.get_qneuron_angles.restype = None
