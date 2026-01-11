@@ -124,7 +124,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
     """Torch layer wrapper for QrackNeuron (with maximally expressive set of neurons between inputs and outputs)
 
     Attributes:
-        simulator (QrackSimulator): Prototype simulator that batching copies to use with QrackNeuron instances
+        simulator (QrackSimulator): Prototype simulator that batching copies to use with QrackNeuron instances. (You may customize or overwrite the initialization or reference, before calling forward(x).)
         simulators (list[QrackSimulator]): In-flight copies of prototype simulator corresponding to batch count
         input_indices (list[int], read-only): simulator qubit indices used as QrackNeuron inputs
         output_indices (list[int], read-only): simulator qubit indices used as QrackNeuron outputs
@@ -132,7 +132,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         neurons (ModuleList[QrackNeuronTorch]): QrackNeuronTorch wrappers (for PyQrack QrackNeurons) in this layer, corresponding to weights
         weights (ParameterList): List of tensors corresponding one-to-one with weights of list of neurons
         apply_fn (Callable[Tensor, QrackNeuronTorch]): Corresponds to QrackNeuronTorchFunction.apply(x, neuron_wrapper) (or override with a custom implementation)
-        backward_fn (Callable[Tensor, Tensor]): Corresponds to QrackNeuronTorchFunction._backward(x, neuron_wrapper) (or override with a custom implementation)
+        post_init_fn (Callable[QrackSimulator]): Function that is applied after forward(x) state initialization, before inference. (As the function depends on nothing but the simulator, it's differentiable.)
     """
 
     def __init__(
@@ -145,6 +145,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         activation=int(NeuronActivationFn.Generalized_Logistic),
         dtype=torch.float if _IS_TORCH_AVAILABLE else float,
         parameters=None,
+        post_init_fn=lambda simulator: None,
         **kwargs
     ):
         """
@@ -155,11 +156,13 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             sim (QrackSimulator): Simulator into which predictor features are loaded
             input_qubits (int): Count of inputs (1 per qubit)
             output_qubits (int): Count of outputs (1 per qubit)
-            hidden_qubits (int): Count of "hidden" inputs (1 per qubit, always initialized to |+>, suggested to be same a highest_combo_count)
-            lowest_combo_count (int): Lowest combination count of input qubits iterated (0 is bias)
-            highest_combo_count (int): Highest combination count of input qubits iterated
-            activation (int): Integer corresponding to choice of activation function from NeuronActivationFn
+            hidden_qubits (int): (Optional) Count of "hidden" inputs (1 per qubit, always initialized to |+>, suggested to be same a highest_combo_count)
+            lowest_combo_count (int): (Optional) Lowest combination count of input qubits iterated (0 is bias)
+            highest_combo_count (int): (Optional) Highest combination count of input qubits iterated
+            activation (int): (Optional) Integer corresponding to choice of activation function from NeuronActivationFn
+            dtype (type): (Optional) dtype of tensor objects used
             parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of input + hidden qubits, repeated for ascending combo count, repeated for each output index
+            post_init_fn (Callable[QrackSimulator]): (Optional) Function that is applied after forward(x) state initialization, before inference. (As the function depends on nothing but the simulator, it's differentiable.)
         """
         super(QrackNeuronTorchLayer, self).__init__()
         if hidden_qubits is None:
@@ -174,6 +177,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         self.activation = NeuronActivationFn(activation)
         self.dtype = dtype
         self.apply_fn = QrackNeuronTorchFunction.apply
+        self.post_init_fn = post_init_fn
 
         # Create neurons from all input combinations, projecting to coherent output qubits
         neurons = []
@@ -224,6 +228,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
 
             for q, input_id in enumerate(self.input_indices):
                 simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), input_id)
+                self.post_init_fn(simulator)
 
             row = []
             for out in self.output_indices:
