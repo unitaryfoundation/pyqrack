@@ -203,6 +203,8 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                     param_count += p_count
         self.neurons = nn.ModuleList(neurons)
 
+        # Prepare the state before feed-forward:
+
         # Prepare hidden predictors
         for hidden_id in self.hidden_indices:
             self.simulator.h(hidden_id)
@@ -226,9 +228,12 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             simulator = self.simulator.clone()
             self.simulators.append(simulator)
 
+            # Apply feed-forward
             for q, input_id in enumerate(self.input_indices):
                 simulator.r(Pauli.PauliY, math.pi * x[b, q].item(), input_id)
-                self.post_init_fn(simulator)
+
+            # Differentiable post-initialization:
+            self.post_init_fn(simulator)
 
             row = []
             for out in self.output_indices:
