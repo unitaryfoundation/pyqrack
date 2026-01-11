@@ -199,19 +199,18 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                     param_count += p_count
         self.neurons = nn.ModuleList(neurons)
 
-    def forward(self, x):
-        B = x.shape[0]
-        x = x.view(B, -1)
-
-        self.simulators.clear()
-
-        self.simulator.reset_all()
         # Prepare hidden predictors
         for hidden_id in self.hidden_indices:
             self.simulator.h(hidden_id)
         # Prepare a maximally uncertain output state.
         for output_id in self.output_indices:
             self.simulator.h(output_id)
+
+    def forward(self, x):
+        B = x.shape[0]
+        x = x.view(B, -1)
+
+        self.simulators.clear()
 
         # Group neurons by output target once
         by_out = {out: [] for out in self.output_indices}
