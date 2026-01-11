@@ -162,7 +162,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             activation (int): (Optional) Integer corresponding to choice of activation function from NeuronActivationFn
             dtype (type): (Optional) dtype of tensor objects used
             parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of input + hidden qubits, repeated for ascending combo count, repeated for each output index
-            post_init_fn (Callable[QrackSimulator]): (Optional) Function that is applied after forward(x) state initialization. (As the function depends on nothing but the simulator, it's differentiable.)
+            post_init_fn (Callable[QrackSimulator]): (Optional) Function that is applied after forward(x) state initialization, before inference. (As the function depends on nothing but the simulator, it's differentiable.)
         """
         super(QrackNeuronTorchLayer, self).__init__()
         if hidden_qubits is None:
