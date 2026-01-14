@@ -147,7 +147,6 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         lowest_combo_count=0,
         highest_combo_count=2,
         activation=int(NeuronActivationFn.Generalized_Logistic),
-        dtype=torch.float if _IS_TORCH_AVAILABLE else float,
         parameters=None,
         post_init_fn=lambda simulator: None,
         **kwargs
@@ -164,7 +163,6 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             lowest_combo_count (int): (Optional) Lowest combination count of input qubits iterated (0 is bias)
             highest_combo_count (int): (Optional) Highest combination count of input qubits iterated
             activation (int): (Optional) Integer corresponding to choice of activation function from NeuronActivationFn
-            dtype (type): (Optional) dtype of tensor objects used
             parameters (list[float]): (Optional) Flat list of initial neuron parameters, corresponding to little-endian basis states of input + hidden qubits, repeated for ascending combo count, repeated for each output index
             post_init_fn (Callable[QrackSimulator]): (Optional) Function that is applied after forward(x) state initialization, before inference. (As the function depends on nothing but the simulator, it's differentiable.)
         """
@@ -179,7 +177,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             range(input_qubits + hidden_qubits, input_qubits + hidden_qubits + output_qubits)
         )
         self.activation = NeuronActivationFn(activation)
-        self.dtype = dtype
+        self.dtype = torch.float if Qrack.fppow <= 5 else torch.double
         self.apply_fn = QrackNeuronTorchFunction.apply
         self.post_init_fn = post_init_fn
 
@@ -193,10 +191,10 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                     angles = (
                         (
                             torch.tensor(
-                                parameters[param_count : (param_count + p_count)], dtype=dtype
+                                parameters[param_count : (param_count + p_count)], dtype=self.dtype
                             )
                             if parameters
-                            else torch.zeros(p_count, dtype=dtype)
+                            else torch.zeros(p_count, dtype=self.dtype)
                         )
                     )
                     neurons.append(
