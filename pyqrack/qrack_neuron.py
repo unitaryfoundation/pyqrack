@@ -31,7 +31,9 @@ class QrackNeuron:
         simulator(QrackSimulator): Simulator instance for all synaptic clefts of the neuron
         controls(list(int)): Indices of all "control" qubits, for neuron input
         target(int): Index of "target" qubit, for neuron output
-        tolerance(double): Rounding tolerance
+        activation_fn(NeuronActivationFn): Activation function choice
+        alpha(float): Activation function parameter, if required
+        angles(list[ctypes.c_float]): (or c_double) Memory for neuron prediction angles
     """
 
     def _get_error(self):
@@ -55,6 +57,7 @@ class QrackNeuron:
         self.target = target
         self.activation_fn = activation_fn
         self.alpha = alpha
+        self.angles = QrackNeuron._real1_byref([0.0] * (1 << len(controls)))
 
         if not _init:
             return
@@ -138,8 +141,7 @@ class QrackNeuron:
             raise ValueError(
                 "Angles 'a' in QrackNeuron.set_angles() must contain at least (2 ** len(self.controls)) elements."
             )
-        Qrack.qrack_lib.set_qneuron_angles(self.nid, QrackNeuron._real1_byref(a))
-        self._throw_if_error()
+        self.angles = QrackNeuron._real1_byref(a)
 
     def get_angles(self):
         """Directly gets the neuron parameters.
@@ -150,10 +152,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        ket = QrackNeuron._real1_byref([0.0] * (1 << len(self.controls)))
-        Qrack.qrack_lib.get_qneuron_angles(self.nid, ket)
-        self._throw_if_error()
-        return list(ket)
+        return list(self.angles)
 
     def set_alpha(self, a):
         """Set the neuron 'alpha' parameter.
@@ -191,7 +190,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        result = Qrack.qrack_lib.qneuron_predict(self.nid, e, r, self.activation_fn, self.alpha)
+        result = Qrack.qrack_lib.qneuron_predict(self.angles, self.nid, e, r, self.activation_fn, self.alpha)
         self._throw_if_error()
         return result
 
@@ -207,7 +206,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        result = Qrack.qrack_lib.qneuron_unpredict(self.nid, e, self.activation_fn, self.alpha)
+        result = Qrack.qrack_lib.qneuron_unpredict(self.angles, self.nid, e, self.activation_fn, self.alpha)
         self._throw_if_error()
         return result
 
@@ -223,7 +222,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        Qrack.qrack_lib.qneuron_learn_cycle(self.nid, e, self.activation_fn, self.alpha)
+        Qrack.qrack_lib.qneuron_learn_cycle(self.angles, self.nid, e, self.activation_fn, self.alpha)
         self._throw_if_error()
 
     def learn(self, eta, e=True, r=True):
@@ -242,7 +241,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        Qrack.qrack_lib.qneuron_learn(self.nid, eta, e, r, self.activation_fn, self.alpha)
+        Qrack.qrack_lib.qneuron_learn(self.angles, self.nid, eta, e, r, self.activation_fn, self.alpha)
         self._throw_if_error()
 
     def learn_permutation(self, eta, e=True, r=True):
@@ -261,7 +260,7 @@ class QrackNeuron:
         Raises:
             RuntimeError: QrackNeuron C++ library raised an exception.
         """
-        Qrack.qrack_lib.qneuron_learn_permutation(self.nid, eta, e, r, self.activation_fn, self.alpha)
+        Qrack.qrack_lib.qneuron_learn_permutation(self.angles, self.nid, eta, e, r, self.activation_fn, self.alpha)
         self._throw_if_error()
 
     def quantile_bounds(vec, bits):
