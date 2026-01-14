@@ -1252,21 +1252,21 @@ class QrackSystem:
 
         if self.fppow <= 5:
             self.qrack_lib.qneuron_predict.restype = c_double
-            self.qrack_lib.qneuron_predict.argtypes = [POINTER(c_float), c_ulonglong, c_bool, c_bool, c_ulonglong, c_double]
+            self.qrack_lib.qneuron_predict.argtypes = [c_ulonglong, POINTER(c_float), c_bool, c_bool, c_ulonglong, c_double]
 
             self.qrack_lib.qneuron_unpredict.restype = c_double
-            self.qrack_lib.qneuron_unpredict.argtypes = [POINTER(c_float), c_ulonglong, c_bool, c_ulonglong, c_double]
+            self.qrack_lib.qneuron_unpredict.argtypes = [c_ulonglong, POINTER(c_float), c_bool, c_ulonglong, c_double]
 
             self.qrack_lib.qneuron_learn_cycle.restype = c_double
-            self.qrack_lib.qneuron_learn_cycle.argtypes = [POINTER(c_float), c_ulonglong, c_bool, c_ulonglong, c_double]
+            self.qrack_lib.qneuron_learn_cycle.argtypes = [c_ulonglong, POINTER(c_float), c_bool, c_ulonglong, c_double]
 
             self.qrack_lib.qneuron_learn.restype = None
-            self.qrack_lib.qneuron_learn.argtypes = [POINTER(c_float), c_ulonglong, c_double, c_bool, c_bool, c_ulonglong, c_double]
+            self.qrack_lib.qneuron_learn.argtypes = [c_ulonglong, POINTER(c_float), c_double, c_bool, c_bool, c_ulonglong, c_double]
 
             self.qrack_lib.qneuron_learn_permutation.restype = None
             self.qrack_lib.qneuron_learn_permutation.argtypes = [
-                POINTER(c_float),
                 c_ulonglong,
+                POINTER(c_float),
                 c_double,
                 c_bool,
                 c_bool,
@@ -1275,21 +1275,21 @@ class QrackSystem:
             ]
         else:
             self.qrack_lib.qneuron_predict.restype = c_double
-            self.qrack_lib.qneuron_predict.argtypes = [POINTER(c_double), c_ulonglong, c_bool, c_bool, c_ulonglong, c_double]
+            self.qrack_lib.qneuron_predict.argtypes = [c_ulonglong, POINTER(c_double), c_bool, c_bool, c_ulonglong, c_double]
 
             self.qrack_lib.qneuron_unpredict.restype = c_double
-            self.qrack_lib.qneuron_unpredict.argtypes = [POINTER(c_double), c_ulonglong, c_bool, c_ulonglong, c_double]
+            self.qrack_lib.qneuron_unpredict.argtypes = [c_ulonglong, POINTER(c_double), c_bool, c_ulonglong, c_double]
 
             self.qrack_lib.qneuron_learn_cycle.restype = c_double
-            self.qrack_lib.qneuron_learn_cycle.argtypes = [POINTER(c_double), c_ulonglong, c_bool, c_ulonglong, c_double]
+            self.qrack_lib.qneuron_learn_cycle.argtypes = [c_ulonglong, POINTER(c_double), c_bool, c_ulonglong, c_double]
 
             self.qrack_lib.qneuron_learn.restype = None
-            self.qrack_lib.qneuron_learn.argtypes = [POINTER(c_double), c_ulonglong, c_double, c_bool, c_bool, c_ulonglong, c_double]
+            self.qrack_lib.qneuron_learn.argtypes = [c_ulonglong, POINTER(c_double), c_double, c_bool, c_bool, c_ulonglong, c_double]
 
             self.qrack_lib.qneuron_learn_permutation.restype = None
             self.qrack_lib.qneuron_learn_permutation.argtypes = [
-                POINTER(c_double),
                 c_ulonglong,
+                POINTER(c_double),
                 c_double,
                 c_bool,
                 c_bool,
