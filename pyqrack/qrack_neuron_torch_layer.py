@@ -177,7 +177,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
             range(input_qubits + hidden_qubits, input_qubits + hidden_qubits + output_qubits)
         )
         self.activation = NeuronActivationFn(activation)
-        self.dtype = (torch.float if Qrack.fppow <= 5 else torch.double) if _IS_TORCH_AVAILABLE else float,
+        self.dtype = torch.float if Qrack.fppow <= 5 else torch.double
         self.apply_fn = QrackNeuronTorchFunction.apply
         self.post_init_fn = post_init_fn
 
@@ -191,10 +191,10 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                     angles = (
                         (
                             torch.tensor(
-                                parameters[param_count : (param_count + p_count)], dtype=dtype
+                                parameters[param_count : (param_count + p_count)], dtype=self.dtype
                             )
                             if parameters
-                            else torch.zeros(p_count, dtype=dtype)
+                            else torch.zeros(p_count, dtype=self.dtype)
                         )
                     )
                     neurons.append(
