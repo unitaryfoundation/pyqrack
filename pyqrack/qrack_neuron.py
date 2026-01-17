@@ -104,26 +104,50 @@ class QrackNeuron:
             return (ctypes.c_float * len(a))(*a)
         return (ctypes.c_double * len(a))(*a)
 
-    def set_simulator(self, s):
+    def set_simulator(self, s, controls=None, target=None):
         """Set the neuron simulator
 
         Set the simulator used by this neuron
 
         Args:
             s(QrackSimulator): The simulator to use
+            controls(list[int]): The control qubit IDs to use
+            target(int): The output qubit ID to use
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
         """
+        if controls is None:
+            controls = self.controls
+        if target is None:
+            target = self.target
         Qrack.qrack_lib.set_qneuron_sim(
             self.nid,
             s.sid,
-            len(self.controls),
-            QrackNeuron._ulonglong_byref(self.controls),
-            self.target,
+            len(controls),
+            QrackNeuron._ulonglong_byref(controls),
+            target,
         )
         self._throw_if_error()
         self.simulator = s
+        self.controls = controls
+        self.target = target
+
+    def set_qubit_ids(self, controls, target=None):
+        """Set the neuron qubit identifiers
+
+        Set the control and target qubits within the simulator
+
+        Args:
+            controls(list[int]): The control qubit IDs to use
+            target(int): The output qubit ID to use
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        if target is None:
+            target = self.target
+        self.set_simulator(self.simulator, controls, target)
 
     def set_angles(self, a):
         """Directly sets the neuron parameters.
