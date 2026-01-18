@@ -124,6 +124,10 @@ class QrackNeuronTorch(nn.Module if _IS_TORCH_AVAILABLE else object):
         return QrackNeuronTorchFunction.apply(self.weights, self.neuron)
 
 
+def dummy_post_init_fn(simulator):
+    pass
+
+
 class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
     """Torch layer wrapper for QrackNeuron (with maximally expressive set of neurons between inputs and outputs)
 
@@ -148,7 +152,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
         highest_combo_count=2,
         activation=int(NeuronActivationFn.Generalized_Logistic),
         parameters=None,
-        post_init_fn=lambda simulator: None,
+        post_init_fn=dummy_post_init_fn,
         **kwargs
     ):
         """
