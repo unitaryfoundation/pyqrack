@@ -51,13 +51,14 @@ class QrackNeuron:
         activation_fn=NeuronActivationFn.Sigmoid,
         alpha=1.0,
         _init=True,
+        _isTorch=False
     ):
         self.simulator = simulator
         self.controls = controls
         self.target = target
         self.activation_fn = activation_fn
         self.alpha = alpha
-        self.angles = QrackNeuron._real1_byref([0.0] * (1 << len(controls)))
+        self.angles = None if _isTorch else QrackNeuron._real1_byref([0.0] * (1 << len(controls)))
 
         if not _init:
             return
