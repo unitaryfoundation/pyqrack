@@ -101,7 +101,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         # Restore simulator
         neuron.set_simulator(pre_sim)
 
-        return grad_x
+        return grad_x, max(math.sqrt(max(1.0 - post_prob * post_prob, 0.0)), 1e-6)
 
     @staticmethod
     def backward(ctx, grad_output):
@@ -112,10 +112,11 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         angles = x.detach().cpu().numpy() if x.requires_grad else x.numpy()
 
-        grad_x = torch.tensor(QrackNeuronTorchFunction._backward(angles, neuron, simulator, post_prob), device=x.device, dtype=x.dtype)
+        grad_x, denom = QrackNeuronTorchFunction._backward(angles, neuron, simulator, post_prob)
+        grad_x = torch.tensor(grad_x, device=x.device, dtype=x.dtype)
 
         # Apply chain rule and upstream gradient
-        grad_x *= grad_output[0] / math.sqrt(max(1.0 - post_prob * post_prob, 1e-6))
+        grad_x *= grad_output[0] / denom
 
         return grad_x, None
 
