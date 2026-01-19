@@ -52,7 +52,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         delta = math.asin(post_prob) - math.asin(pre_prob)
 
         # Return shape: (1,)
-        return delta, post_prob
+        return delta, max(math.sqrt(max(1.0 - post_prob * post_prob, 0.0)), 1e-6)
 
     @staticmethod
     def forward(ctx, x, neuron):
@@ -61,15 +61,15 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         ctx.save_for_backward(x)
 
         angles = x.detach().cpu().numpy() if x.requires_grad else x.numpy()
-        delta, post_prob = QrackNeuronTorchFunction._apply(angles, neuron)
+        delta, denom = QrackNeuronTorchFunction._apply(angles, neuron)
 
-        ctx.post_prob = post_prob
+        ctx.denom = denom
         ctx.delta = delta
 
         return x.new_tensor([delta])
 
     @staticmethod
-    def _backward(angles, neuron, simulator, post_prob):
+    def _backward(angles, neuron, simulator):
         # Restore simulator to state BEFORE this neuron's unitary
         neuron.set_simulator(simulator)
         neuron.angles = angles.ctypes.data_as(ctypes.POINTER(fp_type))
@@ -101,18 +101,18 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         # Restore simulator
         neuron.set_simulator(pre_sim)
 
-        return grad_x, max(math.sqrt(max(1.0 - post_prob * post_prob, 0.0)), 1e-6)
+        return grad_x
 
     @staticmethod
     def backward(ctx, grad_output):
         (x,) = ctx.saved_tensors
         neuron = ctx.neuron
         simulator = ctx.simulator
-        post_prob = ctx.post_prob
+        denom = ctx.denom
 
         angles = x.detach().cpu().numpy() if x.requires_grad else x.numpy()
 
-        grad_x, denom = QrackNeuronTorchFunction._backward(angles, neuron, simulator, post_prob)
+        grad_x = QrackNeuronTorchFunction._backward(angles, neuron, simulator)
         grad_x = torch.tensor(grad_x, device=x.device, dtype=x.dtype)
 
         # Apply chain rule and upstream gradient
