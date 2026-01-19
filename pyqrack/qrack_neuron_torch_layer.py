@@ -215,7 +215,7 @@ class QrackNeuronTorchLayer(nn.Module if _IS_TORCH_AVAILABLE else object):
                     )
                     neurons.append(
                         QrackNeuronTorch(
-                            QrackNeuron(self.simulator, input_subset, output_id, activation), angles
+                            QrackNeuron(self.simulator, input_subset, output_id, activation, _isTorch=True), angles
                         )
                     )
                     param_count += p_count
