@@ -49,10 +49,9 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         angles = x.detach().cpu().numpy() if x.requires_grad else x.numpy()
         neuron.angles = angles.ctypes.data_as(ctypes.POINTER(fp_type))
-        neuron.predict(True, False)
 
         # Probability AFTER applying this neuron's unitary
-        post_prob = neuron.simulator.prob(neuron.target)
+        post_prob = neuron.predict(True, False)
         ctx.post_prob = post_prob
 
         delta = math.asin(post_prob) - math.asin(pre_prob)
@@ -84,15 +83,13 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
             angles[i] = angle + param_shift_eps
             neuron.set_angles(angles)
             neuron.simulator = pre_sim.clone()
-            neuron.predict(True, False)
-            p_plus = neuron.simulator.prob(neuron.target)
+            p_plus = neuron.predict(True, False)
 
             # θ − π/2
             angles[i] = angle - param_shift_eps
             neuron.set_angles(angles)
             neuron.simulator = pre_sim.clone()
-            neuron.predict(True, False)
-            p_minus = neuron.simulator.prob(neuron.target)
+            p_minus = neuron.predict(True, False)
 
             # Parameter-shift gradient
             grad_x[i] = 0.5 * (p_plus - p_minus)
