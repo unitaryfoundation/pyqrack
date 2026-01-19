@@ -17,6 +17,7 @@ try:
     import torch
     import torch.nn as nn
     from torch.autograd import Function
+    import numpy as np
 except ImportError:
     _IS_TORCH_AVAILABLE = False
 
@@ -48,6 +49,8 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         # Probability AFTER applying this neuron's unitary
         post_prob = neuron.predict(True, False)
 
+        neuron.angles = None
+
         # Angle difference
         delta = math.asin(post_prob) - math.asin(pre_prob)
 
@@ -75,20 +78,18 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         neuron.unpredict()
         pre_sim = neuron.simulator
 
-        grad_x = [0.0] * angles.shape[0]
+        grad_x = np.zeros(angles.shape[0], dtype=fp_type)
 
         for i in range(angles.shape[0]):
             angle = angles[i]
 
             # θ + π/2
             angles[i] = angle + param_shift_eps
-            neuron.set_angles(angles)
             neuron.simulator = pre_sim.clone()
             p_plus = neuron.predict(True, False)
 
             # θ − π/2
             angles[i] = angle - param_shift_eps
-            neuron.set_angles(angles)
             neuron.simulator = pre_sim.clone()
             p_minus = neuron.predict(True, False)
 
@@ -99,6 +100,7 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
         # Restore simulator
         neuron.set_simulator(pre_sim)
+        neuron.angles = None
 
         return grad_x
 
