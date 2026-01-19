@@ -64,7 +64,6 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
         delta, denom = QrackNeuronTorchFunction._apply(angles, neuron)
 
         ctx.denom = denom
-        ctx.delta = delta
 
         return x.new_tensor([delta])
 
