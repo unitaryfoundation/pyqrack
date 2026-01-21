@@ -1209,6 +1209,9 @@ class QrackSystem:
         self.qrack_lib.SetTInjection.restype = None
         self.qrack_lib.SetTInjection.argtypes = [c_ulonglong, c_bool]
 
+        self.qrack_lib.SetUseExactNearClifford.restype = None
+        self.qrack_lib.SetUseExactNearClifford.argtypes = [c_ulonglong, c_bool]
+
         self.qrack_lib.SetNoiseParameter.restype = None
         self.qrack_lib.SetNoiseParameter.argtypes = [c_ulonglong, c_double]
 
