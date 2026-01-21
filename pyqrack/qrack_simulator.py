@@ -3281,6 +3281,21 @@ class QrackSimulator:
         Qrack.qrack_lib.SetTInjection(self.sid, iti)
         self._throw_if_error()
 
+    def set_use_exact_near_clifford(self, enc):
+        """Set option to use exact near-Clifford simulation
+
+        If t-injection is available, this method turns exact near-Clifford
+        simulation off/on. (Default is on.) Approximate methods are faster.
+
+        Args:
+            enc: use exact near-Clifford simulation
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetUseExactNearClifford(self.sid, enc)
+        self._throw_if_error()
+
     def set_noise_parameter(self, np):
         """Set noise parameter option
 
