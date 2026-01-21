@@ -3222,7 +3222,7 @@ class QrackSimulator:
         simulation off/on. (Default is on.) Approximate methods are faster.
 
         Args:
-            enc: use exact near-Clifford simulation
+            enc: "on/off" for exact near-Clifford simulation
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
