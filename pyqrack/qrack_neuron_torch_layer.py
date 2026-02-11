@@ -85,13 +85,13 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
 
             # θ + π/2
             angles[i] = angle + param_shift_eps
-            neuron.simulator = pre_sim.clone()
             p_plus = neuron.predict(True, False)
+            neuron.unpredict(True)
 
             # θ − π/2
             angles[i] = angle - param_shift_eps
-            neuron.simulator = pre_sim.clone()
             p_minus = neuron.predict(True, False)
+            neuron.unpredict(True)
 
             # Parameter-shift gradient
             grad_x[i] = 0.5 * (p_plus - p_minus)
@@ -99,7 +99,6 @@ class QrackNeuronTorchFunction(Function if _IS_TORCH_AVAILABLE else object):
             angles[i] = angle
 
         # Restore simulator
-        neuron.set_simulator(pre_sim)
         neuron.angles = None
 
         return grad_x
