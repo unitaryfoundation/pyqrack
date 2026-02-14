@@ -35,6 +35,8 @@ See [https://pyqrack.readthedocs.io/en/latest/](https://pyqrack.readthedocs.io/e
 
 For custom Qrack build floating-point precision, where options are `half`, `float`, `double`, and `quad`, set an environment variable via `export QRACK_FPPOW=[n]` (or as appropriate to your shell) where `[n]` is the logarithm base 2 of the number of bits in the systemic floating point type (`4`, `5`, `6`, or `7`, with `5` or `float` as default, i.e. `2**5=32` for 32-bit `float`). Your Qrack installation floating-point build option must match this specific value, which might require a custom Qrack build.
 
+If you're looking for usage examples of PyQrack, [this examples repository](https://github.com/vm6502q/pyqrack-examples) covers many common algorithms and cases of claimed _"advantage"_ or _"supremacy"_ that Qrack might be able to challenge.
+
 Please feel welcome to open an issue, if you'd like help. 😃
 
 **Special thanks go to Zeeshan Ahmed, for bug fixes and design suggestions, Ashish Panigrahi, for documentation and design suggestions, WingCode, for documentation, Or Golan, for CI build pipeline tooling, and to the broader community of Qrack contributors, for years of happy Qracking! You rock!**
