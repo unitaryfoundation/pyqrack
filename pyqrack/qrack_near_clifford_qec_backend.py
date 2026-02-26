@@ -1,4 +1,4 @@
-# (C) Daniel Strano and the Qrack contributors 2017-2025. All rights reserved.
+# (C) Daniel Strano and the Qrack contributors 2017-2026. All rights reserved.
 #
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
@@ -42,7 +42,7 @@ class QrackNearCliffordQecBackend:
         self.sim = toClone.sim.clone() if toClone else QrackStabilizer(self.code_len * self.n_qubits + 2)
 
     def clone(self):
-        return QrackAceBackend(toClone=self)
+        return QrackNearCliffordQecBackend(toClone=self)
 
     def num_qubits(self):
         return self.n_qubits
@@ -162,44 +162,44 @@ class QrackNearCliffordQecBackend:
     def mcx(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
-                "QrackAceBackend.mcx() is provided for syntax convenience and only supports 1 control qubit!"
+                "QrackNearCliffordQecBackend.mcx() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.cx(lq1, lq2)
+        self.cx(lq1[0], lq2)
 
     def mcy(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
-                "QrackAceBackend.mcy() is provided for syntax convenience and only supports 1 control qubit!"
+                "QrackNearCliffordQecBackend.mcy() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.cy(lq1, lq2)
+        self.cy(lq1[0], lq2)
 
     def mcz(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
-                "QrackAceBackend.mcz() is provided for syntax convenience and only supports 1 control qubit!"
+                "QrackNearCliffordQecBackend.mcz() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.cz(lq1, lq2)
+        self.cz(lq1[0], lq2)
 
     def macx(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
-                "QrackAceBackend.macx() is provided for syntax convenience and only supports 1 control qubit!"
+                "QrackNearCliffordQecBackend.macx() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.acx(lq1, lq2)
+        self.acx(lq1[0], lq2)
 
     def macy(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
-                "QrackAceBackend.macy() is provided for syntax convenience and only supports 1 control qubit!"
+                "QrackNearCliffordQecBackend.macy() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.acy(lq1, lq2)
+        self.acy(lq1[0], lq2)
 
     def macz(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
-                "QrackAceBackend.macz() is provided for syntax convenience and only supports 1 control qubit!"
+                "QrackNearCliffordQecBackend.macz() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.acz(lq1, lq2)
+        self.acz(lq1[0], lq2)
 
     def swap(self, lq1, lq2):
         hq1 = self.code_len * lq1
@@ -228,13 +228,16 @@ class QrackNearCliffordQecBackend:
         bits = []
         for q in range(self.code_len):
             bits.append(int(self.sim.m(hq + q)))
+
         count = sum(bits)
         result = count > 1
-        for q in range(self.code_len):
-            if result:
+
+        if result:
+            for q in range(self.code_len):
                 if bits[q] == 0:
                     self.sim.x(hq + q)
-            else:
+        else:
+            for q in range(self.code_len):
                 if bits[q] == 1:
                     self.sim.x(hq + q)
 
@@ -245,12 +248,15 @@ class QrackNearCliffordQecBackend:
         bits = []
         for q in range(self.code_len):
             bits.append(int(self.sim.m(hq + q)))
+
         count = sum(bits)
-        for q in range(self.code_len):
-            if result:
+
+        if result:
+            for q in range(self.code_len):
                 if bits[q] == 0:
                     self.sim.x(hq + q)
-            else:
+        else:
+            for q in range(self.code_len):
                 if bits[q] == 1:
                     self.sim.x(hq + q)
 
@@ -382,7 +388,7 @@ class QrackNearCliffordQecBackend:
             elif relation == ">=":
                 outcome = compared >= 0
             else:
-                raise QrackError("Invalid boolean function relation.")
+                raise RuntimeError("Invalid boolean function relation.")
 
             # Store outcome in register and optionally memory slot
             regbit = 1 << cregbit
@@ -395,7 +401,7 @@ class QrackNearCliffordQecBackend:
                     int(outcome) << cmembit
                 )
         else:
-            err_msg = 'QrackAceBackend encountered unrecognized operation "{0}"'
+            err_msg = 'QrackNearCliffordQecBackend encountered unrecognized operation "{0}"'
             raise RuntimeError(err_msg.format(operation))
 
     def _add_sample_measure(self, sample_qubits, sample_clbits, num_samples):
@@ -443,7 +449,7 @@ class QrackNearCliffordQecBackend:
     def run_qiskit_circuit(self, experiment, shots=1):
         if not _IS_QISKIT_AVAILABLE:
             raise RuntimeError(
-                "Before trying to run_qiskit_circuit() with QrackAceBackend, you must install Qiskit!"
+                "Before trying to run_qiskit_circuit() with QrackNearCliffordQecBackend, you must install Qiskit!"
             )
 
         instructions = []
@@ -456,80 +462,27 @@ class QrackNearCliffordQecBackend:
         self._sample_qubits = []
         self._sample_clbits = []
         self._sample_cregbits = []
-        self._sample_measure = True
         _data = []
-        shotLoopMax = 1
-
-        is_initializing = True
-        boundary_start = -1
-
-        for opcount in range(len(instructions)):
-            operation = instructions[opcount]
-
-            if operation.name == "id" or operation.name == "barrier":
-                continue
-
-            if is_initializing and ((operation.name == "measure") or (operation.name == "reset")):
-                continue
-
-            is_initializing = False
-
-            if (operation.name == "measure") or (operation.name == "reset"):
-                if boundary_start == -1:
-                    boundary_start = opcount
-
-            if (boundary_start != -1) and (operation.name != "measure"):
-                shotsPerLoop = 1
-                shotLoopMax = self._shots
-                self._sample_measure = False
-                break
-
-        preamble_memory = 0
-        preamble_register = 0
-        preamble_sim = None
-
-        if self._sample_measure or boundary_start <= 0:
-            boundary_start = 0
-            self._sample_measure = True
-            shotsPerLoop = self._shots
-            shotLoopMax = 1
-        else:
-            boundary_start -= 1
-            if boundary_start > 0:
-                self._sim = self
-                self._classical_memory = 0
-                self._classical_register = 0
-
-                for operation in instructions[:boundary_start]:
-                    self._apply_op(operation)
-
-                preamble_memory = self._classical_memory
-                preamble_register = self._classical_register
-                preamble_sim = self._sim
+        shotsPerLoop = 1
+        shotLoopMax = self._shots
+        self._sample_measure = False
 
         for shot in range(shotLoopMax):
-            if preamble_sim is None:
-                self._sim = self
-                self._classical_memory = 0
-                self._classical_register = 0
-            else:
-                self._sim = QrackAceBackend(toClone=preamble_sim)
-                self._classical_memory = preamble_memory
-                self._classical_register = preamble_register
+            self._sim = QrackNearCliffordQecBackend(toClone=self)
+            self._classical_memory = 0
+            self._classical_register = 0
 
-            for operation in instructions[boundary_start:]:
+            for operation in instructions:
                 self._apply_op(operation)
 
-            if not self._sample_measure and (len(self._sample_qubits) > 0):
+            if len(self._sample_qubits) > 0:
                 _data += [bin(self._classical_memory)[2:].zfill(self.num_qubits())]
                 self._sample_qubits = []
                 self._sample_clbits = []
                 self._sample_cregbits = []
+                _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots))
 
-        if self._sample_measure and (len(self._sample_qubits) > 0):
-            _data = self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots)
-
-        del self._sim
+            del self._sim
 
         return _data
 
