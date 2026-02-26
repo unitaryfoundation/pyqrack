@@ -49,7 +49,7 @@ class QrackNearCliffordQecBackend:
         ]
 
         # Apply QEC every other layer
-        self.b = [False] * self.n_qubits
+        self.b = [0] * self.n_qubits
 
         total_qubits = self.code_len * self.n_qubits + (self.code_len - 1)
 
@@ -116,9 +116,10 @@ class QrackNearCliffordQecBackend:
             self.sim.h(hq + i)
 
     def _correct(self, lq, b, p):
-        self.b[lq] = not self.b[lq]
-        if self.b[lq]:
+        self.b[lq] += 1
+        if self.b[lq] % 3:
             return
+        self.b[lq] = 0
         if p:
             self._correct_phase(lq)
         if b:
