@@ -227,7 +227,7 @@ class QrackNearCliffordQecBackend:
         hq = self.code_len * lq
         bits = []
         for q in range(self.code_len):
-            bits.append(int(sim.m(hq + q)))
+            bits.append(int(self.sim.m(hq + q)))
         count = sum(bits)
         result = count > 1
         for q in range(self.code_len):
@@ -244,7 +244,7 @@ class QrackNearCliffordQecBackend:
         hq = self.code_len * lq
         bits = []
         for q in range(self.code_len):
-            bits.append(int(sim.m(hq + q)))
+            bits.append(int(self.sim.m(hq + q)))
         count = sum(bits)
         for q in range(self.code_len):
             if result:
@@ -257,15 +257,11 @@ class QrackNearCliffordQecBackend:
         return result
 
     def m_all(self):
-        raw_sample = self.sim.m_all();
         sample = 0
         for i in range(self.n_qubits):
-            hq = i * self.code_len
-            b = (sample >> hq) & 1
-            b += (sample >> (hq + 1)) & 1
-            b += (sample >> (hq + 2)) & 1
-            if b > 1:
-               sample |= 1 << i
+            sample <<= 1
+            if self.m(i):
+               sample |= 1
 
         return sample
 
@@ -294,7 +290,7 @@ class QrackNearCliffordQecBackend:
         if (name == "u1") or (name == "p"):
             self._sim.u(operation.qubits[0]._index, 0, 0, float(operation.params[0]))
         elif name == "rz":
-            self._sim.r(Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index)
+            self._sim.rz(float(operation.params[0]), operation.qubits[0]._index)
         elif name == "h":
             self._sim.h(operation.qubits[0]._index)
         elif name == "x":
