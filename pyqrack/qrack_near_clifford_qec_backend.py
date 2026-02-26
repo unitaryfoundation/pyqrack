@@ -66,15 +66,10 @@ class QrackNearCliffordQecBackend:
         if b1:
             self.sim.x(self.a1)
 
-    def u(self, lq, th, ph, lm):
+    def rz(self, th, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            self.sim.u(hq + q, th, ph, lm)
-
-    def r(self, p, th, lq):
-        hq = self.code_len * lq
-        for q in range(self.code_len):
-            self.sim.r(p, th, hq + q)
+            self.sim.r(Pauli.PauliZ, th, hq + q)
 
     def h(self, lq):
         hq = self.code_len * lq
@@ -298,31 +293,6 @@ class QrackNearCliffordQecBackend:
 
         if (name == "u1") or (name == "p"):
             self._sim.u(operation.qubits[0]._index, 0, 0, float(operation.params[0]))
-        elif name == "u2":
-            self._sim.u(
-                operation.qubits[0]._index,
-                math.pi / 2,
-                float(operation.params[0]),
-                float(operation.params[1]),
-            )
-        elif (name == "u3") or (name == "u"):
-            self._sim.u(
-                operation.qubits[0]._index,
-                float(operation.params[0]),
-                float(operation.params[1]),
-                float(operation.params[2]),
-            )
-        elif name == "r":
-            self._sim.u(
-                operation.qubits[0]._index,
-                float(operation.params[0]),
-                float(operation.params[1]) - math.pi / 2,
-                (-1 * float(operation.params[1])) + math.pi / 2,
-            )
-        elif name == "rx":
-            self._sim.r(Pauli.PauliX, float(operation.params[0]), operation.qubits[0]._index)
-        elif name == "ry":
-            self._sim.r(Pauli.PauliY, float(operation.params[0]), operation.qubits[0]._index)
         elif name == "rz":
             self._sim.r(Pauli.PauliZ, float(operation.params[0]), operation.qubits[0]._index)
         elif name == "h":
@@ -571,13 +541,8 @@ class QrackNearCliffordQecBackend:
     def get_qiskit_basis_gates():
         return [
             "id",
-            "u",
             "u1",
-            "u2",
-            "u3",
             "r",
-            "rx",
-            "ry",
             "rz",
             "h",
             "x",
