@@ -124,7 +124,7 @@ class QrackNearCliffordQecBackend:
             return
 
         self.b[lq] += 1
-        if self.b[lq] % 2:
+        if self.b[lq] % 4:
             return
         self.b[lq] = 0
 
