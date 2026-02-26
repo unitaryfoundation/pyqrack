@@ -458,31 +458,42 @@ class QrackNearCliffordQecBackend:
         else:
             raise RuntimeError('Unrecognized "run_input" argument specified for run().')
 
-        self._shots = shots
         self._sample_qubits = []
         self._sample_clbits = []
         self._sample_cregbits = []
         _data = []
-        shotsPerLoop = 1
-        shotLoopMax = self._shots
-        self._sample_measure = False
 
-        for shot in range(shotLoopMax):
-            self._sim = QrackNearCliffordQecBackend(toClone=self)
+        if (shots < 2):
+            self._sim = self
             self._classical_memory = 0
             self._classical_register = 0
 
             for operation in instructions:
                 self._apply_op(operation)
 
-            if len(self._sample_qubits) > 0:
+            if (shots > 0) and (len(self._sample_qubits) > 0):
                 _data += [bin(self._classical_memory)[2:].zfill(self.num_qubits())]
                 self._sample_qubits = []
                 self._sample_clbits = []
                 self._sample_cregbits = []
                 _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots))
+        else:
+            for shot in range(shots):
+                self._sim = QrackNearCliffordQecBackend(toClone=self)
+                self._classical_memory = 0
+                self._classical_register = 0
 
-            del self._sim
+                for operation in instructions:
+                    self._apply_op(operation)
+
+                if len(self._sample_qubits) > 0:
+                    _data += [bin(self._classical_memory)[2:].zfill(self.num_qubits())]
+                    self._sample_qubits = []
+                    self._sample_clbits = []
+                    self._sample_cregbits = []
+                    _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots))
+
+                del self._sim
 
         return _data
 
