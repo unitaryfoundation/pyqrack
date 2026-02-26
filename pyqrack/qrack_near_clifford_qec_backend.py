@@ -56,7 +56,7 @@ class QrackNearCliffordQecBackend:
             else QrackStabilizer(total_qubits)
         )
 
-    def _correct(self, lq):
+    def _correct_bit(self, lq):
         hq = self.code_len * lq
 
         # --- Compute adjacent parity checks ---
@@ -97,6 +97,24 @@ class QrackNearCliffordQecBackend:
         for i, bit in enumerate(syndrome):
             if bit:
                 self.sim.x(self.a[i])
+
+    def _correct_phase(self, lq):
+        hq = self.code_len * lq
+
+        # Rotate to X basis
+        for i in range(self.code_len):
+            self.sim.h(hq + i)
+
+        # Run normal bit-flip correction
+        self._correct_bit(lq)
+
+        # Rotate back
+        for i in range(self.code_len):
+            self.sim.h(hq + i)
+
+    def _correct(self, lq):
+        self._correct_phase(lq)
+        self._correct_bit(lq)
 
     def clone(self):
         return QrackNearCliffordQecBackend(toClone=self)
