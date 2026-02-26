@@ -29,7 +29,7 @@ class QrackNearCliffordQecBackend:
     def __init__(
         self,
         qubit_count=1,
-        code_len=5,
+        code_len=3,
         toClone=None,
     ):
         if (code_len < 3) or ((code_len & 1) == 0):
@@ -124,7 +124,7 @@ class QrackNearCliffordQecBackend:
             return
 
         self.b[lq] += 1
-        if self.b[lq] % 4:
+        if self.b[lq] % 2:
             return
         self.b[lq] = 0
 
