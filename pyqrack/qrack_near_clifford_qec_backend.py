@@ -230,7 +230,7 @@ class QrackNearCliffordQecBackend:
             bits.append(int(self.sim.m(hq + q)))
 
         count = sum(bits)
-        result = count > 1
+        result = (count << 1) > self.code_len
 
         if result:
             for q in range(self.code_len):
@@ -249,8 +249,6 @@ class QrackNearCliffordQecBackend:
         for q in range(self.code_len):
             bits.append(int(self.sim.m(hq + q)))
 
-        count = sum(bits)
-
         if result:
             for q in range(self.code_len):
                 if bits[q] == 0:
@@ -265,9 +263,8 @@ class QrackNearCliffordQecBackend:
     def m_all(self):
         sample = 0
         for i in range(self.n_qubits):
-            sample <<= 1
             if self.m(i):
-               sample |= 1
+               sample |= 1 << i
 
         return sample
 
@@ -404,7 +401,7 @@ class QrackNearCliffordQecBackend:
             err_msg = 'QrackNearCliffordQecBackend encountered unrecognized operation "{0}"'
             raise RuntimeError(err_msg.format(operation))
 
-    def _add_sample_measure(self, sample_qubits, sample_clbits, num_samples):
+    def _add_sample_measure(self, sample_qubits, sample_clbits):
         """Generate data samples from current statevector.
 
         Taken almost straight from the terra source code.
@@ -422,27 +419,22 @@ class QrackNearCliffordQecBackend:
         measure_clbit = [clbit for clbit in sample_clbits]
 
         # Sample and convert to bit-strings
-        measure_results = []
-        for s in range(num_samples):
-            sample = self._sim.m_all()
-            result = 0
-            for index in range(len(measure_qubit)):
-                qubit = measure_qubit[index]._index
-                qubit_outcome = (sample >> qubit) & 1
-                result |= qubit_outcome << index
-            measure_results.append(result)
+        sample = self._sim.m_all()
+        measure_result = 0
+        for index in range(len(measure_qubit)):
+            qubit = measure_qubit[index]._index
+            qubit_outcome = (sample >> qubit) & 1
+            measure_result |= qubit_outcome << index
 
-        data = []
-        for sample in measure_results:
-            for index in range(len(measure_qubit)):
-                qubit_outcome = (sample >> index) & 1
-                clbit = measure_clbit[index]._index
-                clmask = 1 << clbit
-                self._classical_memory = (self._classical_memory & (~clmask)) | (
-                    qubit_outcome << clbit
-                )
+        for index in range(len(measure_qubit)):
+            qubit_outcome = (measure_result >> index) & 1
+            clbit = measure_clbit[index]._index
+            clmask = 1 << clbit
+            self._classical_memory = (self._classical_memory & (~clmask)) | (
+                qubit_outcome << clbit
+            )
 
-            data.append(bin(self._classical_memory)[2:].zfill(self.num_qubits()))
+        data = bin(self._classical_memory)[2:].zfill(self.num_qubits())
 
         return data
 
