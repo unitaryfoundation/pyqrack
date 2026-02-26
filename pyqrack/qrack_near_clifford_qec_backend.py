@@ -4,7 +4,7 @@
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 import math
 
-from .qrack_simulator import QrackStabilizer
+from .qrack_stabilizer import QrackStabilizer
 from .pauli import Pauli
 
 
@@ -49,78 +49,78 @@ class QrackNearCliffordQecBackend:
 
     def _correct(self, lq):
         hq = self.code_len * lq
-        experiment.mcx([hq], self.a0)
-        experiment.mcx([hq + 1], self.a0)
-        experiment.mcx([hq + 1], self.a1)
-        experiment.mcx([hq + 2], self.a1)
-        b0 = experiment.m(self.a0)
-        b1 = experiment.m(self.a1)
+        self.sim.mcx([hq], self.a0)
+        self.sim.mcx([hq + 1], self.a0)
+        self.sim.mcx([hq + 1], self.a1)
+        self.sim.mcx([hq + 2], self.a1)
+        b0 = self.sim.m(self.a0)
+        b1 = self.sim.m(self.a1)
         if b0 and b1:
-            experiment.x(hq + 1)
+            self.sim.x(hq + 1)
         elif b0:
-            experiment.x(hq)
+            self.sim.x(hq)
         elif b1:
-            experiment.x(hq + 2)
+            self.sim.x(hq + 2)
         if b0:
-            experiment.x(self.a0)
+            self.sim.x(self.a0)
         if b1:
-            experiment.x(self.a1)
+            self.sim.x(self.a1)
 
     def u(self, lq, th, ph, lm):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.u(hq + q, th, ph, lm)
+            self.sim.u(hq + q, th, ph, lm)
 
     def r(self, p, th, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.r(p, th, hq + q)
+            self.sim.r(p, th, hq + q)
 
     def h(self, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.h(hq + q)
+            self.sim.h(hq + q)
 
     def s(self, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.s(hq + q)
+            self.sim.s(hq + q)
 
     def adjs(self, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.adjs(hq + q)
+            self.sim.adjs(hq + q)
 
     def x(self, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.x(hq + q)
+            self.sim.x(hq + q)
 
     def y(self, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.y(hq + q)
+            self.sim.y(hq + q)
 
     def z(self, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.z(hq + q)
+            self.sim.z(hq + q)
 
     def t(self, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.t(hq + q)
+            self.sim.t(hq + q)
 
     def adjt(self, lq):
         hq = self.code_len * lq
         for q in range(self.code_len):
-            sim.adjt(hq + q)
+            self.sim.adjt(hq + q)
 
     def cx(self, lq1, lq2):
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.mcx([hq1 + q], hq2 + q)
+            self.sim.mcx([hq1 + q], hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -128,7 +128,7 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.mcy([hq1 + q], hq2 + q)
+            self.sim.mcy([hq1 + q], hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -136,7 +136,7 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.mcz([hq1 + q], hq2 + q)
+            self.sim.mcz([hq1 + q], hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -144,7 +144,7 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.macx([hq1 + q], hq2 + q)
+            self.sim.macx([hq1 + q], hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -152,7 +152,7 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.macy([hq1 + q], hq2 + q)
+            self.sim.macy([hq1 + q], hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -160,7 +160,7 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.macz([hq1 + q], hq2 + q)
+            self.sim.macz([hq1 + q], hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -210,13 +210,13 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.swap([hq1 + q], hq2 + q)
+            self.sim.swap([hq1 + q], hq2 + q)
 
     def iswap(self, lq1, lq2):
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.iswap([hq1 + q], hq2 + q)
+            self.sim.iswap([hq1 + q], hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -224,7 +224,7 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            sim.adjiswap([hq1 + q], hq2 + q)
+            self.sim.adjiswap([hq1 + q], hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -238,10 +238,10 @@ class QrackNearCliffordQecBackend:
         for q in range(self.code_len):
             if result:
                 if bits[q] == 0:
-                    sim.x(hq + q)
+                    self.sim.x(hq + q)
             else:
                 if bits[q] == 1:
-                    sim.x(hq + q)
+                    self.sim.x(hq + q)
 
         return result
 
@@ -254,17 +254,17 @@ class QrackNearCliffordQecBackend:
         for q in range(self.code_len):
             if result:
                 if bits[q] == 0:
-                    sim.x(hq + q)
+                    self.sim.x(hq + q)
             else:
                 if bits[q] == 1:
-                    sim.x(hq + q)
+                    self.sim.x(hq + q)
 
         return result
 
     def m_all(self):
-        raw_sample = experiment.m_all();
+        raw_sample = self.sim.m_all();
         sample = 0
-        for i in range(n_qubits):
+        for i in range(self.n_qubits):
             hq = i * self.code_len
             b = (sample >> hq) & 1
             b += (sample >> (hq + 1)) & 1
@@ -272,7 +272,7 @@ class QrackNearCliffordQecBackend:
             if b > 1:
                sample |= 1 << i
 
-        return sumple
+        return sample
 
     def _apply_op(self, operation):
         name = operation.name
