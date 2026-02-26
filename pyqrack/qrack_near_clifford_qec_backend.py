@@ -30,7 +30,7 @@ class QrackNearCliffordQecBackend:
         self,
         qubit_count=1,
         code_len=5,
-        layers_per_qec_round = 2,
+        layers_per_qec_round = 3,
         toClone=None,
     ):
         if (code_len < 3) or ((code_len & 1) == 0):
@@ -38,6 +38,8 @@ class QrackNearCliffordQecBackend:
 
         if toClone:
             qubit_count = toClone.num_qubits()
+            code_len = toClone.code_len
+            layers_per_qec_round = toClone.layers
         if qubit_count < 0:
             qubit_count = 0
 
