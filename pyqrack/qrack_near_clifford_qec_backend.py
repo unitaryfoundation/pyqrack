@@ -199,59 +199,58 @@ class QrackNearCliffordQecBackend:
             self.sim.adjt(hq + q)
 
     def cx(self, lq1, lq2):
+        self._correct(lq1, True, False)
+        self._correct(lq2, False, True)
         self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.mcx([hq1 + q], hq2 + q)
-        self._correct(lq1, False, True)
-        self._correct(lq2, True, False)
 
     def cy(self, lq1, lq2):
+        self._correct(lq1, True, False)
+        self._correct(lq2, True, True)
         self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.mcy([hq1 + q], hq2 + q)
-        self._correct(lq1, False, True)
-        self._correct(lq2, True, True)
 
     def cz(self, lq1, lq2):
+        self._correct(lq1, True, False)
+        self._correct(lq2, True, False)
         self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.mcz([hq1 + q], hq2 + q)
-        self._correct(lq1, True, False)
-        self._correct(lq2, True, False)
 
     def acx(self, lq1, lq2):
+        self._correct(lq1, True, False)
+        self._correct(lq2, False, True)
         self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.macx([hq1 + q], hq2 + q)
-        self._correct(lq1, False, True)
-        self._correct(lq2, True, False)
 
     def acy(self, lq1, lq2):
+        self._correct(lq1, True, False)
+        self._correct(lq2, True, True)
         self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.macy([hq1 + q], hq2 + q)
-        self._correct(lq1, False, True)
-        self._correct(lq2, True, True)
-
 
     def acz(self, lq1, lq2):
+        self._correct(lq1, True, False)
+        self._correct(lq2, True, False)
         self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.macz([hq1 + q], hq2 + q)
-        self._correct(lq1, True, False)
-        self._correct(lq2, True, False)
 
     def mcx(self, lq1, lq2):
         if len(lq1) > 1:
@@ -304,22 +303,22 @@ class QrackNearCliffordQecBackend:
             self.sim.swap(hq1 + q, hq2 + q)
 
     def iswap(self, lq1, lq2):
+        self._correct(lq1, True, False)
+        self._correct(lq2, True, False)
         self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.iswap(hq1 + q, hq2 + q)
-        self._correct(lq1, True, False)
-        self._correct(lq2, True, False)
 
     def adjiswap(self, lq1, lq2):
+        self._correct(lq1, True, False)
+        self._correct(lq2, True, False)
         self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.adjiswap(hq1 + q, hq2 + q)
-        self._correct(lq1, True, False)
-        self._correct(lq2, True, False)
 
     def m(self, lq):
         hq = self.code_len * lq
