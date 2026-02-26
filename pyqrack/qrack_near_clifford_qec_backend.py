@@ -167,36 +167,36 @@ class QrackNearCliffordQecBackend:
             self.sim.adjt(hq + q)
 
     def cx(self, lq1, lq2):
-        self._correct_bit(lq1)
-        self._correct_phase(lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.mcx([hq1 + q], hq2 + q)
+        self._correct_phase(lq1)
+        self._correct_bit(lq2)
 
     def cy(self, lq1, lq2):
-        self._correct_bit(lq1)
-        self._correct(lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.mcy([hq1 + q], hq2 + q)
+        self._correct_phase(lq1)
+        self._correct(lq2)
 
     def cz(self, lq1, lq2):
-        self._correct_bit(lq1)
-        self._correct_bit(lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.mcz([hq1 + q], hq2 + q)
+        self._correct_phase(lq1)
+        self._correct_phase(lq2)
 
     def acx(self, lq1, lq2):
-        self._correct_bit(lq1)
-        self._correct_phase(lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.macx([hq1 + q], hq2 + q)
+        self._correct_phase(lq1)
+        self._correct_bit(lq2)
 
     def acy(self, lq1, lq2):
         self._correct_bit(lq1)
@@ -207,12 +207,12 @@ class QrackNearCliffordQecBackend:
             self.sim.macy([hq1 + q], hq2 + q)
 
     def acz(self, lq1, lq2):
-        self._correct_bit(lq1)
-        self._correct_bit(lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.macz([hq1 + q], hq2 + q)
+        self._correct_phase(lq1)
+        self._correct_phase(lq2)
 
     def mcx(self, lq1, lq2):
         if len(lq1) > 1:
@@ -263,20 +263,20 @@ class QrackNearCliffordQecBackend:
             self.sim.swap(hq1 + q, hq2 + q)
 
     def iswap(self, lq1, lq2):
-        self._correct_bit(lq1)
-        self._correct_bit(lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.iswap(hq1 + q, hq2 + q)
+        self._correct_phase(lq1)
+        self._correct_phase(lq2)
 
     def adjiswap(self, lq1, lq2):
-        self._correct_bit(lq1)
-        self._correct_bit(lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.adjiswap(hq1 + q, hq2 + q)
+        self._correct_phase(lq1)
+        self._correct_phase(lq2)
 
     def m(self, lq):
         hq = self.code_len * lq
