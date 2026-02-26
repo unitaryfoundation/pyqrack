@@ -3,6 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 import math
+import sys
 
 from .qrack_stabilizer import QrackStabilizer
 from .pauli import Pauli
@@ -48,8 +49,11 @@ class QrackNearCliffordQecBackend:
             for i in range(self.code_len - 1)
         ]
 
-        # Apply QEC every other layer
+        # Apply QEC every n layers
         self.b = [0] * self.n_qubits
+
+        # Only apply QEC or count layers if near-Clifford
+        self.c = [False] * self.n_qubits
 
         total_qubits = self.code_len * self.n_qubits + (self.code_len - 1)
 
@@ -116,14 +120,24 @@ class QrackNearCliffordQecBackend:
             self.sim.h(hq + i)
 
     def _correct(self, lq, b, p):
+        if not self.c[lq]:
+            return
+
         self.b[lq] += 1
-        if self.b[lq] % 3:
+        if self.b[lq] % 4:
             return
         self.b[lq] = 0
+
         if p:
             self._correct_phase(lq)
         if b:
             self._correct_bit(lq)
+
+    def _prop_nc(self, lq1, lq2):
+        if self.c[lq1]:
+            self.c[lq2] = True
+        elif self.c[lq2]:
+            self.c[lq1] = True
 
     def clone(self):
         return QrackNearCliffordQecBackend(toClone=self)
@@ -132,6 +146,8 @@ class QrackNearCliffordQecBackend:
         return self.n_qubits
 
     def rz(self, th, lq):
+        if math.fmod(abs(th), math.pi / 2) > sys.float_info.epsilon:
+            self.c[lq] = True
         hq = self.code_len * lq
         for q in range(self.code_len):
             self.sim.r(Pauli.PauliZ, th, hq + q)
@@ -167,16 +183,19 @@ class QrackNearCliffordQecBackend:
             self.sim.z(hq + q)
 
     def t(self, lq):
+        self.c[lq] = True
         hq = self.code_len * lq
         for q in range(self.code_len):
             self.sim.t(hq + q)
 
     def adjt(self, lq):
+        self.c[lq] = True
         hq = self.code_len * lq
         for q in range(self.code_len):
             self.sim.adjt(hq + q)
 
     def cx(self, lq1, lq2):
+        self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
@@ -185,6 +204,7 @@ class QrackNearCliffordQecBackend:
         self._correct(lq2, True, False)
 
     def cy(self, lq1, lq2):
+        self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
@@ -193,6 +213,7 @@ class QrackNearCliffordQecBackend:
         self._correct(lq2, True, True)
 
     def cz(self, lq1, lq2):
+        self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
@@ -201,6 +222,7 @@ class QrackNearCliffordQecBackend:
         self._correct(lq2, True, False)
 
     def acx(self, lq1, lq2):
+        self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
@@ -209,6 +231,7 @@ class QrackNearCliffordQecBackend:
         self._correct(lq2, True, False)
 
     def acy(self, lq1, lq2):
+        self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
@@ -218,6 +241,7 @@ class QrackNearCliffordQecBackend:
 
 
     def acz(self, lq1, lq2):
+        self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
@@ -268,12 +292,15 @@ class QrackNearCliffordQecBackend:
         self.acz(lq1[0], lq2)
 
     def swap(self, lq1, lq2):
+        self.b[lq1], self.b[lq2] = self.b[lq2], self.b[lq1]
+        self.c[lq1], self.c[lq2] = self.c[lq2], self.c[lq1]
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
             self.sim.swap(hq1 + q, hq2 + q)
 
     def iswap(self, lq1, lq2):
+        self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
@@ -282,6 +309,7 @@ class QrackNearCliffordQecBackend:
         self._correct(lq2, True, False)
 
     def adjiswap(self, lq1, lq2):
+        self._prop_nc(lq1, lq2)
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
@@ -307,6 +335,9 @@ class QrackNearCliffordQecBackend:
                 if bits[q] == 1:
                     self.sim.x(hq + q)
 
+        self.b[lq] = 0
+        self.c[lq] = False
+
         return result
 
     def force_m(self, lq, result):
@@ -323,6 +354,9 @@ class QrackNearCliffordQecBackend:
             for q in range(self.code_len):
                 if bits[q] == 1:
                     self.sim.x(hq + q)
+
+        self.b[lq] = 0
+        self.c[lq] = False
 
         return result
 
