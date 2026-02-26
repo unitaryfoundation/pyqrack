@@ -28,43 +28,81 @@ class QrackNearCliffordQecBackend:
     def __init__(
         self,
         qubit_count=1,
+        code_len=3,
         toClone=None,
     ):
+        if (code_len < 3) or ((code_len & 1) == 0):
+            raise ValueError("QrackNearCliffordQecBackend code_len must be odd and >= 3!")
+
         if toClone:
             qubit_count = toClone.num_qubits()
         if qubit_count < 0:
             qubit_count = 0
-        self.n_qubits = qubit_count
-        self.code_len = 3
-        self.a0 = self.n_qubits * self.code_len
-        self.a1 = self.n_qubits * self.code_len + 1
 
-        self.sim = toClone.sim.clone() if toClone else QrackStabilizer(self.code_len * self.n_qubits + 2)
+        self.n_qubits = qubit_count
+        self.code_len = code_len
+
+        # Allocate (code_len - 1) ancillas
+        self.a = [
+            self.n_qubits * self.code_len + i
+            for i in range(self.code_len - 1)
+        ]
+
+        total_qubits = self.code_len * self.n_qubits + (self.code_len - 1)
+
+        self.sim = (
+            toClone.sim.clone()
+            if toClone
+            else QrackStabilizer(total_qubits)
+        )
+
+    def _correct(self, lq):
+        hq = self.code_len * lq
+
+        # --- Compute adjacent parity checks ---
+        for i in range(self.code_len - 1):
+            self.sim.mcx([hq + i], self.a[i])
+            self.sim.mcx([hq + i + 1], self.a[i])
+
+        # --- Measure syndrome ---
+        syndrome = [int(self.sim.m(aq)) for aq in self.a]
+
+        # --- Decode syndrome ---
+        if any(syndrome):
+
+            # Error on first qubit
+            if syndrome[0]:
+                error_index = 0
+
+            # Error on last qubit
+            elif syndrome[-1]:
+                error_index = self.code_len - 1
+
+            else:
+                # Find transition from 1 → 0
+                error_index = None
+                for i in range(len(syndrome) - 1):
+                    if syndrome[i] and not syndrome[i + 1]:
+                        error_index = i + 1
+                        break
+
+                # Fallback (shouldn't happen for single error)
+                if error_index is None:
+                    error_index = 0
+
+            # Apply correction
+            self.sim.x(hq + error_index)
+
+        # --- Reset ancillas ---
+        for i, bit in enumerate(syndrome):
+            if bit:
+                self.sim.x(self.a[i])
 
     def clone(self):
         return QrackNearCliffordQecBackend(toClone=self)
 
     def num_qubits(self):
         return self.n_qubits
-
-    def _correct(self, lq):
-        hq = self.code_len * lq
-        self.sim.mcx([hq], self.a0)
-        self.sim.mcx([hq + 1], self.a0)
-        self.sim.mcx([hq + 1], self.a1)
-        self.sim.mcx([hq + 2], self.a1)
-        b0 = self.sim.m(self.a0)
-        b1 = self.sim.m(self.a1)
-        if b0 and b1:
-            self.sim.x(hq + 1)
-        elif b0:
-            self.sim.x(hq)
-        elif b1:
-            self.sim.x(hq + 2)
-        if b0:
-            self.sim.x(self.a0)
-        if b1:
-            self.sim.x(self.a1)
 
     def rz(self, th, lq):
         hq = self.code_len * lq
