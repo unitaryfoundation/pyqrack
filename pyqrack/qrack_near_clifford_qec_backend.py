@@ -29,7 +29,8 @@ class QrackNearCliffordQecBackend:
     def __init__(
         self,
         qubit_count=1,
-        code_len=3,
+        code_len=5,
+        layers_per_qec_round = 3,
         toClone=None,
     ):
         if (code_len < 3) or ((code_len & 1) == 0):
@@ -42,6 +43,7 @@ class QrackNearCliffordQecBackend:
 
         self.n_qubits = qubit_count
         self.code_len = code_len
+        self.layers = layers_per_qec_round
 
         # Allocate (code_len - 1) ancillas
         self.a = [
@@ -124,7 +126,7 @@ class QrackNearCliffordQecBackend:
             return
 
         self.b[lq] += 1
-        if self.b[lq] % 2:
+        if self.b[lq] % self.layers:
             return
         self.b[lq] = 0
 
