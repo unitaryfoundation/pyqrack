@@ -290,9 +290,7 @@ class QrackNearCliffordQecBackend:
                 if value != int(conditional.val, 16):
                     return
 
-        if (name == "u1") or (name == "p"):
-            self._sim.u(operation.qubits[0]._index, 0, 0, float(operation.params[0]))
-        elif name == "rz":
+        if (name == "u1") or (name == "p") or (name == "rz"):
             self._sim.rz(float(operation.params[0]), operation.qubits[0]._index)
         elif name == "h":
             self._sim.h(operation.qubits[0]._index)
@@ -462,10 +460,6 @@ class QrackNearCliffordQecBackend:
                 self._apply_op(operation)
 
             if (shots > 0) and (len(self._sample_qubits) > 0):
-                _data += [bin(self._classical_memory)[2:].zfill(self.num_qubits())]
-                self._sample_qubits = []
-                self._sample_clbits = []
-                self._sample_cregbits = []
                 _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits))
         else:
             for shot in range(shots):
@@ -477,10 +471,6 @@ class QrackNearCliffordQecBackend:
                     self._apply_op(operation)
 
                 if len(self._sample_qubits) > 0:
-                    _data += [bin(self._classical_memory)[2:].zfill(self.num_qubits())]
-                    self._sample_qubits = []
-                    self._sample_clbits = []
-                    self._sample_cregbits = []
                     _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits))
 
                 del self._sim
