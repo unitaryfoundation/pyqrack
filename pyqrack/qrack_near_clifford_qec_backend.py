@@ -205,13 +205,13 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            self.sim.swap([hq1 + q], hq2 + q)
+            self.sim.swap(hq1 + q, hq2 + q)
 
     def iswap(self, lq1, lq2):
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            self.sim.iswap([hq1 + q], hq2 + q)
+            self.sim.iswap(hq1 + q, hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -219,7 +219,7 @@ class QrackNearCliffordQecBackend:
         hq1 = self.code_len * lq1
         hq2 = self.code_len * lq2
         for q in range(self.code_len):
-            self.sim.adjiswap([hq1 + q], hq2 + q)
+            self.sim.adjiswap(hq1 + q, hq2 + q)
         self._correct(lq1)
         self._correct(lq2)
 
@@ -430,9 +430,7 @@ class QrackNearCliffordQecBackend:
             qubit_outcome = (measure_result >> index) & 1
             clbit = measure_clbit[index]._index
             clmask = 1 << clbit
-            self._classical_memory = (self._classical_memory & (~clmask)) | (
-                qubit_outcome << clbit
-            )
+            self._classical_memory = (self._classical_memory & (~clmask)) | (qubit_outcome << clbit)
 
         data = bin(self._classical_memory)[2:].zfill(self.num_qubits())
 
@@ -468,7 +466,7 @@ class QrackNearCliffordQecBackend:
                 self._sample_qubits = []
                 self._sample_clbits = []
                 self._sample_cregbits = []
-                _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots))
+                _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits))
         else:
             for shot in range(shots):
                 self._sim = QrackNearCliffordQecBackend(toClone=self)
@@ -483,7 +481,7 @@ class QrackNearCliffordQecBackend:
                     self._sample_qubits = []
                     self._sample_clbits = []
                     self._sample_cregbits = []
-                    _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits, self._shots))
+                    _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits))
 
                 del self._sim
 
