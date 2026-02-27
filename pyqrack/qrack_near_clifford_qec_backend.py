@@ -3,6 +3,7 @@
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
 import math
+import random
 import sys
 
 from .qrack_stabilizer import QrackStabilizer
@@ -156,7 +157,11 @@ class QrackNearCliffordQecBackend:
         if math.fmod(abs(th), math.pi / 2) > sys.float_info.epsilon:
             self.c[lq] = True
         hq = self.code_len * lq
+        self.sim.set_stochastic(False)
+        p = [True, False] * (self.code_len >> 1) + [True]
+        random.shuffle(p)
         for q in range(self.code_len):
+            self.sim.set_major_quadrant(p[q])
             self.sim.r(Pauli.PauliZ, th, hq + q)
 
     def h(self, lq):
@@ -192,13 +197,21 @@ class QrackNearCliffordQecBackend:
     def t(self, lq):
         self.c[lq] = True
         hq = self.code_len * lq
+        self.sim.set_stochastic(False)
+        p = [True, False] * (self.code_len >> 1) + [True]
+        random.shuffle(p)
         for q in range(self.code_len):
+            self.sim.set_major_quadrant(p[q])
             self.sim.t(hq + q)
 
     def adjt(self, lq):
         self.c[lq] = True
         hq = self.code_len * lq
+        self.sim.set_stochastic(False)
+        p = [True, False] * (self.code_len >> 1) + [True]
+        random.shuffle(p)
         for q in range(self.code_len):
+            self.sim.set_major_quadrant(p[q])
             self.sim.adjt(hq + q)
 
     def cx(self, lq1, lq2):
