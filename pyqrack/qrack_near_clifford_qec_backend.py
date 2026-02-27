@@ -359,8 +359,23 @@ class QrackNearCliffordQecBackend:
     def m(self, lq):
         hq = self.code_len * lq
         bits = []
+        f = 0
+        t = 0
         for q in range(self.code_len):
-            bits.append(int(self.sim.m(hq + q)))
+            # Try to force the most agreement with majority possible
+            if ((t << 1) > self.code_len) and (self.sim.prob(hq + q) > 0):
+                b = self.sim.force_m(hq + q, True)
+            elif ((f << 1) > self.code_len) and (self.sim.prob(hq + q) < 1):
+                b = self.sim.force_m(hq + q, False)
+            else:
+                b = self.sim.m(hq + q)
+
+            if b:
+                t += 1
+            else:
+                f += 1
+
+            bits.append(int(b))
 
         count = sum(bits)
         result = (count << 1) > self.code_len
