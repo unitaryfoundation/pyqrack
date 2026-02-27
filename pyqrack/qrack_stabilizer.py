@@ -64,3 +64,11 @@ class QrackStabilizer(QrackSimulator):
     def set_major_quadrant(self, q):
         Qrack.qrack_lib.SetMajorQuadrant(self.sid, q)
         self._throw_if_error()
+
+    def flip_quadrant(self, q):
+        Qrack.qrack_lib.FlipQuadrant(self.sid, q)
+        self._throw_if_error()
+
+    def set_quadrant(self, q, b):
+        Qrack.qrack_lib.SetQuadrant(self.sid, q, b)
+        self._throw_if_error()
