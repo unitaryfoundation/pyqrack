@@ -31,7 +31,7 @@ class QrackNearCliffordQecBackend:
         self,
         qubit_count=1,
         code_len=5,
-        layers_per_qec_round = 4,
+        layers_per_qec_round = 0,
         is_eager = True,
         toClone=None,
     ):
@@ -128,7 +128,7 @@ class QrackNearCliffordQecBackend:
             self.sim.h(hq + i)
 
     def _correct(self, lq, b, p):
-        if not self.c[lq]:
+        if (self.layers == 0) or (not self.c[lq]):
             return
 
         hq = self.code_len * lq
