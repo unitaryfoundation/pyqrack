@@ -131,6 +131,15 @@ class QrackNearCliffordQecBackend:
         if not self.c[lq]:
             return
 
+        if self.layers > 0:
+            self.b[lq] += 1
+            if (self.b[lq] % self.layers) == 0:
+                self.b[lq] = 0
+                if p:
+                    self._correct_phase(lq)
+                if b:
+                    self._correct_bit(lq)
+
         hq = self.code_len * lq
 
         if p:
@@ -145,19 +154,6 @@ class QrackNearCliffordQecBackend:
                 self.sim.h(hq + q)
                 self.sim.set_quadrant(hq + q, w[q])
                 self.sim.h(hq + q)
-
-        if self.layers == 0:
-            return
-
-        self.b[lq] += 1
-        if self.b[lq] % self.layers:
-            return
-        self.b[lq] = 0
-
-        if p:
-            self._correct_phase(lq)
-        if b:
-            self._correct_bit(lq)
 
     def _prop_nc(self, lq1, lq2):
         if self.c[lq1]:
