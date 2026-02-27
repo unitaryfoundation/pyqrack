@@ -1238,6 +1238,12 @@ class QrackSystem:
         self.qrack_lib.SetMajorQuadrant.restype = None
         self.qrack_lib.SetMajorQuadrant.argtypes = [c_ulonglong, c_bool]
 
+        self.qrack_lib.FlipQuadrant.restype = None
+        self.qrack_lib.FlipQuadrant.argtypes = [c_ulonglong, c_ulonglong]
+
+        self.qrack_lib.SetQuadrant.restype = None
+        self.qrack_lib.SetQuadrant.argtypes = [c_ulonglong, c_ulonglong, c_bool]
+
         self.qrack_lib.Normalize.restype = None
         self.qrack_lib.Normalize.argtypes = [c_ulonglong]
 
