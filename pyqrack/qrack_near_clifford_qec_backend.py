@@ -30,9 +30,9 @@ class QrackNearCliffordQecBackend:
     def __init__(
         self,
         qubit_count=1,
-        code_len=7,
-        layers_per_qec_round = 2,
-        is_eager = False,
+        code_len=5,
+        layers_per_qec_round = 4,
+        is_eager = True,
         toClone=None,
     ):
         if (code_len < 3) or ((code_len & 1) == 0):
@@ -131,15 +131,29 @@ class QrackNearCliffordQecBackend:
         if not self.c[lq]:
             return
 
-        self.b[lq] += 1
-        if self.b[lq] % self.layers:
-            return
-        self.b[lq] = 0
+        if self.layers > 0:
+            self.b[lq] += 1
+            if (self.b[lq] % self.layers) == 0:
+                self.b[lq] = 0
+                if p:
+                    self._correct_phase(lq)
+                if b:
+                    self._correct_bit(lq)
+
+        hq = self.code_len * lq
 
         if p:
-            self._correct_phase(lq)
+            w = [True, False] * (self.code_len >> 1) + [True]
+            random.shuffle(w)
+            for q in range(self.code_len):
+                self.sim.set_quadrant(hq + q, w[q])
         if b:
-            self._correct_bit(lq)
+            w = [True, False] * (self.code_len >> 1) + [True]
+            random.shuffle(w)
+            for q in range(self.code_len):
+                self.sim.h(hq + q)
+                self.sim.set_quadrant(hq + q, w[q])
+                self.sim.h(hq + q)
 
     def _prop_nc(self, lq1, lq2):
         if self.c[lq1]:
@@ -157,12 +171,11 @@ class QrackNearCliffordQecBackend:
         if math.fmod(abs(th), math.pi / 2) > sys.float_info.epsilon:
             self.c[lq] = True
         hq = self.code_len * lq
-        self.sim.set_stochastic(False)
         p = [True, False] * (self.code_len >> 1) + [True]
         random.shuffle(p)
         for q in range(self.code_len):
-            self.sim.set_major_quadrant(p[q])
             self.sim.r(Pauli.PauliZ, th, hq + q)
+            self.sim.set_quadrant(hq + q, p[q])
 
     def h(self, lq):
         hq = self.code_len * lq
@@ -197,22 +210,20 @@ class QrackNearCliffordQecBackend:
     def t(self, lq):
         self.c[lq] = True
         hq = self.code_len * lq
-        self.sim.set_stochastic(False)
         p = [True, False] * (self.code_len >> 1) + [True]
         random.shuffle(p)
         for q in range(self.code_len):
-            self.sim.set_major_quadrant(p[q])
             self.sim.t(hq + q)
+            self.sim.set_quadrant(hq + q, p[q])
 
     def adjt(self, lq):
         self.c[lq] = True
         hq = self.code_len * lq
-        self.sim.set_stochastic(False)
         p = [True, False] * (self.code_len >> 1) + [True]
         random.shuffle(p)
         for q in range(self.code_len):
-            self.sim.set_major_quadrant(p[q])
             self.sim.adjt(hq + q)
+            self.sim.set_quadrant(hq + q, p[q])
 
     def cx(self, lq1, lq2):
         if not self.is_eager:
