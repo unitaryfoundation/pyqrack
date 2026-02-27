@@ -4217,7 +4217,7 @@ class QrackSimulator:
             elif relation == ">=":
                 outcome = compared >= 0
             else:
-                raise QrackError("Invalid boolean function relation.")
+                raise RuntimeError("Invalid boolean function relation.")
 
             # Store outcome in register and optionally memory slot
             regbit = 1 << cregbit
