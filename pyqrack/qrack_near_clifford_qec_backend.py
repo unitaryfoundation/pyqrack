@@ -31,7 +31,7 @@ class QrackNearCliffordQecBackend:
         self,
         qubit_count=1,
         code_len=7,
-        layers_per_qec_round = 2,
+        layers_per_qec_round = 4,
         is_eager = False,
         toClone=None,
     ):
