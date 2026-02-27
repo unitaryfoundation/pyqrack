@@ -128,7 +128,7 @@ class QrackNearCliffordQecBackend:
             self.sim.h(hq + i)
 
     def _correct(self, lq, b, p):
-        if (self.layers == 0) or (not self.c[lq]):
+        if not self.c[lq]:
             return
 
         hq = self.code_len * lq
@@ -136,6 +136,9 @@ class QrackNearCliffordQecBackend:
         random.shuffle(p)
         for q in range(self.code_len):
             self.sim.set_quadrant(hq + q, p[q])
+
+        if self.layers == 0:
+            return
 
         self.b[lq] += 1
         if self.b[lq] % self.layers:
