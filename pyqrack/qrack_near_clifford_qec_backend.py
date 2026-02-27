@@ -30,7 +30,7 @@ class QrackNearCliffordQecBackend:
     def __init__(
         self,
         qubit_count=1,
-        code_len=5,
+        code_len=9,
         layers_per_qec_round = 2,
         is_eager = False,
         toClone=None,
