@@ -178,8 +178,8 @@ class QrackNearCliffordQecBackend:
         p = [True, False] * (self.code_len >> 1) + [True]
         random.shuffle(p)
         for q in range(self.code_len):
-            self.sim.r(Pauli.PauliZ, th, hq + q)
             self.sim.set_quadrant(hq + q, p[q])
+            self.sim.r(Pauli.PauliZ, th, hq + q)
 
     def h(self, lq):
         hq = self.code_len * lq
@@ -217,8 +217,8 @@ class QrackNearCliffordQecBackend:
         p = [True, False] * (self.code_len >> 1) + [True]
         random.shuffle(p)
         for q in range(self.code_len):
-            self.sim.t(hq + q)
             self.sim.set_quadrant(hq + q, p[q])
+            self.sim.t(hq + q)
 
     def adjt(self, lq):
         self.c[lq] = True
@@ -226,8 +226,8 @@ class QrackNearCliffordQecBackend:
         p = [True, False] * (self.code_len >> 1) + [True]
         random.shuffle(p)
         for q in range(self.code_len):
-            self.sim.adjt(hq + q)
             self.sim.set_quadrant(hq + q, p[q])
+            self.sim.adjt(hq + q)
 
     def cx(self, lq1, lq2):
         if not self.is_eager:
