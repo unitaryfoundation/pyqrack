@@ -1203,6 +1203,9 @@ class QrackSystem:
         self.qrack_lib.SetNcrp.restype = None
         self.qrack_lib.SetNcrp.argtypes = [c_ulonglong, c_double]
 
+        self.qrack_lib.SetSprp.restype = None
+        self.qrack_lib.SetSprp.argtypes = [c_ulonglong, c_double]
+
         self.qrack_lib.SetReactiveSeparate.restype = None
         self.qrack_lib.SetReactiveSeparate.argtypes = [c_ulonglong, c_bool]
 

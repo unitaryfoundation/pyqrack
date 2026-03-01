@@ -3185,6 +3185,19 @@ class QrackSimulator:
         Qrack.qrack_lib.SetNcrp(self.sid, ncrp)
         self._throw_if_error()
 
+    def set_sprp(self, sprp):
+        """Set "sparse probability rounding parameter"
+
+        When using sparse simulation, any amplitude with probability
+        less than or equal to "SPRP" will be truncated out of the sparse
+        representation.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetSprp(self.sid, sprp)
+        self._throw_if_error()
+
     def set_reactive_separate(self, irs):
         """Set reactive separation option
 
