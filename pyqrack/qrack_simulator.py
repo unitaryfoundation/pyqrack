@@ -1129,10 +1129,22 @@ class QrackSimulator:
         Returns:
             list of measurement result.
         """
-        m = QrackSimulator._ulonglong_byref([0] * s)
+        w = (len(q) - 1) // 64 + 1
+        m = QrackSimulator._ulonglong_byref([0] * w * s)
         Qrack.qrack_lib.MeasureShots(self.sid, len(q), QrackSimulator._ulonglong_byref(q), s, m)
         self._throw_if_error()
-        return [m[i] for i in range(s)]
+
+        if w > 1:
+            o = []
+            for i in range(s):
+                t = 0
+                for j in range(w):
+                    t |= m[i * w + j]
+                o.append(t)
+        else:
+            o = [m[i] for i in range(s)]
+
+        return o
 
     def reset_all(self):
         """Reset gate
