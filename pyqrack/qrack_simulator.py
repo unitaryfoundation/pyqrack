@@ -1139,6 +1139,7 @@ class QrackSimulator:
             for i in range(s):
                 t = 0
                 for j in range(w):
+                    t <<= 64
                     t |= m[i * w + j]
                 o.append(t)
         else:
