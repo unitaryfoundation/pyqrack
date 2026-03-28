@@ -122,7 +122,6 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
-          brew upgrade
           brew install cmake boost
 
       - name: Build Wheel
@@ -160,7 +159,6 @@ jobs:
 
       - name: Prepare Build Environment (MacOS)
         run: |
-          brew upgrade
           brew install cmake boost
 
       - name: Build Wheel
