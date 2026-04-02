@@ -3434,8 +3434,8 @@ class QrackSimulator:
 
         return out
 
-    def lossy_out_to_file(self, f, b=0, p=4):
-        Qrack.qrack_lib.lossy_out_to_file(self.sid, b, p, f.encode("utf-8"))
+    def lossy_out_to_file(self, f, p=10, b=4):
+        Qrack.qrack_lib.lossy_out_to_file(self.sid, f.encode("utf-8"), min(p, self.num_qubits()), b)
         self._throw_if_error()
 
     def lossy_in_from_file(self, f):
