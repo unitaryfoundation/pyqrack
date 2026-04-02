@@ -1257,7 +1257,7 @@ class QrackSystem:
         self.qrack_lib.qstabilizer_in_from_file.argtypes = [c_ulonglong, c_char_p]
 
         self.qrack_lib.lossy_out_to_file.restype = None
-        self.qrack_lib.lossy_out_to_file.argtypes = [c_ulonglong, c_int, c_int, c_char_p]
+        self.qrack_lib.lossy_out_to_file.argtypes = [c_ulonglong, c_char_p, c_int, c_int]
 
         self.qrack_lib.lossy_in_from_file.restype = None
         self.qrack_lib.lossy_in_from_file.argtypes = [c_ulonglong, c_char_p]
