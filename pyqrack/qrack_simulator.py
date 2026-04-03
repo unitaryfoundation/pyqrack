@@ -77,7 +77,6 @@ class QrackSimulator:
                 "Cannot clone a QrackSimulator and specify its qubit length at the same time, in QrackSimulator constructor!"
             )
 
-        self.is_tensor_network = isTensorNetwork
         self.is_pure_stabilizer = False
 
         if cloneSid > -1:
@@ -1130,10 +1129,23 @@ class QrackSimulator:
         Returns:
             list of measurement result.
         """
-        m = QrackSimulator._ulonglong_byref([0] * s)
+        w = (len(q) - 1) // 64 + 1
+        m = QrackSimulator._ulonglong_byref([0] * w * s)
         Qrack.qrack_lib.MeasureShots(self.sid, len(q), QrackSimulator._ulonglong_byref(q), s, m)
         self._throw_if_error()
-        return [m[i] for i in range(s)]
+
+        if w > 1:
+            o = []
+            for i in range(s):
+                t = 0
+                for j in range(w):
+                    t <<= 64
+                    t |= m[i * w + j]
+                o.append(t)
+        else:
+            o = [m[i] for i in range(s)]
+
+        return o
 
     def reset_all(self):
         """Reset gate
@@ -1307,15 +1319,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mul()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot mul()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot mul()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot mul()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot mul()! (Create a QrackSimulator instead.)"
             )
 
         if len(q) != len(o):
@@ -1346,15 +1354,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot div()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot div()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot div()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot div()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot div()! (Create a QrackSimulator instead.)"
             )
 
         if len(q) != len(o):
@@ -1443,15 +1447,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot pown()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot pown()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot pown()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot pown()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot pown()! (Create a QrackSimulator instead.)"
             )
 
         if len(q) != len(o):
@@ -1536,15 +1536,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcmul()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot mcmul()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot mcmul()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot mcmul()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot mcmul()! (Create a QrackSimulator instead.)"
             )
 
         if len(q) != len(o):
@@ -1578,15 +1574,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcdiv()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot mcdiv()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot mcdiv()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot mcdiv()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot mcdiv()! (Create a QrackSimulator instead.)"
             )
 
         if len(q) != len(o):
@@ -1686,15 +1678,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot mcpown()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot mcpown()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot mcpown()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot mcpown()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot mcpown()! (Create a QrackSimulator instead.)"
             )
 
         if len(q) != len(o):
@@ -1727,15 +1715,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot lda()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot lda()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot lda()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot lda()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot lda()! (Create a QrackSimulator instead.)"
             )
 
         Qrack.qrack_lib.LDA(
@@ -1761,15 +1745,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot adc()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot adc()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot adc()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot adc()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot adc()! (Create a QrackSimulator instead.)"
             )
 
         Qrack.qrack_lib.ADC(
@@ -1796,15 +1776,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot sbc()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot sbc()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot sbc()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot sbc()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot sbc()! (Create a QrackSimulator instead.)"
             )
 
         Qrack.qrack_lib.SBC(
@@ -1832,15 +1808,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot hash()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot hash()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot hash()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot hash()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot hash()! (Create a QrackSimulator instead.)"
             )
 
         Qrack.qrack_lib.Hash(
@@ -2150,13 +2122,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot compose()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot compose()! (Turn off just this option, in the constructor.)"
-            )
-
         Qrack.qrack_lib.Compose(self.sid, other.sid, QrackSimulator._ulonglong_byref(q))
         self._throw_if_error()
 
@@ -2170,16 +2136,10 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot decompose()! (Turn off just this option, in the constructor.)
 
         Returns:
             Decomposed subsystem simulator.
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot decompose()! (Turn off just this option, in the constructor.)"
-            )
-
         other = QrackSimulator()
         Qrack.qrack_lib.destroy(other.sid)
         l = len(q)
@@ -2198,13 +2158,7 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot dispose()! (Turn off just this option, in the constructor.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot dispose()! (Turn off just this option, in the constructor.)"
-            )
-
         l = len(q)
         Qrack.qrack_lib.Dispose(self.sid, l, QrackSimulator._ulonglong_byref(q))
         self._throw_if_error()
@@ -3128,15 +3082,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot phase_parity()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot phase_parity()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot phase_parity()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot phase_parity()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot phase_parity()! (Create a QrackSimulator instead.)"
             )
 
         Qrack.qrack_lib.PhaseParity(
@@ -3155,15 +3105,11 @@ class QrackSimulator:
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
-            RuntimeError: QrackSimulator with isTensorNetwork=True option cannot phase_root_n()! (Turn off just this option, in the constructor.)
+            RuntimeError: QrackStabilizer cannot phase_root_n()! (Create a QrackSimulator instead.)
         """
-        if self.is_tensor_network:
-            raise RuntimeError(
-                "QrackSimulator with isTensorNetwork=True option cannot phase_root_n()! (Turn off just this option, in the constructor.)"
-            )
         if self.is_pure_stabilizer:
             raise RuntimeError(
-                "QrackStabilizer cannot phase_root_n()! (Create a QrackSimulator instead, also with isTensorNetwork=False.)"
+                "QrackStabilizer cannot phase_root_n()! (Create a QrackSimulator instead.)"
             )
 
         Qrack.qrack_lib.PhaseRootN(self.sid, n, len(q), QrackSimulator._ulonglong_byref(q))
@@ -3318,6 +3264,19 @@ class QrackSimulator:
         Qrack.qrack_lib.SetNcrp(self.sid, ncrp)
         self._throw_if_error()
 
+    def set_sprp(self, sprp):
+        """Set "sparse probability rounding parameter"
+
+        When using sparse simulation, any amplitude with probability
+        less than or equal to "SPRP" will be truncated out of the sparse
+        representation.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetSprp(self.sid, sprp)
+        self._throw_if_error()
+
     def set_reactive_separate(self, irs):
         """Set reactive separation option
 
@@ -3346,6 +3305,21 @@ class QrackSimulator:
             RuntimeError: QrackSimulator raised an exception.
         """
         Qrack.qrack_lib.SetTInjection(self.sid, iti)
+        self._throw_if_error()
+
+    def set_use_exact_near_clifford(self, enc):
+        """Set option to use exact near-Clifford simulation
+
+        If t-injection is available, this method turns exact near-Clifford
+        simulation off/on. (Default is on.) Approximate methods are faster.
+
+        Args:
+            enc: "on/off" for exact near-Clifford simulation
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.SetUseExactNearClifford(self.sid, enc)
         self._throw_if_error()
 
     def set_noise_parameter(self, np):
@@ -3459,6 +3433,14 @@ class QrackSimulator:
         out._throw_if_error()
 
         return out
+
+    def lossy_out_to_file(self, f, p=10, b=4):
+        Qrack.qrack_lib.lossy_out_to_file(self.sid, f.encode("utf-8"), min(p, self.num_qubits()), b)
+        self._throw_if_error()
+
+    def lossy_in_from_file(self, f):
+        Qrack.qrack_lib.lossy_in_from_file(self.sid, f.encode("utf-8"))
+        self._throw_if_error()
 
     def file_to_qiskit_circuit(filename, is_hardware_encoded=False):
         """Convert an output state file to a Qiskit circuit
@@ -4335,7 +4317,7 @@ class QrackSimulator:
             elif relation == ">=":
                 outcome = compared >= 0
             else:
-                raise QrackError("Invalid boolean function relation.")
+                raise RuntimeError("Invalid boolean function relation.")
 
             # Store outcome in register and optionally memory slot
             regbit = 1 << cregbit

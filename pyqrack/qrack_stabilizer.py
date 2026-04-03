@@ -56,3 +56,19 @@ class QrackStabilizer(QrackSimulator):
             self.run_pyzx_gates(pyzxCircuit.gates)
         elif qiskitCircuit is not None:
             self.run_qiskit_circuit(qiskitCircuit)
+
+    def set_stochastic(self, s):
+        Qrack.qrack_lib.SetStochastic(self.sid, s)
+        self._throw_if_error()
+
+    def set_major_quadrant(self, q):
+        Qrack.qrack_lib.SetMajorQuadrant(self.sid, q)
+        self._throw_if_error()
+
+    def flip_quadrant(self, q):
+        Qrack.qrack_lib.FlipQuadrant(self.sid, q)
+        self._throw_if_error()
+
+    def set_quadrant(self, q, b):
+        Qrack.qrack_lib.SetQuadrant(self.sid, q, b)
+        self._throw_if_error()

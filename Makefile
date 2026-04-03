@@ -30,21 +30,21 @@ build-deps:
 	rm -rf pyqrack/qrack_system/qrack_cl_precompile
 ifneq ($(OS),Windows_NT)
 ifeq ($(QRACK_PRESENT),)
-	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout df0d945f5c6c37be5bb2f619587f76ae2e2187ec; cd ..
+	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout ce71b37faec696e658a867444172a12c0f169607; cd ..
 endif
 	mkdir -p qrack/build
 ifeq ($(UNAME_S),Linux)
 ifneq ($(filter $(UNAME_P),x86_64 i386),)
-	cd qrack/build; $(CMAKE_L) -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; $(CMAKE_L) -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DQBCAPPOW=10 ..; make qrack_pinvoke qrack_cl_precompile
 else
-	cd qrack/build; $(CMAKE_L) -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; $(CMAKE_L) -DENABLE_RDRAND=OFF -DENABLE_DEVRAND=ON -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=10 ..; make qrack_pinvoke qrack_cl_precompile
 endif
 endif
 ifeq ($(UNAME_S),Darwin)
 ifneq ($(filter $(UNAME_P),x86_64 i386),)
-	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DQBCAPPOW=8 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DQBCAPPOW=10 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
 else
-	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=8 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
+	cd qrack/build; cmake -DENABLE_OPENCL=OFF -DENABLE_RDRAND=OFF -DENABLE_COMPLEX_X2=OFF -DENABLE_SSE3=OFF -DQBCAPPOW=10 -DBoost_INCLUDE_DIR=/opt/homebrew/include -DBoost_LIBRARY_DIRS=/opt/homebrew/lib ..; make qrack_pinvoke qrack_cl_precompile
 endif
 endif
 endif
