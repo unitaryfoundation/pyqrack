@@ -1,3 +1,33 @@
+pyqrack (1.88.6) jammy; urgency=medium
+
+  * TurboQuant-based lossy state vector save/load
+
+ -- Daniel Strano <stranoj@gmail.com>  Fri, 03 Apr 2026 02:49:59 -0400
+
+pyqrack (1.88.5) bionic; urgency=medium
+
+  * TurboQuant-based lossy state vector save/load
+
+ -- Daniel Strano <stranoj@gmail.com>  Fri, 03 Apr 2026 02:47:11 -0400
+
+pyqrack (1.88.4) focal; urgency=medium
+
+  * TurboQuant-based lossy state vector save/load
+
+ -- Daniel Strano <stranoj@gmail.com>  Fri, 03 Apr 2026 02:41:50 -0400
+
+pyqrack (1.88.3) noble; urgency=medium
+
+  * Rebuild on RISCV
+
+ -- Daniel Strano <stranoj@gmail.com>  Fri, 03 Apr 2026 02:15:19 -0400
+
+pyqrack (1.88.2) noble; urgency=medium
+
+  * TurboQuant-based lossy state vector save/load
+
+ -- Daniel Strano <stranoj@gmail.com>  Fri, 03 Apr 2026 01:32:59 -0400
+
 pyqrack (1.66.5) bionic; urgency=medium
 
   * Reduced density matrices (Bionic 4/4)
