@@ -30,7 +30,7 @@ build-deps:
 	rm -rf pyqrack/qrack_system/qrack_cl_precompile
 ifneq ($(OS),Windows_NT)
 ifeq ($(QRACK_PRESENT),)
-	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout ce71b37faec696e658a867444172a12c0f169607; cd ..
+	git clone https://github.com/unitaryfund/qrack.git; cd qrack; git checkout 94fbfa206911c3acd386c085bfd6171c0cd0ab06; cd ..
 endif
 	mkdir -p qrack/build
 ifeq ($(UNAME_S),Linux)
