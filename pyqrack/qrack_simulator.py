@@ -69,7 +69,7 @@ class QrackSimulator:
             is_opencl = False
 
         if pyzx_circuit is not None:
-            qubitCount = pyzx_circuit.qubits
+            qubit_count = pyzx_circuit.qubits
         elif qiskit_circuit is not None and qubit_count < 0:
             raise RuntimeError(
                 "Must specify qubitCount with qiskitCircuit parameter in QrackSimulator constructor!"
@@ -83,7 +83,7 @@ class QrackSimulator:
         self.is_pure_stabilizer = False
 
         if clone_sid > -1:
-            self.sid = Qrack.qrack_lib.init_clone(cloneSid)
+            self.sid = Qrack.qrack_lib.init_clone(clone_sid)
         else:
             if qubit_count < 0:
                 qubit_count = 0
@@ -110,8 +110,8 @@ class QrackSimulator:
 
         if pyzx_circuit is not None:
             self.run_pyzx_gates(pyzx_circuit.gates)
-        elif qiskitCircuit is not None:
-            self.run_qiskit_circuit(qiskitCircuit)
+        elif qiskit_circuit is not None:
+            self.run_qiskit_circuit(qiskit_circuit)
 
     def __del__(self):
         if self.sid is not None:
