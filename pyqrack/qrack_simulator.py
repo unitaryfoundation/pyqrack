@@ -53,7 +53,7 @@ class QrackSimulator:
         is_schmidt_decompose=True,
         is_stabilizer_hybrid=False,
         is_binary_decision_tree=False,
-        is_opencl=True,
+        is_gpu=True,
         is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
         is_sparse=False,
         is_near_clifford_tableau_writer=False,
@@ -70,11 +70,11 @@ class QrackSimulator:
             is_tensor_network=False
             is_schmidt_decompose=False
             is_stabilizer_hybrid=True
-            is_opencl=False
+            is_gpu=False
         else:
             is_tensor_network=True
             if is_sparse:
-                is_opencl = False
+                is_gpu = False
 
         if pyzx_circuit is not None:
             qubit_count = pyzx_circuit.qubits
@@ -106,7 +106,7 @@ class QrackSimulator:
                 is_paged,
                 (noise > 0),
                 is_cpu_gpu_hybrid,
-                is_opencl,
+                is_gpu,
                 is_host_pointer,
                 is_sparse,
             )
@@ -3411,11 +3411,11 @@ class QrackSimulator:
     def in_from_file(
         filename,
         is_binary_decision_tree=False,
-        is_paged=True,
-        is_cpu_gpu_hybrid=False,
-        is_opencl=True,
-        is_host_pointer=False,
-        is_noisy=False,
+        is_gpu=True,
+        is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
+        is_sparse=False,
+        is_near_clifford_tableau_writer=False,
+        noise=0,
     ):
         """Input state from file (stabilizer only!)
 
@@ -3429,16 +3429,15 @@ class QrackSimulator:
             qb_count = int(f.readline())
         out = QrackSimulator(
             qubitCount=qb_count,
-            isTensorNetwork=False,
-            isSchmidtDecomposeMulti=False,
-            isSchmidtDecompose=False,
-            isStabilizerHybrid=True,
-            isBinaryDecisionTree=is_binary_decision_tree,
-            isPaged=is_paged,
-            isCpuGpuHybrid=is_cpu_gpu_hybrid,
-            isOpenCL=is_opencl,
-            isHostPointer=is_host_pointer,
-            isNoisy=is_noisy,
+            is_schmidt_decompose_multi=False,
+            is_schmidt_decompose=False,
+            is_stabilizer_hybrid=True,
+            is_binary_decision_tree=is_binary_decision_tree,
+            is_gpu=is_gpu,
+            is_host_pointer=is_host_pointer,
+            is_sparse=is_sparse,
+            is_near_clifford_tableau_writer=is_near_clifford_tableau_writer,
+            noise=noise,
         )
         Qrack.qrack_lib.qstabilizer_in_from_file(out.sid, filename.encode("utf-8"))
         out._throw_if_error()
