@@ -56,17 +56,23 @@ class QrackSimulator:
         is_opencl=True,
         is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
         is_sparse=False,
+        is_near_clifford_tableau_writer=False,
         noise=0,
         pyzx_circuit=None,
         qiskit_circuit=None,
     ):
         self.sid = None
 
-        is_tensor_network=True
-        is_paged=True
-        is_cpu_gpu_hybrid=True
-        if is_sparse:
-            is_opencl = False
+        if is_near_clifford_tableau_writer:
+            is_tensor_network=False
+            is_schmidt_decompose=False
+            is_stabilizer_hybrid=True
+        else:
+            is_tensor_network=True
+            is_paged=True
+            is_cpu_gpu_hybrid=True
+            if is_sparse:
+                is_opencl = False
 
         if pyzx_circuit is not None:
             qubit_count = pyzx_circuit.qubits
