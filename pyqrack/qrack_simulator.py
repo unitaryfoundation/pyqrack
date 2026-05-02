@@ -108,8 +108,8 @@ class QrackSimulator:
         if noise > 0:
             self.set_noise_parameter(noise)
 
-        if pyzxCircuit is not None:
-            self.run_pyzx_gates(pyzxCircuit.gates)
+        if pyzx_circuit is not None:
+            self.run_pyzx_gates(pyzx_circuit.gates)
         elif qiskitCircuit is not None:
             self.run_qiskit_circuit(qiskitCircuit)
 
