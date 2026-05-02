@@ -47,57 +47,66 @@ class QrackSimulator:
 
     def __init__(
         self,
-        qubitCount=-1,
-        cloneSid=-1,
-        isTensorNetwork=True,
-        isSchmidtDecomposeMulti=False,
-        isSchmidtDecompose=True,
-        isStabilizerHybrid=False,
-        isBinaryDecisionTree=False,
-        isPaged=True,
-        isCpuGpuHybrid=True,
-        isOpenCL=True,
-        isHostPointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
-        isSparse=False,
+        qubit_count=-1,
+        clone_sid=-1,
+        is_schmidt_decompose_multi=False,
+        is_schmidt_decompose=True,
+        is_stabilizer_hybrid=False,
+        is_binary_decision_tree=False,
+        is_opencl=True,
+        is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
+        is_sparse=False,
+        is_near_clifford_tableau_writer=False,
         noise=0,
-        pyzxCircuit=None,
-        qiskitCircuit=None,
+        pyzx_circuit=None,
+        qiskit_circuit=None,
     ):
         self.sid = None
 
-        if pyzxCircuit is not None:
-            qubitCount = pyzxCircuit.qubits
-        elif qiskitCircuit is not None and qubitCount < 0:
+        if is_near_clifford_tableau_writer:
+            is_tensor_network=False
+            is_schmidt_decompose=False
+            is_stabilizer_hybrid=True
+        else:
+            is_tensor_network=True
+            is_paged=True
+            is_cpu_gpu_hybrid=True
+            if is_sparse:
+                is_opencl = False
+
+        if pyzx_circuit is not None:
+            qubit_count = pyzx_circuit.qubits
+        elif qiskit_circuit is not None and qubit_count < 0:
             raise RuntimeError(
                 "Must specify qubitCount with qiskitCircuit parameter in QrackSimulator constructor!"
             )
 
-        if qubitCount > -1 and cloneSid > -1:
+        if qubit_count > -1 and clone_sid > -1:
             raise RuntimeError(
                 "Cannot clone a QrackSimulator and specify its qubit length at the same time, in QrackSimulator constructor!"
             )
 
         self.is_pure_stabilizer = False
 
-        if cloneSid > -1:
-            self.sid = Qrack.qrack_lib.init_clone(cloneSid)
+        if clone_sid > -1:
+            self.sid = Qrack.qrack_lib.init_clone(clone_sid)
         else:
-            if qubitCount < 0:
-                qubitCount = 0
+            if qubit_count < 0:
+                qubit_count = 0
 
             self.sid = Qrack.qrack_lib.init_count_type(
-                qubitCount,
-                isTensorNetwork,
-                isSchmidtDecomposeMulti,
-                isSchmidtDecompose,
-                isStabilizerHybrid,
-                isBinaryDecisionTree,
-                isPaged,
+                qubit_count,
+                is_tensor_network,
+                is_schmidt_decompose_multi,
+                is_schmidt_decompose,
+                is_stabilizer_hybrid,
+                is_binary_decision_tree,
+                is_paged,
                 (noise > 0),
-                isCpuGpuHybrid,
-                isOpenCL,
-                isHostPointer,
-                isSparse,
+                is_cpu_gpu_hybrid,
+                is_opencl,
+                is_host_pointer,
+                is_sparse,
             )
 
         self._throw_if_error()
@@ -105,10 +114,10 @@ class QrackSimulator:
         if noise > 0:
             self.set_noise_parameter(noise)
 
-        if pyzxCircuit is not None:
-            self.run_pyzx_gates(pyzxCircuit.gates)
-        elif qiskitCircuit is not None:
-            self.run_qiskit_circuit(qiskitCircuit)
+        if pyzx_circuit is not None:
+            self.run_pyzx_gates(pyzx_circuit.gates)
+        elif qiskit_circuit is not None:
+            self.run_qiskit_circuit(qiskit_circuit)
 
     def __del__(self):
         if self.sid is not None:

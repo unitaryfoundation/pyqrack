@@ -30,10 +30,10 @@ except ImportError:
 # Initial stub and concept produced through conversation with Elara
 # (the custom OpenAI GPT)
 class LHVQubit:
-    def __init__(self, toClone=None):
+    def __init__(self, to_clone=None):
         # Initial state in "Bloch vector" terms, defaults to |0⟩
-        if toClone:
-            self.bloch = toClone.bloch.copy()
+        if to_clone:
+            self.bloch = to_clone.bloch.copy()
         else:
             self.reset()
 
@@ -216,23 +216,21 @@ class QrackAceBackend:
         long_range_columns=4,
         long_range_rows=4,
         is_transpose=False,
-        isTensorNetwork=False,
-        isSchmidtDecomposeMulti=False,
-        isSchmidtDecompose=True,
-        isStabilizerHybrid=False,
-        isBinaryDecisionTree=False,
-        isPaged=True,
-        isCpuGpuHybrid=True,
-        isOpenCL=True,
-        isHostPointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
+        is_schmidt_decompose_multi=False,
+        is_schmidt_decompose=True,
+        is_stabilizer_hybrid=False,
+        is_binary_decision_tree=False,
+        is_opencl=True,
+        is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
+        is_near_clifford_tableau_writer=False,
         noise=0,
-        toClone=None,
+        to_clone=None,
     ):
-        if toClone:
-            qubit_count = toClone.num_qubits()
-            long_range_columns = toClone.long_range_columns
-            long_range_rows = toClone.long_range_rows
-            is_transpose = toClone.is_transpose
+        if to_clone:
+            qubit_count = to_clone.num_qubits()
+            long_range_columns = to_clone.long_range_columns
+            long_range_rows = to_clone.long_range_rows
+            is_transpose = to_clone.is_transpose
         if qubit_count < 0:
             qubit_count = 0
         if long_range_columns < 0:
@@ -292,7 +290,7 @@ class QrackAceBackend:
                     sim_counts[t_sim_id] += 1
 
                     qubit.append(
-                        LHVQubit(toClone=(toClone._qubits[tot_qubits][2] if toClone else None))
+                        LHVQubit(to_clone=(to_clone._qubits[tot_qubits][2] if to_clone else None))
                     )
 
                 if (not c) and (not r):
@@ -313,19 +311,17 @@ class QrackAceBackend:
         self.sim = []
         for i in range(sim_count):
             self.sim.append(
-                toClone.sim[i].clone()
-                if toClone
+                to_clone.sim[i].clone()
+                if to_clone
                 else QrackSimulator(
                     sim_counts[i],
-                    isTensorNetwork=isTensorNetwork,
-                    isSchmidtDecomposeMulti=isSchmidtDecomposeMulti,
-                    isSchmidtDecompose=isSchmidtDecompose,
-                    isStabilizerHybrid=isStabilizerHybrid,
-                    isBinaryDecisionTree=isBinaryDecisionTree,
-                    isPaged=isPaged,
-                    isCpuGpuHybrid=isCpuGpuHybrid,
-                    isOpenCL=isOpenCL,
-                    isHostPointer=isHostPointer,
+                    is_schmidt_decompose_multi=is_schmidt_decompose_multi,
+                    is_schmidt_decompose=is_schmidt_decompose,
+                    is_stabilizer_hybrid=is_stabilizer_hybrid,
+                    is_binary_decision_tree=is_binary_decision_tree,
+                    is_opencl=is_opencl,
+                    is_host_pointer=is_host_pointer,
+                    is_near_clifford_tableau_writer=is_near_clifford_tableau_writer,
                     noise=noise,
                 )
             )
@@ -336,7 +332,7 @@ class QrackAceBackend:
                 self.sim[i].set_sdrp(0.073223304703363119)
 
     def clone(self):
-        return QrackAceBackend(toClone=self)
+        return QrackAceBackend(to_clone=self)
 
     def num_qubits(self):
         return self._row_length * self._col_length
@@ -1398,7 +1394,7 @@ class QrackAceBackend:
                 self._classical_memory = 0
                 self._classical_register = 0
             else:
-                self._sim = QrackAceBackend(toClone=preamble_sim)
+                self._sim = QrackAceBackend(to_clone=preamble_sim)
                 self._classical_memory = preamble_memory
                 self._classical_register = preamble_register
 
