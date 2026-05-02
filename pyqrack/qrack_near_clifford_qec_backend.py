@@ -33,16 +33,16 @@ class QrackNearCliffordQecBackend:
         code_len=5,
         layers_per_qec_round = 0,
         is_eager = True,
-        toClone=None,
+        to_clone=None,
     ):
         if (code_len < 3) or ((code_len & 1) == 0):
             raise ValueError("QrackNearCliffordQecBackend code_len must be odd and >= 3!")
 
-        if toClone:
-            qubit_count = toClone.num_qubits()
-            code_len = toClone.code_len
-            layers_per_qec_round = toClone.layers
-            is_eager = toClone.is_eager
+        if to_clone:
+            qubit_count = to_clone.num_qubits()
+            code_len = to_clone.code_len
+            layers_per_qec_round = to_clone.layers
+            is_eager = to_clone.is_eager
         if qubit_count < 0:
             qubit_count = 0
 
@@ -66,8 +66,8 @@ class QrackNearCliffordQecBackend:
         total_qubits = self.code_len * self.n_qubits + (self.code_len - 1)
 
         self.sim = (
-            toClone.sim.clone()
-            if toClone
+            to_clone.sim.clone()
+            if to_clone
             else QrackStabilizer(total_qubits)
         )
 
@@ -162,7 +162,7 @@ class QrackNearCliffordQecBackend:
             self.c[lq1] = True
 
     def clone(self):
-        return QrackNearCliffordQecBackend(toClone=self)
+        return QrackNearCliffordQecBackend(to_clone=self)
 
     def num_qubits(self):
         return self.n_qubits
@@ -641,7 +641,7 @@ class QrackNearCliffordQecBackend:
                 _data.append(self._add_sample_measure(self._sample_qubits, self._sample_clbits))
         else:
             for shot in range(shots):
-                self._sim = QrackNearCliffordQecBackend(toClone=self)
+                self._sim = QrackNearCliffordQecBackend(to_clone=self)
                 self._classical_memory = 0
                 self._classical_register = 0
 

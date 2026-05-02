@@ -20,21 +20,21 @@ class QrackStabilizer(QrackSimulator):
 
     def __init__(
         self,
-        qubitCount=-1,
-        cloneSid=-1,
-        pyzxCircuit=None,
-        qiskitCircuit=None,
+        qubit_count=-1,
+        clone_sid=-1,
+        pyzx_circuit=None,
+        qiskit_circuit=None,
     ):
         self.sid = None
 
-        if pyzxCircuit is not None:
-            qubitCount = pyzxCircuit.qubits
-        elif qiskitCircuit is not None and qubitCount < 0:
+        if pyzx_circuit is not None:
+            qubit_count = pyzx_circuit.qubits
+        elif qiskit_circuit is not None and qubitCount < 0:
             raise RuntimeError(
                 "Must specify qubitCount with qiskitCircuit parameter in QrackSimulator constructor!"
             )
 
-        if qubitCount > -1 and cloneSid > -1:
+        if qubit_count > -1 and clone_sid > -1:
             raise RuntimeError(
                 "Cannot clone a QrackStabilizer and specify its qubit length at the same time, in QrackStabilizer constructor!"
             )
@@ -42,20 +42,20 @@ class QrackStabilizer(QrackSimulator):
         self.is_tensor_network = False
         self.is_pure_stabilizer = True
 
-        if cloneSid > -1:
-            self.sid = Qrack.qrack_lib.init_clone(cloneSid)
+        if clone_sid > -1:
+            self.sid = Qrack.qrack_lib.init_clone(clone_sid)
         else:
-            if qubitCount < 0:
-                qubitCount = 0
+            if qubit_count < 0:
+                qubit_count = 0
 
-            self.sid = Qrack.qrack_lib.init_count_stabilizer(qubitCount)
+            self.sid = Qrack.qrack_lib.init_count_stabilizer(qubit_count)
 
         self._throw_if_error()
 
-        if pyzxCircuit is not None:
-            self.run_pyzx_gates(pyzxCircuit.gates)
-        elif qiskitCircuit is not None:
-            self.run_qiskit_circuit(qiskitCircuit)
+        if pyzx_circuit is not None:
+            self.run_pyzx_gates(pyzx_circuit.gates)
+        elif qiskit_circuit is not None:
+            self.run_qiskit_circuit(qiskit_circuit)
 
     def set_stochastic(self, s):
         Qrack.qrack_lib.SetStochastic(self.sid, s)
