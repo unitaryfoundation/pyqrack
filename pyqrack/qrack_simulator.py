@@ -63,14 +63,18 @@ class QrackSimulator:
     ):
         self.sid = None
 
+        is_paged=True
+        is_cpu_gpu_hybrid=True
+
         if is_near_clifford_tableau_writer:
             is_tensor_network=False
             is_schmidt_decompose=False
             is_stabilizer_hybrid=True
+            is_opencl=False
+            is_sparse=False
+            is_binary_decision_tree=False
         else:
             is_tensor_network=True
-            is_paged=True
-            is_cpu_gpu_hybrid=True
             if is_sparse:
                 is_opencl = False
 
