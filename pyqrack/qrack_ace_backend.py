@@ -222,6 +222,7 @@ class QrackAceBackend:
         is_binary_decision_tree=False,
         is_opencl=True,
         is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
+        is_near_clifford_tableau_writer=False,
         noise=0,
         to_clone=None,
     ):
@@ -320,6 +321,7 @@ class QrackAceBackend:
                     is_binary_decision_tree=is_binary_decision_tree,
                     is_opencl=is_opencl,
                     is_host_pointer=is_host_pointer,
+                    is_near_clifford_tableau_writer=is_near_clifford_tableau_writer,
                     noise=noise,
                 )
             )
