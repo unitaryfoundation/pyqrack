@@ -217,7 +217,6 @@ class QrackAceBackend:
         long_range_rows=4,
         is_transpose=False,
         is_schmidt_decompose_multi=False,
-        is_schmidt_decompose=True,
         is_stabilizer_hybrid=False,
         is_binary_decision_tree=False,
         is_gpu=True,
@@ -316,7 +315,6 @@ class QrackAceBackend:
                 else QrackSimulator(
                     sim_counts[i],
                     is_schmidt_decompose_multi=is_schmidt_decompose_multi,
-                    is_schmidt_decompose=is_schmidt_decompose,
                     is_stabilizer_hybrid=is_stabilizer_hybrid,
                     is_binary_decision_tree=is_binary_decision_tree,
                     is_gpu=is_gpu,
