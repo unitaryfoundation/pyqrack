@@ -50,7 +50,6 @@ class QrackSimulator:
         qubit_count=-1,
         clone_sid=-1,
         is_schmidt_decompose_multi=False,
-        is_schmidt_decompose=True,
         is_stabilizer_hybrid=False,
         is_binary_decision_tree=False,
         is_gpu=True,
@@ -73,6 +72,7 @@ class QrackSimulator:
             is_gpu=False
         else:
             is_tensor_network=True
+            is_schmidt_decompose=True
             if is_sparse:
                 is_gpu = False
 
@@ -3428,9 +3428,7 @@ class QrackSimulator:
         with open(filename) as f:
             qb_count = int(f.readline())
         out = QrackSimulator(
-            qubitCount=qb_count,
-            is_schmidt_decompose_multi=False,
-            is_schmidt_decompose=False,
+            qubit_count=qb_count,
             is_stabilizer_hybrid=True,
             is_binary_decision_tree=is_binary_decision_tree,
             is_gpu=is_gpu,
