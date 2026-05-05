@@ -209,7 +209,7 @@ class QrackSimulator:
         self._throw_if_error()
 
     def clone(self):
-        return QrackSimulator(cloneSid=self.sid)
+        return QrackSimulator(clone_sid=self.sid)
 
     # standard gates
 
@@ -4393,7 +4393,7 @@ class QrackSimulator:
                 self._classical_memory = 0
                 self._classical_register = 0
             else:
-                self._sim = QrackSimulator(cloneSid=preamble_sim.sid)
+                self._sim = QrackSimulator(clone_sid=preamble_sim.sid)
                 self._classical_memory = preamble_memory
                 self._classical_register = preamble_register
 
