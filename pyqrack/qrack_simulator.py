@@ -122,7 +122,7 @@ class QrackSimulator:
             self.run_qiskit_circuit(qiskit_circuit)
 
     def __del__(self):
-        if self.sid is not None:
+        if hasattr(self, "sid") and (self.sid is not None):
             Qrack.qrack_lib.destroy(self.sid)
             self.sid = None
 
