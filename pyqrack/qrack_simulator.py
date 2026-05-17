@@ -122,7 +122,7 @@ class QrackSimulator:
             self.run_qiskit_circuit(qiskit_circuit)
 
     def __del__(self):
-        if self.sid is not None:
+        if hasattr(self, "sid") and (self.sid is not None):
             Qrack.qrack_lib.destroy(self.sid)
             self.sid = None
 
@@ -1750,6 +1750,7 @@ class QrackSimulator:
         the length `2 ** len(qi)`.
 
         Args:
+            s: qubit register for carry bit
             qi: qubit register for index
             qv: qubit register for value
             t: list of values
@@ -1781,6 +1782,7 @@ class QrackSimulator:
         the length `2 ** len(qi)`
 
         Args:
+            s: qubit register for carry bit
             qi: qubit register for index
             qv: qubit register for value
             t: list of values
