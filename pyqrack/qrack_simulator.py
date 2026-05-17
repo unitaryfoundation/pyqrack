@@ -1750,6 +1750,7 @@ class QrackSimulator:
         the length `2 ** len(qi)`.
 
         Args:
+            s: qubit register for carry bit
             qi: qubit register for index
             qv: qubit register for value
             t: list of values
@@ -1781,6 +1782,7 @@ class QrackSimulator:
         the length `2 ** len(qi)`
 
         Args:
+            s: qubit register for carry bit
             qi: qubit register for index
             qv: qubit register for value
             t: list of values
