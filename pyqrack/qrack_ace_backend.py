@@ -2,6 +2,8 @@
 #
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
+#
+# Produced with input from (OpenAI) ChatGPT and (Anthropic) Claude
 import math
 import os
 import random
@@ -548,11 +550,14 @@ class QrackAceBackend:
                 else [p[0], p[1], p[2], p[3], p[4]]
             )
             for q in range(5):
-                if syndrome[q] > (0.5 + self._epsilon):
+                excess = syndrome[q] - 0.5
+                if excess > self._epsilon:
+                    theta = math.pi * excess * 2
                     if q == 2:
-                        hq[q].x()
+                        hq[q].rx(theta)
                     else:
-                        self.sim[hq[q][0]].x(hq[q][1])
+                        b = hq[q]
+                        self.sim[b[0]].r(Pauli.PauliX, theta, b[1])
 
             if not skip_rotation:
                 a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
@@ -593,11 +598,16 @@ class QrackAceBackend:
             result = ((prms + (1 - qrms)) / 2) >= 0.5
             syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
             for q in range(3):
-                if syndrome[q] > (0.5 + self._epsilon):
+                # Soft correction: partial Rx proportional to syndrome excess.
+                # excess in (0, 0.5]; theta in (0, pi]. Full disagreement = X.
+                excess = syndrome[q] - 0.5
+                if excess > self._epsilon:
+                    theta = math.pi * excess * 2
                     if q == 2:
-                        hq[q].x()
+                        hq[q].rx(theta)
                     else:
-                        self.sim[hq[q][0]].x(hq[q][1])
+                        b = hq[q]
+                        self.sim[b[0]].r(Pauli.PauliX, theta, b[1])
 
             if not skip_rotation:
                 a, i = [0, 0, 0], [0, 0, 0]
@@ -669,8 +679,7 @@ class QrackAceBackend:
         b = hq[lhv]
         b.u(th, ph, lm)
 
-        self._correct(lq, False, True)
-        self._correct(lq, True, False)
+        # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
@@ -693,10 +702,7 @@ class QrackAceBackend:
         elif p == Pauli.PauliZ:
             b.rz(th)
 
-        if p != Pauli.PauliZ:
-            self._correct(lq, False, p != Pauli.PauliX)
-        if p != Pauli.PauliX:
-            self._correct(lq, True)
+        # Correction deferred to next 2-qubit gate
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -704,8 +710,6 @@ class QrackAceBackend:
             b = hq[0]
             self.sim[b[0]].h(b[1])
             return
-
-        self._correct(lq)
 
         qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
@@ -716,7 +720,7 @@ class QrackAceBackend:
         b = hq[lhv]
         b.h()
 
-        self._correct(lq)
+        # Correction deferred to next 2-qubit gate
 
     def s(self, lq):
         hq = self._unpack(lq)
