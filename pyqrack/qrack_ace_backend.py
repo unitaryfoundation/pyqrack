@@ -2,6 +2,8 @@
 #
 # Use of this source code is governed by an MIT-style license that can be
 # found in the LICENSE file or at https://opensource.org/licenses/MIT.
+#
+# Produced with input from (OpenAI) ChatGPT and (Anthropic) Claude
 import math
 import os
 import random
@@ -672,8 +674,7 @@ class QrackAceBackend:
         b = hq[lhv]
         b.u(th, ph, lm)
 
-        self._correct(lq, False, True)
-        self._correct(lq, True, False)
+        # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def r(self, p, th, lq):
         hq = self._unpack(lq)
@@ -696,10 +697,7 @@ class QrackAceBackend:
         elif p == Pauli.PauliZ:
             b.rz(th)
 
-        if p != Pauli.PauliZ:
-            self._correct(lq, False, p != Pauli.PauliX)
-        if p != Pauli.PauliX:
-            self._correct(lq, True)
+        # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -719,7 +717,7 @@ class QrackAceBackend:
         b = hq[lhv]
         b.h()
 
-        self._correct(lq)
+        # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def s(self, lq):
         hq = self._unpack(lq)
