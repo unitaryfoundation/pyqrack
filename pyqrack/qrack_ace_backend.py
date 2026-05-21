@@ -553,14 +553,11 @@ class QrackAceBackend:
                 else [p[0], p[1], p[2], p[3], p[4]]
             )
             for q in range(5):
-                excess = syndrome[q] - 0.5
-                if excess > self._epsilon:
-                    theta = math.pi * excess * 2
+                if syndrome[q] > (0.5 + self._epsilon):
                     if q == 2:
-                        hq[q].rx(theta)
+                        hq[q].x()
                     else:
-                        b = hq[q]
-                        self.sim[b[0]].r(Pauli.PauliX, theta, b[1])
+                        self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
                 a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
@@ -601,16 +598,11 @@ class QrackAceBackend:
             result = ((prms + (1 - qrms)) / 2) >= 0.5
             syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
             for q in range(3):
-                # Soft correction: partial Rx proportional to syndrome excess.
-                # excess in (0, 0.5]; theta in (0, pi]. Full disagreement = X.
-                excess = syndrome[q] - 0.5
-                if excess > self._epsilon:
-                    theta = math.pi * excess * 2
+                if syndrome[q] > (0.5 + self._epsilon):
                     if q == 2:
-                        hq[q].rx(theta)
+                        hq[q].x()
                     else:
-                        b = hq[q]
-                        self.sim[b[0]].r(Pauli.PauliX, theta, b[1])
+                        self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
                 a, i = [0, 0, 0], [0, 0, 0]
@@ -705,7 +697,7 @@ class QrackAceBackend:
         elif p == Pauli.PauliZ:
             b.rz(th)
 
-        # Correction deferred to next 2-qubit gate
+        # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def h(self, lq):
         hq = self._unpack(lq)
@@ -713,6 +705,8 @@ class QrackAceBackend:
             b = hq[0]
             self.sim[b[0]].h(b[1])
             return
+
+        self._correct(lq)
 
         qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
@@ -723,7 +717,7 @@ class QrackAceBackend:
         b = hq[lhv]
         b.h()
 
-        # Correction deferred to next 2-qubit gate
+        # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def s(self, lq):
         hq = self._unpack(lq)
