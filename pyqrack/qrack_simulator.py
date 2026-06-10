@@ -554,8 +554,8 @@ class QrackSimulator:
         Qrack.qrack_lib.MCAdjT(self.sid, len(c), QrackSimulator._ulonglong_byref(c), q)
         self._throw_if_error()
 
-    def mcu(self, c, q, th, ph, la):
-        """Multi-controlled arbitraty unitary
+    def mcu(self, c, q, th, ph, la, gm=0.0):
+        """Multi-controlled arbitrary unitary
 
         If all controlled qubits are `|1>` then the unitary gate described by
         parameters is applied to the target qubit.
@@ -566,6 +566,7 @@ class QrackSimulator:
             th: theta
             ph: phi
             la: lambda
+            gm: gamma
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
@@ -578,6 +579,7 @@ class QrackSimulator:
             ctypes.c_double(th),
             ctypes.c_double(ph),
             ctypes.c_double(la),
+            ctypes.c_double(gm),
         )
         self._throw_if_error()
 
@@ -736,8 +738,8 @@ class QrackSimulator:
         Qrack.qrack_lib.MACAdjT(self.sid, len(c), QrackSimulator._ulonglong_byref(c), q)
         self._throw_if_error()
 
-    def macu(self, c, q, th, ph, la):
-        """Anti multi-controlled arbitraty unitary
+    def macu(self, c, q, th, ph, la, gm=0.0):
+        """Anti multi-controlled arbitrary unitary
 
         If all controlled qubits are `|0>` then the unitary gate described by
         parameters is applied to the target qubit.
@@ -748,6 +750,7 @@ class QrackSimulator:
             th: theta
             ph: phi
             la: lambda
+            gm: gamma
 
         Raises:
             RuntimeError: QrackSimulator raised an exception.
@@ -760,11 +763,12 @@ class QrackSimulator:
             ctypes.c_double(th),
             ctypes.c_double(ph),
             ctypes.c_double(la),
+            ctypes.c_double(gm),
         )
         self._throw_if_error()
 
     def macmtrx(self, c, m, q):
-        """Anti multi-controlled arbitraty operator
+        """Anti multi-controlled arbitrary operator
 
         If all controlled qubits are `|0>` then the arbitrary operation by
         parameters is applied to the target qubit.
@@ -4194,13 +4198,22 @@ class QrackSimulator:
                 float(operation.params[0]),
                 float(operation.params[1]),
             )
-        elif (name == "cu3") or (name == "cu"):
+        elif name == "cu3":
             self._sim.mcu(
                 [q._index for q in operation.qubits[0:1]],
                 operation.qubits[1]._index,
                 float(operation.params[0]),
                 float(operation.params[1]),
                 float(operation.params[2]),
+            )
+        elif name == "cu":
+            self._sim.mcu(
+                [q._index for q in operation.qubits[0:1]],
+                operation.qubits[1]._index,
+                float(operation.params[0]),
+                float(operation.params[1]),
+                float(operation.params[2]),
+                float(operation.params[3]),
             )
         elif name == "cx":
             self._sim.mcx([q._index for q in operation.qubits[0:1]], operation.qubits[1]._index)
