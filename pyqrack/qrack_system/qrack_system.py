@@ -629,6 +629,7 @@ class QrackSystem:
             c_double,
             c_double,
             c_double,
+            c_double,
         ]
 
         self.qrack_lib.MCMtrx.restype = None
@@ -712,6 +713,7 @@ class QrackSystem:
             c_ulonglong,
             POINTER(c_ulonglong),
             c_ulonglong,
+            c_double,
             c_double,
             c_double,
             c_double,
