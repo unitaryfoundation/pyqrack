@@ -157,13 +157,23 @@ class QrackAceBackend:
                 self._qubits.append(qubit)
                 tot_qubits += 1
 
-        # The crossbar's size is fixed by how many boundary sites exist;
-        # append its count onto sim_counts so the allocation loop below
-        # builds it exactly like any other patch simulator.
-        sim_counts.append(boundary_count)
+        # The crossbar's size is fixed by how many boundary sites exist.
+        # When there are none (e.g. a grid small enough, relative to
+        # long_range_rows/columns, that the whole thing is "fully
+        # connected" with no QEC boundary at all), we must NOT allocate a
+        # 0-qubit QrackSimulator for the crossbar: a 0-qubit QrackSimulator
+        # can be constructed, but calling .clone() on one crashes the
+        # native Qrack core (segfault), and clone() is called routinely by
+        # measure_shots()/clone(). So the boundary sim is only created when
+        # boundary_count > 0, exactly mirroring how the original LHV-based
+        # code never instantiated anything for the boundary case when
+        # there were no boundary sites.
+        has_boundary = boundary_count > 0
+        if has_boundary:
+            sim_counts.append(boundary_count)
 
         self.sim = []
-        for i in range(sim_count + 1):
+        for i in range(sim_count + (1 if has_boundary else 0)):
             self.sim.append(
                 to_clone.sim[i].clone()
                 if to_clone
@@ -184,7 +194,7 @@ class QrackAceBackend:
                 # (1 - 1 / sqrt(2)) / 4 (but empirically tuned)
                 self.sim[i].set_sdrp(0.073223304703363119)
 
-        self._boundary_sim_id = boundary_sim_id
+        self._boundary_sim_id = boundary_sim_id if has_boundary else None
 
     def clone(self):
         return QrackAceBackend(to_clone=self)
