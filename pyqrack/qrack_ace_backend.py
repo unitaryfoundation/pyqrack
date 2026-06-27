@@ -1138,7 +1138,7 @@ class QrackAceBackend:
             else:
                 self.sim[b[0]].force_m(b[1], result)
 
-        b = hq[1]
+        b = hq[lhv]
         b.reset()
         if result:
             b.x()
@@ -1507,22 +1507,25 @@ class QrackAceBackend:
             return self._coupling_map
 
         coupling_map = set()
-        rows, cols = self._row_length, self._col_length
+        # self._row_length is the number of qubits per row (the row's span,
+        # i.e. the column count); self._col_length is the number of rows.
+        num_rows, num_cols = self._col_length, self._row_length
 
-        # Map each column index to its full list of logical qubit indices
+        # Row-major logical index, strided by the actual row span.
         def logical_index(row, col):
-            return row * cols + col
+            return row * num_cols + col
 
-        for col in range(cols):
-            connected_cols, _ = self._get_connected(col, False)
-            for row in range(rows):
-                connected_rows, _ = self._get_connected(row, False)
+        for row in range(num_rows):
+            connected_rows, _ = self._get_connected(row, True)
+            for col in range(num_cols):
+                connected_cols, _ = self._get_connected(col, False)
                 a = logical_index(row, col)
-                for c in connected_cols:
-                    for r in connected_rows:
+                for r in connected_rows:
+                    for c in connected_cols:
                         b = logical_index(r, c)
                         if a != b:
                             coupling_map.add((a, b))
+                            coupling_map.add((b, a))
 
         self._coupling_map = sorted(coupling_map)
 
@@ -1536,9 +1539,11 @@ class QrackAceBackend:
             )
         noise_model = NoiseModel()
 
-        # Single-qubit depolarizing only on boundary qubits
         boundary_qubits = set()
         for a, b in self.get_logical_coupling_map():
+            if a > b:
+                #Skip duplicates
+                continue
             col_a = a % self._row_length
             col_b = b % self._row_length
             is_long_a = self._is_col_long_range[col_a]
@@ -1548,12 +1553,6 @@ class QrackAceBackend:
                     boundary_qubits.add(a)
                 if not is_long_b:
                     boundary_qubits.add(b)
-
-        for q in boundary_qubits:
-            for gate in ["u", "u1", "u2", "u3", "h", "x", "y", "z",
-                         "s", "sdg", "t", "tdg", "rx", "ry", "rz"]:
-                noise_model.add_quantum_error(
-                    depolarizing_error(x, 1), gate, [q])
 
         # Two-qubit depolarizing on boundary-crossing and boundary-adjacent gates
         for a, b in self.get_logical_coupling_map():
