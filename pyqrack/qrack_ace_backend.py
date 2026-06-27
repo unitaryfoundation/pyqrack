@@ -596,8 +596,8 @@ class QrackAceBackend:
             eff_prob = (prms + (1 - qrms)) / 2
             result = (
                 (random.random() < 0.5)
-                if abs(eff_prob - 0.5) <= self._epsilon
-                else (eff_prob >= 0.5)
+                if (eff_prob - 0.5) == 0.0
+                else (eff_prob > 0.5)
             )
             syndrome = (
                 [1 - p[0], 1 - p[1], 1 - p[2], 1 - p[3], 1 - p[4]]
@@ -650,8 +650,8 @@ class QrackAceBackend:
             eff_prob = (prms + (1 - qrms)) / 2
             result = (
                 (random.random() < 0.5)
-                if abs(eff_prob - 0.5) <= self._epsilon
-                else (eff_prob >= 0.5)
+                if (eff_prob - 0.5) == 0.0
+                else (eff_prob > 0.5)
             )
             syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
             for q in range(3):
