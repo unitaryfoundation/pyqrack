@@ -597,7 +597,7 @@ class QrackAceBackend:
             eff_prob = (prms + (1 - qrms)) / 2
             result = (
                 (random.random() < 0.5)
-                if (eff_prob - 0.5) == 0.0
+                if abs(eff_prob - 0.5) <= self._epsilon
                 else (eff_prob > 0.5)
             )
             syndrome = (
@@ -651,7 +651,7 @@ class QrackAceBackend:
             eff_prob = (prms + (1 - qrms)) / 2
             result = (
                 (random.random() < 0.5)
-                if (eff_prob - 0.5) == 0.0
+                if abs(eff_prob - 0.5) <= self._epsilon
                 else (eff_prob > 0.5)
             )
             syndrome = [1 - p[0], 1 - p[1], 1 - p[2]] if result else [p[0], p[1], p[2]]
@@ -1100,7 +1100,7 @@ class QrackAceBackend:
             return self.sim[b[0]].m(b[1])
 
         p = self.prob(lq)
-        result = ((p + self._epsilon) >= 1) or (random.random() < p)
+        result = ((p + self._epsilon) >= 1.0) or (random.random() < p)
 
         qb, lhv = QrackAceBackend._get_qb_lhv_indices(hq)
 
