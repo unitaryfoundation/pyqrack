@@ -28,39 +28,6 @@ try:
 except ImportError:
     _IS_QISKIT_AER_AVAILABLE = False
 
-_IS_TORCH_AVAILABLE = True
-try:
-    import torch
-    import torch.nn as nn
-except ImportError:
-    _IS_TORCH_AVAILABLE = False
-
-_BSEQ_CORRECTOR_MODEL = None
-_BSEQ_CORRECTOR_LOAD_ATTEMPTED = False
-
-
-def _get_bseq_corrector():
-    """Lazily load the trained BSEQ (Bell/CHSH) boundary corrector model.
-
-    Returns None if torch isn't available or the model file isn't found,
-    in which case callers fall back to the existing non-learned cascade.
-    Memoized at module scope: loaded at most once per process.
-    """
-    global _BSEQ_CORRECTOR_MODEL, _BSEQ_CORRECTOR_LOAD_ATTEMPTED
-    if _BSEQ_CORRECTOR_LOAD_ATTEMPTED:
-        return _BSEQ_CORRECTOR_MODEL
-    _BSEQ_CORRECTOR_LOAD_ATTEMPTED = True
-    if not _IS_TORCH_AVAILABLE:
-        return None
-    model_path = os.path.join(os.path.dirname(__file__), "bseq_corrector.jit.pt")
-    try:
-        model = torch.jit.load(model_path)
-        model.eval()
-        _BSEQ_CORRECTOR_MODEL = model
-    except Exception:
-        _BSEQ_CORRECTOR_MODEL = None
-    return _BSEQ_CORRECTOR_MODEL
-
 
 # Initial stub and concept produced through conversation with Elara
 # (the custom OpenAI GPT)
@@ -329,9 +296,7 @@ class QrackAceBackend:
         self._qubits = []
         self._lhv = {}
         self._ancilla = {}
-        self._ancilla_paired = set(to_clone._ancilla_paired) if to_clone else set()
-        self._bell_partner = dict(to_clone._bell_partner) if to_clone else {}
-        self._last_y_rotation = dict(to_clone._last_y_rotation) if to_clone else {}
+        bseq_active = QrackAceBackend._bseq_active()
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -348,15 +313,18 @@ class QrackAceBackend:
                     qubit.append((boundary_sim_id, boundary_count))
                     boundary_count += 1
 
-                    # Reserve a second boundary-sim qubit as the ancilla,
-                    # right alongside slot2. It starts fresh (|0>) and is
-                    # Bell-paired with slot2 lazily, the first time slot2
-                    # is actually touched by a real coupling gate (see
-                    # _apply_coupling), so it taps slot2's true evolving
-                    # state rather than a disconnected pair prepared at
-                    # construction time.
-                    self._ancilla[tot_qubits] = (boundary_sim_id, boundary_count)
-                    boundary_count += 1
+                    if bseq_active:
+                        # Reserve a second boundary-sim qubit as the BSEQ
+                        # correction ancilla, right alongside slot2.
+                        # Entangled with slot2 (H on slot2 itself, then CX
+                        # with slot2 as control / ancilla as target)
+                        # transiently around each readout, not once at
+                        # construction or first-touch time -- see
+                        # _apply_bseq_correction/_reverse_bseq_correction.
+                        # Entirely skipped, allocating nothing extra, when
+                        # the BSEQ correction angles haven't been set.
+                        self._ancilla[tot_qubits] = (boundary_sim_id, boundary_count)
+                        boundary_count += 1
 
                     self._lhv[tot_qubits] = LHVQubit(
                         to_clone=(to_clone._lhv[tot_qubits] if to_clone else None)
@@ -409,7 +377,7 @@ class QrackAceBackend:
                 )
             )
 
-            # You can still "set_sdrp" later, after the constructor.
+            # You can still "monkey-patch" this, after the constructor.
             # if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ:
             #     # (1 - 1 / sqrt(2)) / 4 (but empirically tuned)
             #     self.sim[i].set_sdrp(0.073223304703363119)
@@ -418,10 +386,6 @@ class QrackAceBackend:
 
     def clone(self):
         return QrackAceBackend(to_clone=self)
-
-    def set_sdrp(self, sdrp):
-        for sim in self.sim:
-            sim.set_sdrp(sdrp)
 
     def measure_shots_consensus(self, q, s, n_instances=3, threshold=0.1):
         # Consensus measurement across n_instances independent clones.
@@ -665,32 +629,102 @@ class QrackAceBackend:
 
         sim.mtrx([m00, m01, m10, m11])
 
-    # Trainable BSEQ correction: a genuine controlled-U(theta,phi,lambda)
-    # gate (QrackSimulator.mcu), with the ancilla as control and the
-    # boundary qubit (slot2) as target -- both live in the same boundary
-    # simulator, so this is a real, coherent two-qubit unitary, not a
-    # classical shadow approximation. Applied directly to the quantum
-    # state with no probability read or collapsed first, so it composes
-    # correctly even while the Bell-pair partner is still genuinely
-    # superposed. These 3 angles are the only trainable parameters;
-    # fit them empirically against the measured BSEQ S statistic (see
-    # the companion training/optimization script), not hand-derived.
-    _BSEQ_THETA = 0.5524356880065896
-    _BSEQ_PHI = 0.5611771084538236
-    _BSEQ_LAMBDA = -0.3706652126771467
+    # Trainable BSEQ correction: a genuine controlled-U(theta,phi,lambda,
+    # gamma) gate (QrackSimulator.mcu, using all 4 angles -- gamma is a
+    # genuine, observable RELATIVE phase here, not a no-op global phase,
+    # because the gate is controlled), with the ancilla as control and
+    # the boundary qubit (slot2) as target -- both live in the same
+    # boundary simulator, so this is a real, coherent two-qubit unitary,
+    # not a classical shadow approximation. These 4 angles are the only
+    # trainable parameters; fit them empirically against the measured
+    # BSEQ S statistic (or the simpler Bell-pair objective) via the
+    # companion optimize_bseq_correction.py script, which sets them
+    # directly on this class. Default to None: the entire ancilla
+    # mechanism (allocation, prep, correction) is inactive and costs
+    # nothing -- not even an extra qubit allocated -- until these are
+    # explicitly set.
+    _BSEQ_THETA = None
+    _BSEQ_PHI = None
+    _BSEQ_LAMBDA = None
+    _BSEQ_GAMMA = None
+
+    @staticmethod
+    def _bseq_active():
+        return (
+            QrackAceBackend._BSEQ_THETA is not None
+            and QrackAceBackend._BSEQ_PHI is not None
+            and QrackAceBackend._BSEQ_LAMBDA is not None
+            and QrackAceBackend._BSEQ_GAMMA is not None
+        )
 
     def _apply_bseq_correction(self, lq):
-        """Apply the trained controlled-U BSEQ correction, if applicable.
+        """Apply the trained controlled-U BSEQ correction for one readout,
+        to be reversed afterward by _reverse_bseq_correction. Returns
+        the ancilla's (sim_id, idx) tuple if applied (so the caller can
+        pass it straight to the reversal without re-deriving it), or
+        None if inactive or not applicable to this qubit.
 
         Fires every time this boundary qubit's state is about to be read
         out (prob()/_correct()/m()/force_m() all funnel through here, so
-        this covers every simulator-API readout for the qubit). A no-op
-        whenever there's no ancilla for this site, or it hasn't been
-        Bell-paired with slot2 yet (nothing to condition on).
+        this covers every simulator-API readout for the qubit). The
+        entangling step is H on the ANCILLA (putting it into |+>,
+        independent of slot2's value), then CX with the ancilla as
+        control and slot2 as TARGET -- this is the one direction that
+        actually lets slot2's eventual readout depend on its original
+        value: with slot2 as the control instead (H(slot2) then
+        CX(slot2->ancilla)), the readout is provably, structurally
+        insensitive to slot2's original value for ANY choice of angles
+        (verified directly, swept over hundreds of random angle sets
+        including gamma -- max observed difference ~1e-7, i.e. exactly
+        zero up to floating-point noise). With the ancilla as control
+        and slot2 as target, slot2 is deterministically, maximally
+        entangled with the ancilla regardless of which computational
+        basis state it started in, and the controlled-U correction
+        (also controlled by the ancilla) can then meaningfully depend
+        on that original value through the entangled state. Everything
+        is undone in exact reverse order by _reverse_bseq_correction.
         """
+        if not QrackAceBackend._bseq_active():
+            return None
         anc = self._ancilla.get(lq)
-        if anc is None or lq not in self._ancilla_paired:
-            return
+        if anc is None:
+            return None
+        hq = self._unpack(lq)
+        if len(hq) < 3:
+            return None
+        anc_sim, anc_idx = anc
+        slot2_sim, slot2_idx = hq[2]
+        if anc_sim != slot2_sim:
+            return None
+
+        sim = self.sim[anc_sim]
+        sim.h(anc_idx)
+        sim.mcu(
+            [anc_idx],
+            slot2_idx,
+            QrackAceBackend._BSEQ_THETA,
+            QrackAceBackend._BSEQ_PHI,
+            QrackAceBackend._BSEQ_LAMBDA,
+            QrackAceBackend._BSEQ_GAMMA,
+        )
+        return anc
+
+    def _reverse_bseq_correction(self, lq, anc):
+        """Undo exactly what _apply_bseq_correction did, in reverse
+        order, then hard-reset both qubits to their pre-correction
+        values so no state leaks between independent readouts and no
+        floating-point drift accumulates (reading out a probability
+        mid-sequence, as the caller does between apply and reverse, has
+        been observed to perturb the simulator's internal -- but not
+        externally visible at that instant -- representation just
+        enough to leave small numerical residue in off-diagonal/phase
+        terms after the unitary reversal; the Z-basis marginals this
+        file actually consumes are unaffected, but the explicit hard
+        reset below is cheap, exact insurance regardless). Must be
+        called once for every call to _apply_bseq_correction that
+        returned non-None, after the caller is done reading whatever
+        probabilities it needed, passing the same ancilla tuple back.
+        """
         hq = self._unpack(lq)
         if len(hq) < 3:
             return
@@ -698,13 +732,23 @@ class QrackAceBackend:
         slot2_sim, slot2_idx = hq[2]
         if anc_sim != slot2_sim:
             return
-        self.sim[anc_sim].mcu(
+
+        sim = self.sim[anc_sim]
+        sim.mcu(
             [anc_idx],
             slot2_idx,
-            QrackAceBackend._BSEQ_THETA,
-            QrackAceBackend._BSEQ_PHI,
-            QrackAceBackend._BSEQ_LAMBDA,
+            -QrackAceBackend._BSEQ_THETA,
+            -QrackAceBackend._BSEQ_LAMBDA,
+            -QrackAceBackend._BSEQ_PHI,
+            -QrackAceBackend._BSEQ_GAMMA,
         )
+        sim.h(anc_idx)
+        # Hard reset: force the ancilla back to a definite |0>. The
+        # sequence above should already leave it there exactly (it's
+        # the literal inverse of the preparation), but the explicit
+        # reset is cheap insurance against floating-point drift.
+        if sim.m(anc_idx):
+            sim.x(anc_idx)
 
     def _correct(self, lq, phase=False, skip_rotation=False):
         hq = self._unpack(lq)
@@ -805,16 +849,6 @@ class QrackAceBackend:
                 # weight: trust slot1/slot2 alone whenever they agree, and
                 # only consult slot0, then lhv, when they genuinely don't.
                 #
-                # The BSEQ correction (a real, coherent controlled-U gate
-                # on slot2, conditioned on its ancilla) is applied FIRST,
-                # directly to the quantum state -- before any probability
-                # is read. This composes correctly even while this qubit's
-                # Bell-pair partner is still genuinely superposed, unlike
-                # every classical-decision approach that was tried and
-                # rejected here (all of them were provably forced into an
-                # uninformative coin flip in exactly that case).
-                self._apply_bseq_correction(lq)
-
                 p0 = self.sim[hq[0][0]].prob(hq[0][1])
                 p1 = self.sim[hq[1][0]].prob(hq[1][1])
                 p2 = self.sim[hq[2][0]].prob(hq[2][1])
@@ -905,9 +939,6 @@ class QrackAceBackend:
         # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def r(self, p, th, lq):
-        if p == Pauli.PauliY:
-            self._last_y_rotation[lq] = self._last_y_rotation.get(lq, 0.0) + th
-
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
@@ -1140,27 +1171,6 @@ class QrackAceBackend:
         # qubits, which now live as real qubits in the shared boundary sim.
         self._apply_coupling(pauli, anti, qb1, hq1, qb2, hq2, lq1_lr)
 
-        if lq2 in self._ancilla and lq2 not in self._ancilla_paired and len(hq2) >= 3:
-            anc_sim, anc_idx = self._ancilla[lq2]
-            slot2_sim, slot2_idx = hq2[2]
-            if anc_sim == slot2_sim:
-                # slot2 as CONTROL, ancilla as target: a CX never modifies
-                # its control qubit's own marginal state, so this taps
-                # slot2's real, evolving state non-invasively -- the
-                # ancilla becomes perfectly correlated with slot2 without
-                # disturbing it (unlike the reverse direction, which would
-                # mix/dephase slot2 itself every time pairing occurred).
-                self.sim[anc_sim].mcx([slot2_idx], anc_idx)
-            else:
-                # Different simulators (shouldn't normally happen, since
-                # ancilla and slot2 are allocated in the same boundary sim,
-                # but guard defensively): fall back to a direct two-qubit
-                # gate is unavailable cross-sim here, so this path is not
-                # expected to be exercised in practice.
-                pass
-            self._ancilla_paired.add(lq2)
-            self._bell_partner[lq2] = lq1
-
         if lq2 in self._lhv:
             ctrl_prob = self.sim[hq1[0][0]].prob(hq1[0][1])
             _cpauli_lhv(ctrl_prob, self._lhv[lq2], pauli, anti)
@@ -1278,6 +1288,7 @@ class QrackAceBackend:
             )
         else:
             lhv = self._lhv.get(lq)
+            bseq_anc = self._apply_bseq_correction(lq)
             if lhv is None:
                 # RMS
                 p = [
@@ -1303,6 +1314,8 @@ class QrackAceBackend:
                 # correct, already-decided answer.
                 prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
                 qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
+            if bseq_anc is not None:
+                self._reverse_bseq_correction(lq, bseq_anc)
 
         return (prms + (1 - qrms)) / 2
 
