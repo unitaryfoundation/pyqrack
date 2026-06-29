@@ -124,20 +124,27 @@ def compute_S(shots, **kwargs):
     return e_ab + e_abp + e_apb - e_apbp
 
 
-def compute_bell_pair_stats(n_constructions, shots, width=3, long_range_columns=1, ancillae=True):
+def compute_bell_pair_stats(
+    n_constructions, shots, width=3, long_range_columns=1, ancillae=True, control=0
+):
     """Simpler, plain Bell-pair statistic (matching bell_state.py): for
-    each of n_constructions independent h(0); cx(0,1) builds, sample
-    shots measurements and track the 0/1 (agreement-side) balance and
-    overall correlation. Returns (mean_correlation, mean_balance,
-    stdev_balance). In direct testing this correction mechanism affects
-    these more reliably than CHSH S -- see module docstring.
+    each of n_constructions independent constructions, put qubit
+    `control` into superposition and CNOT from it onto the other qubit
+    (control=0: h(0); cx(0,1), matching bell_state.py exactly;
+    control=1: h(1); cx(1,0), the mirrored direction -- qubit 1 is the
+    boundary qubit in this 3-qubit, long_range_columns=1 topology, so
+    these two directions exercise genuinely different code paths, not
+    just relabeled qubits). Samples shots measurements and tracks the
+    0/1 (agreement-side) balance and overall correlation. Returns
+    (mean_correlation, mean_balance, stdev_balance).
     """
+    target = 1 - control
     total_correlated = 0
     balance_vals = []
     for _ in range(n_constructions):
         s = QrackAceBackend(width, long_range_columns=long_range_columns, bseq_ancillae=ancillae)
-        s.h(0)
-        s.cx(0, 1)
+        s.h(control)
+        s.cx(control, target)
         results = s.measure_shots([0, 1], shots)
         zero = sum(1 for r in results if r == 0)
         three = sum(1 for r in results if r == 3)
@@ -179,6 +186,31 @@ def bell_correlation_score(params, n_constructions=200, shots=24, ancillae=True,
     return mean_corr
 
 
+def bell_correlation_symmetric_score(
+    params, n_constructions=200, shots=24, ancillae=True, **kwargs
+):
+    """Like bell_correlation_score, but fit simultaneously, with equal
+    weight, against BOTH CNOT directions: control=0 (h(0); cx(0,1),
+    the original bell_state.py case) and control=1 (h(1); cx(1,0), the
+    mirrored case). Returns the unweighted average of the two
+    directions' mean correlations, so a correction that helps one
+    direction while hurting the other equally is NOT rewarded --
+    direct testing showed the correction trained on control=0 alone
+    actively hurts control=1 (correlation dropping to ~0.17, well
+    below the ~0.5 chance baseline), confirming the two directions
+    exercise genuinely different code paths (qubit 1 is the boundary
+    qubit in this topology) and need to be fit together, not assumed
+    symmetric."""
+    set_correction(params, ancillae=ancillae)
+    mean_corr_0, _, _ = compute_bell_pair_stats(
+        n_constructions, shots, ancillae=ancillae, control=0, **kwargs
+    )
+    mean_corr_1, _, _ = compute_bell_pair_stats(
+        n_constructions, shots, ancillae=ancillae, control=1, **kwargs
+    )
+    return (mean_corr_0 + mean_corr_1) / 2
+
+
 def set_correction(params, ancillae=True):
     """params is a 3-tuple (theta, phi, lambda) for the u layer alone
     when ancillae=False, or a 7-tuple (theta, phi, lambda, mcu_theta,
@@ -218,7 +250,7 @@ def optimize(
     initial_step=PI / 4,
     step_decay=0.8,
     decay_every=10,
-    target="correlation",
+    target="correlation_symmetric",
     ancillae=True,
 ):
     """Gradient-free random-walk search over the correction angles,
@@ -233,15 +265,21 @@ def optimize(
         parameters and constructs with bseq_ancillae=False (no ancilla
         qubits allocated at all).
 
-    target: "correlation" (default) maximizes mean Bell-pair
-        correlation directly -- the simplest objective, matching
-        bell_state.py's printed "Correlation:" metric exactly, with no
-        balance-centering or variance penalty. "bell_pair" optimizes a
-        composite of correlation, balance-centering, and low variance.
-        "S" optimizes the CHSH S statistic directly. In direct
-        testing, "bell_pair"/"correlation" show real, reproducible
-        improvement under this correction mechanism, while "S" did
-        not show a consistent improvement.
+    target: "correlation_symmetric" (default) maximizes mean Bell-pair
+        correlation, fit simultaneously with EQUAL weight against both
+        CNOT directions (control=0, the original bell_state.py case,
+        and control=1, the mirrored case h(1); cx(1,0)) -- a correction
+        that helps one direction while hurting the other is not
+        rewarded. Direct testing showed these two directions are NOT
+        symmetric in this architecture (qubit 1 is the boundary qubit
+        in the 3-qubit, long_range_columns=1 topology): a correction
+        fit only on control=0 actively harmed control=1 (correlation
+        dropping to ~0.17, below the ~0.5 chance baseline). "correlation"
+        optimizes only the original control=0 direction. "bell_pair"
+        optimizes a composite of correlation, balance-centering, and
+        low variance (control=0 only). "S" optimizes the CHSH S
+        statistic directly. In direct testing, "S" did not show a
+        consistent improvement.
     """
     if seed is not None:
         random.seed(seed)
@@ -259,9 +297,15 @@ def optimize(
             p, n_constructions=n_repeats * 32, shots=shots, ancillae=ancillae
         )
         label = "mean_correlation"
+    elif target == "correlation_symmetric":
+        reward_fn = lambda p: bell_correlation_symmetric_score(
+            p, n_constructions=n_repeats * 32, shots=shots, ancillae=ancillae
+        )
+        label = "mean_correlation_symmetric"
     else:
         raise ValueError(
-            f"unknown target: {target!r} (expected 'S', 'bell_pair', or 'correlation')"
+            f"unknown target: {target!r} (expected 'S', 'bell_pair', "
+            "'correlation', or 'correlation_symmetric')"
         )
 
     n_params = 7 if ancillae else 3
@@ -347,19 +391,22 @@ def write_params_to_backend_file(params):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--iterations", type=int, default=None)
-    parser.add_argument("--time-budget", type=float, default=400.0)
+    parser.add_argument("--time-budget", type=float, default=200.0)
     parser.add_argument("--repeats", type=int, default=4)
     parser.add_argument("--shots", type=int, default=64)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument(
         "--target",
-        choices=["S", "bell_pair", "correlation"],
-        default="correlation",
-        help="Optimization objective: 'correlation' maximizes mean "
-        "Bell-pair correlation directly (default, matching "
-        "bell_state.py's printed metric); 'bell_pair' optimizes a "
-        "composite of correlation, balance-centering, and low "
-        "variance; 'S' optimizes the CHSH S statistic directly.",
+        choices=["S", "bell_pair", "correlation", "correlation_symmetric"],
+        default="correlation_symmetric",
+        help="Optimization objective: 'correlation_symmetric' (default) "
+        "maximizes mean Bell-pair correlation, fit with equal weight "
+        "against both CNOT directions (control=0 and control=1, which "
+        "are NOT symmetric in this architecture); 'correlation' fits "
+        "only the original control=0 direction; 'bell_pair' optimizes "
+        "a composite of correlation, balance-centering, and low "
+        "variance (control=0 only); 'S' optimizes the CHSH S "
+        "statistic directly.",
     )
     parser.add_argument(
         "--no-ancillae",
