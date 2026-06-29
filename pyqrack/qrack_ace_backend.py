@@ -676,17 +676,24 @@ class QrackAceBackend:
                     self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
-                a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
-                a[0], i[0], _ = self._get_bloch_angles(hq[0])
-                a[1], i[1], _ = self._get_bloch_angles(hq[1])
-                a[2], i[2], _ = self._get_bloch_angles(hq[2])
-                a[3], i[3], _ = self._get_bloch_angles(hq[3])
-                a[4], i[4], _ = self._get_bloch_angles(hq[4])
+                a, i, w = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
+                a[0], i[0], r0 = self._get_bloch_angles(hq[0])
+                a[1], i[1], r1 = self._get_bloch_angles(hq[1])
+                a[2], i[2], r2 = self._get_bloch_angles(hq[2])
+                a[3], i[3], r3 = self._get_bloch_angles(hq[3])
+                a[4], i[4], r4 = self._get_bloch_angles(hq[4])
+                w = [1 - r0, 1 - r1, 1 - r2, 1 - r3, 1 - r4]
 
-                a_target = sum(a) / 5
-                i_target = sum(i) / 5
-                for x in range(5):
-                    self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                w_total = sum(w)
+                if w_total > self._epsilon:
+                    a_target = sum(wx * ax for wx, ax in zip(w, a)) / w_total
+                    i_target = sum(wx * ix for wx, ix in zip(w, i)) / w_total
+                    for x in range(5):
+                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                # If every replica reads as maximally mixed (w_total ~ 0),
+                # there is no well-defined direction to rotate toward at
+                # all -- skip the rotation rather than rotate toward an
+                # arbitrary/undefined target derived from noise.
 
         else:
             lhv = self._lhv.get(lq)
@@ -728,7 +735,27 @@ class QrackAceBackend:
                 p2 = self.sim[hq[2][0]].prob(hq[2][1])
                 p_lhv = lhv.prob()
 
-                if (p1 >= 0.5) == (p2 >= 0.5):
+                end_caps_agree = (p1 >= 0.5) == (p2 >= 0.5)
+                slot0_disagrees_with_end_caps = (
+                    end_caps_agree
+                    and (abs(p0 - 0.5) > self._epsilon)
+                    and ((p0 >= 0.5) != (p1 >= 0.5))
+                )
+                if slot0_disagrees_with_end_caps:
+                    # The end-caps agreeing is not, by itself, reliable
+                    # corroboration: it can equally well mean both are
+                    # stale (e.g. an interior qubit they were shadow-
+                    # coupled to has since been measured for real, and
+                    # only slot0 -- which shares a simulator with that
+                    # interior qubit -- has actually been updated to
+                    # reflect it). When slot0 has a real, non-ambiguous
+                    # opinion that contradicts the agreeing pair, that
+                    # contradiction is itself the signal that the pair's
+                    # agreement is stale, not corroborating -- so trust
+                    # slot0 directly, overriding the agreement-trusts-
+                    # itself default below.
+                    result = p0 >= 0.5
+                elif end_caps_agree:
                     prms = math.sqrt((p1**2 + p2**2) / 2)
                     qrms = math.sqrt(((1 - p1) ** 2 + (1 - p2) ** 2) / 2)
                     eff_prob = (prms + (1 - qrms)) / 2
@@ -761,16 +788,19 @@ class QrackAceBackend:
                 # _cpauli_lhv, preserving the property that makes it usable
                 # as a non-collapsing tie-breaker of last resort.
 
-            if not skip_rotation:
-                a, i = [0, 0, 0], [0, 0, 0]
-                a[0], i[0], _ = self._get_bloch_angles(hq[0])
-                a[1], i[1], _ = self._get_bloch_angles(hq[1])
-                a[2], i[2], _ = self._get_bloch_angles(hq[2])
+            if (not skip_rotation) and (not end_caps_agree):
+                a, i, w = [0, 0, 0], [0, 0, 0], [0, 0, 0]
+                a[0], i[0], r0 = self._get_bloch_angles(hq[0])
+                a[1], i[1], r1 = self._get_bloch_angles(hq[1])
+                a[2], i[2], r2 = self._get_bloch_angles(hq[2])
+                w = [1 - r0, 1 - r1, 1 - r2]
 
-                a_target = sum(a) / 3
-                i_target = sum(i) / 3
-                for x in range(3):
-                    self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                w_total = sum(w)
+                if w_total > self._epsilon:
+                    a_target = sum(wx * ax for wx, ax in zip(w, a)) / w_total
+                    i_target = sum(wx * ix for wx, ix in zip(w, i)) / w_total
+                    for x in range(3):
+                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         if phase:
             for q in qb:
