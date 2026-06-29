@@ -129,13 +129,9 @@ def compute_bell_pair_stats(
 ):
     """Simpler, plain Bell-pair statistic (matching bell_state.py): for
     each of n_constructions independent constructions, put qubit
-    `control` into superposition and CNOT from it onto the other qubit
-    (control=0: h(0); cx(0,1), matching bell_state.py exactly;
-    control=1: h(1); cx(1,0), the mirrored direction -- qubit 1 is the
-    boundary qubit in this 3-qubit, long_range_columns=1 topology, so
-    these two directions exercise genuinely different code paths, not
-    just relabeled qubits). Samples shots measurements and tracks the
-    0/1 (agreement-side) balance and overall correlation. Returns
+    `control` into superposition and CNOT from it onto the other
+    qubit. Samples shots measurements and tracks the 0/1
+    (agreement-side) balance and overall correlation. Returns
     (mean_correlation, mean_balance, stdev_balance).
     """
     target = 1 - control
@@ -186,29 +182,83 @@ def bell_correlation_score(params, n_constructions=200, shots=24, ancillae=True,
     return mean_corr
 
 
-def bell_correlation_symmetric_score(
-    params, n_constructions=200, shots=24, ancillae=True, **kwargs
-):
-    """Like bell_correlation_score, but fit simultaneously, with equal
-    weight, against BOTH CNOT directions: control=0 (h(0); cx(0,1),
-    the original bell_state.py case) and control=1 (h(1); cx(1,0), the
-    mirrored case). Returns the unweighted average of the two
-    directions' mean correlations, so a correction that helps one
-    direction while hurting the other equally is NOT rewarded --
-    direct testing showed the correction trained on control=0 alone
-    actively hurts control=1 (correlation dropping to ~0.17, well
-    below the ~0.5 chance baseline), confirming the two directions
-    exercise genuinely different code paths (qubit 1 is the boundary
-    qubit in this topology) and need to be fit together, not assumed
-    symmetric."""
+def _prepare_and_measure(gate_fn, n_constructions, shots, width=3, long_range_columns=1, ancillae=True):
+    """Build n_constructions fresh QrackAceBackend instances, apply
+    gate_fn(sim) to each, sample shots measurements of qubits [0,1],
+    and return a Counter-like dict of total outcome counts pooled
+    across all constructions and shots (outcome values 0..3, matching
+    bell_state.py's encoding: bit 0 = qubit 0, bit 1 = qubit 1)."""
+    totals = {0: 0, 1: 0, 2: 0, 3: 0}
+    for _ in range(n_constructions):
+        s = QrackAceBackend(width, long_range_columns=long_range_columns, bseq_ancillae=ancillae)
+        gate_fn(s)
+        results = s.measure_shots([0, 1], shots)
+        for r in results:
+            totals[r] += 1
+    return totals
+
+
+def _outcome_prob(totals, outcomes, n_constructions, shots):
+    total_shots = n_constructions * shots
+    return sum(totals[o] for o in outcomes) / total_shots
+
+
+# The 6 components making up the combined BSEQ objective, each paired
+# with the gate sequence that prepares it and the outcome(s) that
+# count as "ideal" for that preparation:
+#
+#   Bell-pair subset (50% combined weight, 25% each):
+#     1. h(0); cx(0,1)            ideal |00>+|11>  -> reward P(0 or 3)
+#     2. h(0); cx(0,1); x(1)      ideal |01>+|10>  -> reward P(1 or 2)
+#
+#   Deterministic subset (50% combined weight, 12.5% each):
+#     3. (no gates at all)        ideal |00>       -> reward P(0)
+#     4. x(0); x(1)                ideal |11>       -> reward P(3)
+#     5. x(0)                      ideal |10>       -> reward P(2)
+#     6. x(1)                      ideal |01>       -> reward P(1)
+#
+# Components 3-6 exist specifically to guard against the correction
+# over-fitting correlation in cases where the two qubits are NOT
+# entangled and should NOT show any correlation/anti-correlation
+# pattern at all beyond their deterministic, classical preparation --
+# without this, an optimizer chasing Bell-pair correlation alone has
+# no reason not to learn a correction that makes everything look more
+# "agreed" or "disagreed," which would be wrong for these 4 cases.
+_BSEQ_COMPONENTS = [
+    ("bell_00_11", lambda s: (s.h(0), s.cx(0, 1)), (0, 3), 0.25),
+    ("bell_01_10", lambda s: (s.h(0), s.cx(0, 1), s.x(1)), (1, 2), 0.25),
+    ("det_00", lambda s: None, (0,), 0.125),
+    ("det_11", lambda s: (s.x(0), s.x(1)), (3,), 0.125),
+    ("det_10", lambda s: s.x(0), (1,), 0.125),
+    ("det_01", lambda s: s.x(1), (2,), 0.125),
+]
+
+
+def compute_bseq_components(n_constructions, shots, **kwargs):
+    """Run all 6 components and return a dict of {name: probability of
+    ideal outcome(s)}, each averaged over n_constructions independent
+    constructions."""
+    out = {}
+    for name, gate_fn, ideal_outcomes, _weight in _BSEQ_COMPONENTS:
+        totals = _prepare_and_measure(gate_fn, n_constructions, shots, **kwargs)
+        out[name] = _outcome_prob(totals, ideal_outcomes, n_constructions, shots)
+    return out
+
+
+def bseq_combined_score(params, n_constructions=200, shots=24, ancillae=True, **kwargs):
+    """The combined, 6-component, equal-subset-weighted reward: 50%
+    weight on the 2 Bell-pair components (rewarding correlation on
+    |00>+|11> and anti-correlation on |01>+|10>, 25% each), 50% weight
+    on the 4 deterministic components (rewarding the correct,
+    classical, non-entangled outcome for each of the 4 single-qubit-X
+    preparations, 12.5% each). This is a single linear combination,
+    so improving any one component (without harming the others)
+    always improves the total -- and an optimizer cannot improve Bell-
+    pair correlation by making the deterministic cases look more
+    "correlated" without paying an equal-or-greater penalty there."""
     set_correction(params, ancillae=ancillae)
-    mean_corr_0, _, _ = compute_bell_pair_stats(
-        n_constructions, shots, ancillae=ancillae, control=0, **kwargs
-    )
-    mean_corr_1, _, _ = compute_bell_pair_stats(
-        n_constructions, shots, ancillae=ancillae, control=1, **kwargs
-    )
-    return (mean_corr_0 + mean_corr_1) / 2
+    components = compute_bseq_components(n_constructions, shots, ancillae=ancillae, **kwargs)
+    return sum(components[name] * weight for name, _, _, weight in _BSEQ_COMPONENTS)
 
 
 def set_correction(params, ancillae=True):
@@ -250,7 +300,7 @@ def optimize(
     initial_step=PI / 4,
     step_decay=0.8,
     decay_every=10,
-    target="correlation_symmetric",
+    target="bseq_combined",
     ancillae=True,
 ):
     """Gradient-free random-walk search over the correction angles,
@@ -265,21 +315,25 @@ def optimize(
         parameters and constructs with bseq_ancillae=False (no ancilla
         qubits allocated at all).
 
-    target: "correlation_symmetric" (default) maximizes mean Bell-pair
-        correlation, fit simultaneously with EQUAL weight against both
-        CNOT directions (control=0, the original bell_state.py case,
-        and control=1, the mirrored case h(1); cx(1,0)) -- a correction
-        that helps one direction while hurting the other is not
-        rewarded. Direct testing showed these two directions are NOT
-        symmetric in this architecture (qubit 1 is the boundary qubit
-        in the 3-qubit, long_range_columns=1 topology): a correction
-        fit only on control=0 actively harmed control=1 (correlation
-        dropping to ~0.17, below the ~0.5 chance baseline). "correlation"
-        optimizes only the original control=0 direction. "bell_pair"
-        optimizes a composite of correlation, balance-centering, and
-        low variance (control=0 only). "S" optimizes the CHSH S
-        statistic directly. In direct testing, "S" did not show a
-        consistent improvement.
+    target: "bseq_combined" (default) is a single linear combination
+        of 6 components, 50% combined weight on 2 Bell-pair components
+        (correlation on h(0);cx(0,1)'s ideal |00>+|11>, and
+        anti-correlation on h(0);cx(0,1);x(1)'s ideal |01>+|10>, 25%
+        each) and 50% combined weight on 4 deterministic components
+        (the correct classical outcome for each of no-op->00,
+        x(0);x(1)->11, x(0)->10, x(1)->01, 12.5% each). The
+        deterministic components exist specifically so the optimizer
+        cannot improve Bell-pair correlation by learning a correction
+        that makes everything look more "agreed" or "disagreed,"
+        independent of whether the qubits are actually entangled --
+        that would show up as a penalty on the deterministic
+        components equal to or larger than the Bell-pair gain.
+        "correlation" optimizes only the original Bell-pair (control=0)
+        case alone, with no deterministic guard. "bell_pair" optimizes
+        a composite of correlation, balance-centering, and low
+        variance (also control=0 only, no deterministic guard). "S"
+        optimizes the CHSH S statistic directly. In direct testing,
+        "S" did not show a consistent improvement.
     """
     if seed is not None:
         random.seed(seed)
@@ -297,16 +351,17 @@ def optimize(
             p, n_constructions=n_repeats * 32, shots=shots, ancillae=ancillae
         )
         label = "mean_correlation"
-    elif target == "correlation_symmetric":
-        reward_fn = lambda p: bell_correlation_symmetric_score(
+    elif target == "bseq_combined":
+        reward_fn = lambda p: bseq_combined_score(
             p, n_constructions=n_repeats * 32, shots=shots, ancillae=ancillae
         )
-        label = "mean_correlation_symmetric"
+        label = "bseq_combined_score"
     else:
         raise ValueError(
             f"unknown target: {target!r} (expected 'S', 'bell_pair', "
-            "'correlation', or 'correlation_symmetric')"
+            "'correlation', or 'bseq_combined')"
         )
+
 
     n_params = 7 if ancillae else 3
     best_params = tuple(0.0 for _ in range(n_params))
@@ -397,16 +452,18 @@ def main():
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument(
         "--target",
-        choices=["S", "bell_pair", "correlation", "correlation_symmetric"],
-        default="correlation_symmetric",
-        help="Optimization objective: 'correlation_symmetric' (default) "
-        "maximizes mean Bell-pair correlation, fit with equal weight "
-        "against both CNOT directions (control=0 and control=1, which "
-        "are NOT symmetric in this architecture); 'correlation' fits "
-        "only the original control=0 direction; 'bell_pair' optimizes "
-        "a composite of correlation, balance-centering, and low "
-        "variance (control=0 only); 'S' optimizes the CHSH S "
-        "statistic directly.",
+        choices=["S", "bell_pair", "correlation", "bseq_combined"],
+        default="bseq_combined",
+        help="Optimization objective: 'bseq_combined' (default) is a "
+        "linear combination of 2 Bell-pair components (50% combined "
+        "weight: correlation on |00>+|11>, anti-correlation on "
+        "|01>+|10>) and 4 deterministic components (50% combined "
+        "weight: the correct classical outcome for no-op, x(0);x(1), "
+        "x(0) alone, and x(1) alone), guarding against over-fitting "
+        "correlation where qubits should NOT correlate; 'correlation' "
+        "fits only the original Bell-pair case alone; 'bell_pair' "
+        "optimizes a composite of correlation, balance-centering, and "
+        "low variance; 'S' optimizes the CHSH S statistic directly.",
     )
     parser.add_argument(
         "--no-ancillae",
