@@ -164,6 +164,21 @@ def bell_pair_score(params, n_constructions=200, shots=24, ancillae=True, **kwar
     return mean_corr - abs(mean_bal - 0.5) - 0.5 * stdev_bal
 
 
+def bell_correlation_score(params, n_constructions=200, shots=24, ancillae=True, **kwargs):
+    """A simpler reward: just the mean Bell-pair correlation itself
+    (matching bell_state.py's printed "Correlation:" metric exactly --
+    correlated/shots, averaged over many independent constructions),
+    with no balance-centering or variance penalty. Note: unlike
+    bell_pair_score, this has no guard against the optimizer finding a
+    correction that pushes correlation up by forcing deterministic
+    agreement between the two qubits rather than by improving genuine
+    entanglement fidelity -- it is the more direct, but less
+    constrained, objective."""
+    set_correction(params, ancillae=ancillae)
+    mean_corr, _, _ = compute_bell_pair_stats(n_constructions, shots, ancillae=ancillae, **kwargs)
+    return mean_corr
+
+
 def set_correction(params, ancillae=True):
     """params is a 3-tuple (theta, phi, lambda) for the u layer alone
     when ancillae=False, or a 7-tuple (theta, phi, lambda, mcu_theta,
@@ -203,7 +218,7 @@ def optimize(
     initial_step=PI / 4,
     step_decay=0.8,
     decay_every=10,
-    target="bell_pair",
+    target="correlation",
     ancillae=True,
 ):
     """Gradient-free random-walk search over the correction angles,
@@ -218,12 +233,15 @@ def optimize(
         parameters and constructs with bseq_ancillae=False (no ancilla
         qubits allocated at all).
 
-    target: "S" optimizes the CHSH S statistic directly (the originally
-        requested objective); "bell_pair" optimizes the simpler
-        correlation/balance/variance objective from bell_state.py. In
-        direct testing, "bell_pair" shows a real, reproducible variance
-        reduction under this correction mechanism, while "S" did not
-        show a consistent improvement -- so "bell_pair" is the default.
+    target: "correlation" (default) maximizes mean Bell-pair
+        correlation directly -- the simplest objective, matching
+        bell_state.py's printed "Correlation:" metric exactly, with no
+        balance-centering or variance penalty. "bell_pair" optimizes a
+        composite of correlation, balance-centering, and low variance.
+        "S" optimizes the CHSH S statistic directly. In direct
+        testing, "bell_pair"/"correlation" show real, reproducible
+        improvement under this correction mechanism, while "S" did
+        not show a consistent improvement.
     """
     if seed is not None:
         random.seed(seed)
@@ -236,8 +254,15 @@ def optimize(
             p, n_constructions=n_repeats * 32, shots=shots, ancillae=ancillae
         )
         label = "bell_pair_score"
+    elif target == "correlation":
+        reward_fn = lambda p: bell_correlation_score(
+            p, n_constructions=n_repeats * 32, shots=shots, ancillae=ancillae
+        )
+        label = "mean_correlation"
     else:
-        raise ValueError(f"unknown target: {target!r} (expected 'S' or 'bell_pair')")
+        raise ValueError(
+            f"unknown target: {target!r} (expected 'S', 'bell_pair', or 'correlation')"
+        )
 
     n_params = 7 if ancillae else 3
     best_params = tuple(0.0 for _ in range(n_params))
@@ -322,18 +347,19 @@ def write_params_to_backend_file(params):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--iterations", type=int, default=None)
-    parser.add_argument("--time-budget", type=float, default=200.0)
+    parser.add_argument("--time-budget", type=float, default=400.0)
     parser.add_argument("--repeats", type=int, default=4)
     parser.add_argument("--shots", type=int, default=64)
     parser.add_argument("--seed", type=int, default=None)
     parser.add_argument(
         "--target",
-        choices=["S", "bell_pair"],
-        default="bell_pair",
-        help="Optimization objective: CHSH S directly, or the simpler "
-        "Bell-pair correlation/balance/variance objective (default; "
-        "responds far more reliably to this correction mechanism in "
-        "direct testing).",
+        choices=["S", "bell_pair", "correlation"],
+        default="correlation",
+        help="Optimization objective: 'correlation' maximizes mean "
+        "Bell-pair correlation directly (default, matching "
+        "bell_state.py's printed metric); 'bell_pair' optimizes a "
+        "composite of correlation, balance-centering, and low "
+        "variance; 'S' optimizes the CHSH S statistic directly.",
     )
     parser.add_argument(
         "--no-ancillae",
