@@ -640,37 +640,51 @@ class QrackAceBackend:
                 self._lhv[lq].h()
 
         if len(hq) == 5:
-            # RMS
-            p = [
-                self.sim[hq[0][0]].prob(hq[0][1]),
-                self.sim[hq[1][0]].prob(hq[1][1]),
-                self.sim[hq[2][0]].prob(hq[2][1]),
-                self.sim[hq[3][0]].prob(hq[3][1]),
-                self.sim[hq[4][0]].prob(hq[4][1]),
-            ]
-            # Balancing suggestion from Elara (the custom OpenAI GPT)
-            prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + 3 * (p[2] ** 2) + p[3] ** 2 + p[4] ** 2) / 7)
-            qrms = math.sqrt(
-                (
-                    (1 - p[0]) ** 2
-                    + (1 - p[1]) ** 2
-                    + 3 * ((1 - p[2]) ** 2)
-                    + (1 - p[3]) ** 2
-                    + (1 - p[4]) ** 2
+            p0 = self.sim[hq[0][0]].prob(hq[0][1])
+            p1 = self.sim[hq[1][0]].prob(hq[1][1])
+            p2 = self.sim[hq[2][0]].prob(hq[2][1])
+            p3 = self.sim[hq[3][0]].prob(hq[3][1])
+            p4 = self.sim[hq[4][0]].prob(hq[4][1])
+            lhv = self._lhv.get(lq)
+
+            # The 4 "end-cap" replicas (home patch + the 3 patch-partner
+            # shadow replicas), by analogy with the 3-replica case's
+            # slot1/slot2: vote first via their own RMS pool, UNLESS they
+            # are in a genuine 2-vs-2 tie, in which case the crossbar
+            # replica (hq[2], already weighted specially in the prior
+            # flat-pool code) breaks the tie; the LHV is consulted only
+            # as a last-resort fallback if the crossbar itself is
+            # ambiguous. This is a direct structural analogy to the
+            # validated 3-replica cascade, not independently re-derived
+            # for this topology -- carried only as far as that cheap
+            # analogy supports, per explicit guidance.
+            end_caps = [p0, p1, p3, p4]
+            high_count = sum(1 for x in end_caps if x >= 0.5)
+            end_caps_tied = high_count == 2
+
+            if not end_caps_tied:
+                prms = math.sqrt(sum(x**2 for x in end_caps) / 4)
+                qrms = math.sqrt(sum((1 - x) ** 2 for x in end_caps) / 4)
+                eff_prob = (prms + (1 - qrms)) / 2
+                result = (
+                    (random.random() < 0.5)
+                    if abs(eff_prob - 0.5) <= self._epsilon
+                    else (eff_prob >= 0.5)
                 )
-                / 7
-            )
-            eff_prob = (prms + (1 - qrms)) / 2
-            result = (
-                (random.random() < 0.5)
-                if abs(eff_prob - 0.5) <= self._epsilon
-                else (eff_prob >= 0.5)
-            )
-            syndrome = (
-                [1 - p[0], 1 - p[1], 1 - p[2], 1 - p[3], 1 - p[4]]
-                if result
-                else [p[0], p[1], p[2], p[3], p[4]]
-            )
+            elif abs(p2 - 0.5) > self._epsilon:
+                result = p2 >= 0.5
+            elif lhv is not None:
+                p_lhv = lhv.prob()
+                result = (
+                    (random.random() < 0.5)
+                    if abs(p_lhv - 0.5) <= self._epsilon
+                    else (p_lhv >= 0.5)
+                )
+            else:
+                result = random.random() < 0.5
+
+            p = [p0, p1, p2, p3, p4]
+            syndrome = [1 - x for x in p] if result else list(p)
             for q in range(5):
                 if syndrome[q] > (0.5 + self._epsilon):
                     self.sim[hq[q][0]].x(hq[q][1])
@@ -688,7 +702,17 @@ class QrackAceBackend:
                 if w_total > self._epsilon:
                     a_target = sum(wx * ax for wx, ax in zip(w, a)) / w_total
                     i_target = sum(wx * ix for wx, ix in zip(w, i)) / w_total
-                    for x in range(5):
+                    # hq[0] is excluded from the rotation itself, by the
+                    # same reasoning as the 3-replica case above: it's
+                    # allocated identically (unconditionally, first, in
+                    # the qubit's home-patch simulator) before any
+                    # boundary/crossbar extension logic runs, so it's the
+                    # replica most likely to carry real, same-simulator
+                    # coherent entanglement worth protecting from the
+                    # decoherence a physical rotation would cost it.
+                    # Indices 1-4 are all crossbar-extension slots with
+                    # no comparable real entanglement to lose.
+                    for x in range(1, 5):
                         self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
                 # If every replica reads as maximally mixed (w_total ~ 0),
                 # there is no well-defined direction to rotate toward at
@@ -799,7 +823,20 @@ class QrackAceBackend:
                 if w_total > self._epsilon:
                     a_target = sum(wx * ax for wx, ax in zip(w, a)) / w_total
                     i_target = sum(wx * ix for wx, ix in zip(w, i)) / w_total
-                    for x in range(3):
+                    # slot0 (hq[0]) is excluded from the rotation itself:
+                    # it commonly shares a real simulator with another
+                    # logical qubit it's still genuinely, coherently
+                    # entangled with (e.g. an interior control qubit),
+                    # and physically rotating it -- even toward a
+                    # well-intentioned averaged target -- is a real
+                    # decoherence event on that relationship. slot0's
+                    # Bloch angles still inform the target above (so
+                    # slot1/slot2 reconcile toward a value that accounts
+                    # for what slot0 currently shows), but only slot1 and
+                    # slot2 (the lossy shadow replicas, which have no
+                    # comparable real entanglement to lose) are actually
+                    # rotated.
+                    for x in range(1, 3):
                         self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         if phase:
