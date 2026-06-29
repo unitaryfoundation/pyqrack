@@ -9,6 +9,7 @@ import os
 import random
 import sys
 import time
+from collections import deque
 
 from .qrack_simulator import QrackSimulator
 from .pauli import Pauli
@@ -230,6 +231,7 @@ class QrackAceBackend:
         is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
         is_near_clifford_tableau_writer=False,
         noise=0,
+        history_window=0,
         to_clone=None,
     ):
         if to_clone:
@@ -237,15 +239,19 @@ class QrackAceBackend:
             long_range_columns = to_clone.long_range_columns
             long_range_rows = to_clone.long_range_rows
             is_transpose = to_clone.is_transpose
+            history_window = to_clone.history_window
         if qubit_count < 0:
             qubit_count = 0
         if long_range_columns < 0:
             long_range_columns = 0
+        if history_window < 0:
+            history_window = 0
 
         self._factor_width(qubit_count, is_transpose)
         self.long_range_columns = long_range_columns
         self.long_range_rows = long_range_rows
         self.is_transpose = is_transpose
+        self.history_window = history_window
 
         fppow = 5
         if "QRACK_FPPOW" in os.environ:
@@ -295,6 +301,16 @@ class QrackAceBackend:
 
         self._qubits = []
         self._lhv = {}
+        if self.history_window > 0:
+            if to_clone and to_clone._coupling_history is not None:
+                self._coupling_history = {
+                    k: deque(v, maxlen=self.history_window)
+                    for k, v in to_clone._coupling_history.items()
+                }
+            else:
+                self._coupling_history = {}
+        else:
+            self._coupling_history = None
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -883,6 +899,21 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            if (
+                self._coupling_history is not None
+                and p != Pauli.PauliZ
+                and (abs(th) > self._epsilon)
+                and lq in self._coupling_history
+            ):
+                # A PauliX/PauliY rotation on this qubit can invalidate
+                # any shadow commitment made on a partner qubit's behalf
+                # while this qubit was treated as a fixed Z-basis
+                # control. PauliZ rotations commute with that
+                # commitment and don't need this.
+                for _lq2, targets in self._coupling_history[lq]:
+                    for t_sim, t_idx in targets:
+                        self.sim[t_sim].h(t_idx)
+                del self._coupling_history[lq]
             self.sim[b[0]].r(p, th, b[1])
             return
 
@@ -1081,7 +1112,8 @@ class QrackAceBackend:
 
         return connected, boundary
 
-    def _apply_coupling(self, pauli, anti, qb1, hq1, qb2, hq2, lq1_lr):
+    def _apply_coupling(self, pauli, anti, qb1, hq1, qb2, hq2, lq1_lr, lq1=None, lq2=None):
+        shadow_targets = []
         for q1 in qb1:
             b1 = hq1[q1]
             gate_fn, shadow_fn = self._get_gate(pauli, anti, b1[0])
@@ -1091,6 +1123,19 @@ class QrackAceBackend:
                     gate_fn([b1[1]], b2[1])
                 elif lq1_lr or (b1[1] == b2[1]) or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1))):
                     shadow_fn(b1, b2)
+                    shadow_targets.append(b2)
+
+        if (
+            self._coupling_history is not None
+            and lq1 is not None
+            and lq2 is not None
+            and shadow_targets
+        ):
+            entry = (lq2, tuple(shadow_targets))
+            hist = self._coupling_history.setdefault(
+                lq1, deque(maxlen=self.history_window)
+            )
+            hist.append(entry)
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         lq1_row = lq1 // self._row_length
@@ -1110,7 +1155,7 @@ class QrackAceBackend:
         qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
         # Apply cross coupling on every qubit, including former-LHV boundary
         # qubits, which now live as real qubits in the shared boundary sim.
-        self._apply_coupling(pauli, anti, qb1, hq1, qb2, hq2, lq1_lr)
+        self._apply_coupling(pauli, anti, qb1, hq1, qb2, hq2, lq1_lr, lq1, lq2)
 
         if lq2 in self._lhv:
             ctrl_prob = self.sim[hq1[0][0]].prob(hq1[0][1])
