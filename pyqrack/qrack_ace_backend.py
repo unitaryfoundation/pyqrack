@@ -230,7 +230,6 @@ class QrackAceBackend:
         is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
         is_near_clifford_tableau_writer=False,
         noise=0,
-        bseq_ancillae=True,
         to_clone=None,
     ):
         if to_clone:
@@ -238,7 +237,6 @@ class QrackAceBackend:
             long_range_columns = to_clone.long_range_columns
             long_range_rows = to_clone.long_range_rows
             is_transpose = to_clone.is_transpose
-            bseq_ancillae = to_clone.bseq_ancillae
         if qubit_count < 0:
             qubit_count = 0
         if long_range_columns < 0:
@@ -248,7 +246,6 @@ class QrackAceBackend:
         self.long_range_columns = long_range_columns
         self.long_range_rows = long_range_rows
         self.is_transpose = is_transpose
-        self.bseq_ancillae = bseq_ancillae
 
         fppow = 5
         if "QRACK_FPPOW" in os.environ:
@@ -298,7 +295,6 @@ class QrackAceBackend:
 
         self._qubits = []
         self._lhv = {}
-        self._ancilla = {}
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -314,19 +310,6 @@ class QrackAceBackend:
 
                     qubit.append((boundary_sim_id, boundary_count))
                     boundary_count += 1
-
-                    if self.bseq_ancillae:
-                        # Reserve a second boundary-sim qubit as the BSEQ
-                        # correction ancilla, right alongside slot2.
-                        # Starts at |0> and is prepped fresh into |+>
-                        # (via H) transiently around each readout, then
-                        # acts as the CONTROL on a 4-parameter mcu gate
-                        # targeting slot2 -- see
-                        # _apply_bseq_correction/_reverse_bseq_correction.
-                        # Entirely skipped, allocating nothing extra, when
-                        # bseq_ancillae=False.
-                        self._ancilla[tot_qubits] = (boundary_sim_id, boundary_count)
-                        boundary_count += 1
 
                     self._lhv[tot_qubits] = LHVQubit(
                         to_clone=(to_clone._lhv[tot_qubits] if to_clone else None)
@@ -569,7 +552,6 @@ class QrackAceBackend:
     def _get_bloch_angles(self, hq):
         sim = self.sim[hq[0]].clone()
         q = hq[1]
-        sim.separate([q])
 
         # Z axis
         z = 1 - 2 * sim.prob(q)
@@ -589,7 +571,17 @@ class QrackAceBackend:
         inclination = math.atan2(math.sqrt(x**2 + y**2), z)
         azimuth = math.atan2(y, x)
 
-        return azimuth, inclination
+        # Separability measure, per QUnit::TrySeparate: a genuinely
+        # separable (pure, unentangled) single qubit has Bloch vector
+        # length exactly 1 ("on-shell" -- on the surface of the Bloch
+        # sphere); a qubit reduced from a larger entangled state has
+        # length < 1 ("off-shell interior"). one_minus_r = 1 - |r| is
+        # near 0 for a genuinely separable qubit, and grows toward 1 the
+        # more entangled (mixed, as seen by this one qubit's reduced
+        # density matrix) it actually is.
+        one_minus_r = 1.0 - math.sqrt(x**2 + y**2 + z**2)
+
+        return azimuth, inclination, one_minus_r
 
     def _rotate_to_bloch(self, hq, delta_azimuth, delta_inclination):
         sim = self.sim[hq[0]]
@@ -631,159 +623,6 @@ class QrackAceBackend:
 
         sim.mtrx([m00, m01, m10, m11])
 
-    # Trainable BSEQ correction, in two layers:
-    #
-    # 1. A plain, uncontrolled single-qubit U(theta, phi, lambda) gate
-    #    (QrackSimulator.u), applied directly to the boundary qubit
-    #    (slot2). U then U-adjoint, with nothing else happening to slot2
-    #    in between except a probability read, is mathematically forced
-    #    to be the identity on slot2's actual evolution (U_dag @ U = I),
-    #    while the intermediate readout genuinely depends on whatever
-    #    slot2's value was beforehand whenever U doesn't commute with
-    #    the Z basis. This layer needs no ancilla and is always
-    #    available whenever its 3 angles are set.
-    #
-    # 2. Optionally (when bseq_ancillae=True at construction, the
-    #    default, and an ancilla was therefore allocated for this
-    #    site), a second layer: the ancilla is prepped fresh into |+>
-    #    (via H), then acts as CONTROL on a 4-parameter mcu gate
-    #    targeting slot2. This layer runs AFTER the u gate in the
-    #    forward ("compute") direction, and is undone FIRST, in the
-    #    opposite order, during reversal ("uncompute"): mcu-adjoint,
-    #    then H, then u-adjoint last.
-    #
-    # PyQrack's mcu follows the same convention as Qiskit's U/CU gates.
-    # Per Qiskit's own documentation, UGate.inverse() gives
-    # U(th,ph,la)^dagger = U(-th,-la,-ph) (theta negated, phi/lambda
-    # swapped-and-negated) -- and this was directly, repeatedly
-    # verified against the real PyQrack simulator (matching to better
-    # than 1e-6 on the full state vector, across multiple random seeds)
-    # for the 3-parameter u as well as the 4-parameter mcu (with gamma
-    # simply negated alongside the same swap). Note that Qiskit's
-    # separately-documented CUGate.inverse() page states a *different*
-    # formula (straight negation of all 4 parameters, no swap) -- that
-    # formula was tested directly against PyQrack's mcu and does NOT
-    # match; the swap formula is the one actually verified to work here.
-    #
-    # All 7 angles (3 for u, 4 for mcu) are trainable; fit them
-    # empirically against the measured BSEQ S statistic (or the
-    # simpler Bell-pair objective) via the companion
-    # optimize_bseq_correction.py script, which sets them directly on
-    # this class. Default to None: each layer is inactive (a
-    # guaranteed no-op) until its own angles are explicitly set, and
-    # the mcu layer additionally requires bseq_ancillae=True at
-    # construction (and therefore an ancilla actually allocated for
-    # the site in question).
-    _BSEQ_THETA = None
-    _BSEQ_PHI = None
-    _BSEQ_LAMBDA = None
-    _BSEQ_MCU_THETA = None
-    _BSEQ_MCU_PHI = None
-    _BSEQ_MCU_LAMBDA = None
-    _BSEQ_MCU_GAMMA = None
-
-    @staticmethod
-    def _bseq_u_active():
-        return (
-            QrackAceBackend._BSEQ_THETA is not None
-            and QrackAceBackend._BSEQ_PHI is not None
-            and QrackAceBackend._BSEQ_LAMBDA is not None
-        )
-
-    @staticmethod
-    def _bseq_mcu_active():
-        return (
-            QrackAceBackend._BSEQ_MCU_THETA is not None
-            and QrackAceBackend._BSEQ_MCU_PHI is not None
-            and QrackAceBackend._BSEQ_MCU_LAMBDA is not None
-            and QrackAceBackend._BSEQ_MCU_GAMMA is not None
-        )
-
-    @staticmethod
-    def _bseq_active():
-        return QrackAceBackend._bseq_u_active() or QrackAceBackend._bseq_mcu_active()
-
-    def _apply_bseq_correction(self, lq):
-        """Apply the trained BSEQ correction for one readout (the u
-        layer, then optionally the ancilla+mcu layer), to be reversed
-        afterward by _reverse_bseq_correction in the opposite order.
-        Returns a small state dict if anything was applied (so the
-        caller can pass it straight to the reversal without
-        re-deriving it), or None if nothing is active or applicable to
-        this qubit.
-
-        Fires every time this boundary qubit's state is about to be
-        read out (prob()/_correct()/m()/force_m() all funnel through
-        here, so this covers every simulator-API readout for the
-        qubit).
-        """
-        u_active = QrackAceBackend._bseq_u_active()
-        mcu_active = QrackAceBackend._bseq_mcu_active() and lq in self._ancilla
-        if not (u_active or mcu_active):
-            return None
-        hq = self._unpack(lq)
-        if len(hq) < 3:
-            return None
-        slot2_sim, slot2_idx = hq[2]
-
-        if u_active:
-            self.sim[slot2_sim].u(
-                slot2_idx,
-                QrackAceBackend._BSEQ_THETA,
-                QrackAceBackend._BSEQ_PHI,
-                QrackAceBackend._BSEQ_LAMBDA,
-            )
-
-        anc = None
-        if mcu_active:
-            anc_sim, anc_idx = self._ancilla[lq]
-            if anc_sim == slot2_sim:
-                anc = (anc_sim, anc_idx)
-                sim = self.sim[anc_sim]
-                sim.h(anc_idx)
-                sim.mcu(
-                    [anc_idx],
-                    slot2_idx,
-                    QrackAceBackend._BSEQ_MCU_THETA,
-                    QrackAceBackend._BSEQ_MCU_PHI,
-                    QrackAceBackend._BSEQ_MCU_LAMBDA,
-                    QrackAceBackend._BSEQ_MCU_GAMMA,
-                )
-
-        return {"slot2": hq[2], "ancilla": anc, "u_active": u_active}
-
-    def _reverse_bseq_correction(self, lq, state):
-        """Undo exactly what _apply_bseq_correction did, in the
-        opposite order: mcu-adjoint and H first (if the ancilla layer
-        ran), then u-adjoint last. Must be called once for every call
-        to _apply_bseq_correction that returned non-None, after the
-        caller is done reading whatever probabilities it needed,
-        passing the same state dict back.
-        """
-        slot2_sim, slot2_idx = state["slot2"]
-        anc = state["ancilla"]
-
-        if anc is not None:
-            anc_sim, anc_idx = anc
-            sim = self.sim[anc_sim]
-            sim.mcu(
-                [anc_idx],
-                slot2_idx,
-                -QrackAceBackend._BSEQ_MCU_THETA,
-                -QrackAceBackend._BSEQ_MCU_LAMBDA,
-                -QrackAceBackend._BSEQ_MCU_PHI,
-                -QrackAceBackend._BSEQ_MCU_GAMMA,
-            )
-            sim.h(anc_idx)
-
-        if state["u_active"]:
-            self.sim[slot2_sim].u(
-                slot2_idx,
-                -QrackAceBackend._BSEQ_THETA,
-                -QrackAceBackend._BSEQ_LAMBDA,
-                -QrackAceBackend._BSEQ_PHI,
-            )
-
     def _correct(self, lq, phase=False, skip_rotation=False):
         hq = self._unpack(lq)
 
@@ -791,8 +630,6 @@ class QrackAceBackend:
             return
 
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
-
-        bseq_state = self._apply_bseq_correction(lq)
 
         if phase:
             for q in qb:
@@ -838,17 +675,24 @@ class QrackAceBackend:
                     self.sim[hq[q][0]].x(hq[q][1])
 
             if not skip_rotation:
-                a, i = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
-                a[0], i[0] = self._get_bloch_angles(hq[0])
-                a[1], i[1] = self._get_bloch_angles(hq[1])
-                a[2], i[2] = self._get_bloch_angles(hq[2])
-                a[3], i[3] = self._get_bloch_angles(hq[3])
-                a[4], i[4] = self._get_bloch_angles(hq[4])
+                a, i, w = [0, 0, 0, 0, 0], [0, 0, 0, 0, 0], [0, 0, 0, 0, 0]
+                a[0], i[0], r0 = self._get_bloch_angles(hq[0])
+                a[1], i[1], r1 = self._get_bloch_angles(hq[1])
+                a[2], i[2], r2 = self._get_bloch_angles(hq[2])
+                a[3], i[3], r3 = self._get_bloch_angles(hq[3])
+                a[4], i[4], r4 = self._get_bloch_angles(hq[4])
+                w = [1 - r0, 1 - r1, 1 - r2, 1 - r3, 1 - r4]
 
-                a_target = sum(a) / 5
-                i_target = sum(i) / 5
-                for x in range(5):
-                    self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                w_total = sum(w)
+                if w_total > self._epsilon:
+                    a_target = sum(wx * ax for wx, ax in zip(w, a)) / w_total
+                    i_target = sum(wx * ix for wx, ix in zip(w, i)) / w_total
+                    for x in range(5):
+                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                # If every replica reads as maximally mixed (w_total ~ 0),
+                # there is no well-defined direction to rotate toward at
+                # all -- skip the rotation rather than rotate toward an
+                # arbitrary/undefined target derived from noise.
 
         else:
             lhv = self._lhv.get(lq)
@@ -890,7 +734,27 @@ class QrackAceBackend:
                 p2 = self.sim[hq[2][0]].prob(hq[2][1])
                 p_lhv = lhv.prob()
 
-                if (p1 >= 0.5) == (p2 >= 0.5):
+                end_caps_agree = (p1 >= 0.5) == (p2 >= 0.5)
+                slot0_disagrees_with_end_caps = (
+                    end_caps_agree
+                    and (abs(p0 - 0.5) > self._epsilon)
+                    and ((p0 >= 0.5) != (p1 >= 0.5))
+                )
+                if slot0_disagrees_with_end_caps:
+                    # The end-caps agreeing is not, by itself, reliable
+                    # corroboration: it can equally well mean both are
+                    # stale (e.g. an interior qubit they were shadow-
+                    # coupled to has since been measured for real, and
+                    # only slot0 -- which shares a simulator with that
+                    # interior qubit -- has actually been updated to
+                    # reflect it). When slot0 has a real, non-ambiguous
+                    # opinion that contradicts the agreeing pair, that
+                    # contradiction is itself the signal that the pair's
+                    # agreement is stale, not corroborating -- so trust
+                    # slot0 directly, overriding the agreement-trusts-
+                    # itself default below.
+                    result = p0 >= 0.5
+                elif end_caps_agree:
                     prms = math.sqrt((p1**2 + p2**2) / 2)
                     qrms = math.sqrt(((1 - p1) ** 2 + (1 - p2) ** 2) / 2)
                     eff_prob = (prms + (1 - qrms)) / 2
@@ -923,16 +787,19 @@ class QrackAceBackend:
                 # _cpauli_lhv, preserving the property that makes it usable
                 # as a non-collapsing tie-breaker of last resort.
 
-            if not skip_rotation:
-                a, i = [0, 0, 0], [0, 0, 0]
-                a[0], i[0] = self._get_bloch_angles(hq[0])
-                a[1], i[1] = self._get_bloch_angles(hq[1])
-                a[2], i[2] = self._get_bloch_angles(hq[2])
+            if (not skip_rotation) and (not end_caps_agree):
+                a, i, w = [0, 0, 0], [0, 0, 0], [0, 0, 0]
+                a[0], i[0], r0 = self._get_bloch_angles(hq[0])
+                a[1], i[1], r1 = self._get_bloch_angles(hq[1])
+                a[2], i[2], r2 = self._get_bloch_angles(hq[2])
+                w = [1 - r0, 1 - r1, 1 - r2]
 
-                a_target = sum(a) / 3
-                i_target = sum(i) / 3
-                for x in range(3):
-                    self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                w_total = sum(w)
+                if w_total > self._epsilon:
+                    a_target = sum(wx * ax for wx, ax in zip(w, a)) / w_total
+                    i_target = sum(wx * ix for wx, ix in zip(w, i)) / w_total
+                    for x in range(3):
+                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         if phase:
             for q in qb:
@@ -941,9 +808,6 @@ class QrackAceBackend:
             if lq in self._lhv:
                 self._lhv[lq].h()
 
-        if bseq_state is not None:
-            self._reverse_bseq_correction(lq, bseq_state)
-
     def apply_magnetic_bias(self, q, b):
         if b == 0:
             return
@@ -951,7 +815,7 @@ class QrackAceBackend:
         for x in q:
             hq = self._unpack(x)
             for h in hq:
-                a, i = self._get_bloch_angles(h)
+                a, i, _ = self._get_bloch_angles(h)
                 self._rotate_to_bloch(
                     h,
                     math.atan(math.tan(a) * b) - a,
@@ -1303,8 +1167,6 @@ class QrackAceBackend:
             b = hq[0]
             return self.sim[b[0]].prob(b[1])
 
-        bseq_state = self._apply_bseq_correction(lq)
-
         self._correct(lq)
         if len(hq) == 5:
             # RMS
@@ -1354,9 +1216,6 @@ class QrackAceBackend:
                 # correct, already-decided answer.
                 prms = math.sqrt((p[0] ** 2 + p[1] ** 2 + p[2] ** 2) / 3)
                 qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2 + (1 - p[2]) ** 2) / 3)
-
-        if bseq_state is not None:
-            self._reverse_bseq_correction(lq, bseq_state)
 
         return (prms + (1 - qrms)) / 2
 
