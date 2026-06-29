@@ -454,16 +454,6 @@ def main():
         "--target",
         choices=["S", "bell_pair", "correlation", "bseq_combined"],
         default="bseq_combined",
-        help="Optimization objective: 'bseq_combined' (default) is a "
-        "linear combination of 2 Bell-pair components (50% combined "
-        "weight: correlation on |00>+|11>, anti-correlation on "
-        "|01>+|10>) and 4 deterministic components (50% combined "
-        "weight: the correct classical outcome for no-op, x(0);x(1), "
-        "x(0) alone, and x(1) alone), guarding against over-fitting "
-        "correlation where qubits should NOT correlate; 'correlation' "
-        "fits only the original Bell-pair case alone; 'bell_pair' "
-        "optimizes a composite of correlation, balance-centering, and "
-        "low variance; 'S' optimizes the CHSH S statistic directly.",
     )
     parser.add_argument(
         "--no-ancillae",
