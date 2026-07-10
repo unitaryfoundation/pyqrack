@@ -307,10 +307,16 @@ class QrackAceBackend:
                     k: deque(v, maxlen=self.history_window)
                     for k, v in to_clone._coupling_history.items()
                 }
+                self._coupling_history_rev = dict(to_clone._coupling_history_rev)
+                self._pending_skip = {k: set(v) for k, v in to_clone._pending_skip.items()}
             else:
                 self._coupling_history = {}
+                self._coupling_history_rev = {}
+                self._pending_skip = {}
         else:
             self._coupling_history = None
+            self._coupling_history_rev = None
+            self._pending_skip = None
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -880,14 +886,17 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
+        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].u(b[1], th, ph, lm)
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].u(b[1], th, ph, lm)
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -895,33 +904,85 @@ class QrackAceBackend:
 
         # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
+    def _revert_shadow_commitment(self, lq1):
+        """Revert shadow-committed replicas recorded under lq1. H-reverts
+        each committed shadow replica (undoing the stale Z-basis commitment),
+        stores the reverted tuples in _pending_skip[lq2] so the NEXT gate on
+        that boundary qubit skips those replicas entirely (rotating an H-reverted
+        shadow replica from the wrong starting state gives a wrong result; the
+        right behavior is to skip it and let the next coupling gate re-derive
+        from scratch), and returns the reverted set for the immediate caller to
+        skip as well (for case A, where the control's own rotation should also
+        skip its own shadow replicas that were just un-committed)."""
+        if self._coupling_history is None:
+            return set()
+        hist = self._coupling_history.pop(lq1, None)
+        if hist is None:
+            return set()
+        reverted_all = set()
+        for lq2, targets in hist:
+            reverted = set()
+            for t_sim, t_idx in targets:
+                self.sim[t_sim].h(t_idx)
+                reverted.add((t_sim, t_idx))
+            # Store as pending skip for the NEXT gate on lq2 (case B):
+            # when the boundary qubit's own gate runs, it should skip
+            # these replicas rather than applying its gate to the freshly-
+            # H-reverted, uncommitted state.
+            if reverted:
+                existing = self._pending_skip.get(lq2, set())
+                self._pending_skip[lq2] = existing | reverted
+            self._coupling_history_rev.pop(lq2, None)
+            reverted_all |= reverted
+        return reverted_all
+
+    def _invalidate_for_gate(self, lq):
+        """Called by every single-qubit gate dispatcher. Returns the set of
+        (sim_id, idx) shadow replicas that should be SKIPPED in the calling
+        gate's own application loop.
+        - Case A: lq is the coherent-partner (lq1) in a live history entry.
+          A gate on the control side invalidates the shadow commitment: reverts
+          the shadow targets via H (returning them to uncommitted 0.5), stores
+          them in pending_skip[lq2] for the NEXT gate on the boundary qubit,
+          and returns them for the immediate caller to skip as well (since the
+          control's own replica at slot0 may also be in the reverted set).
+        - Case B: lq is the boundary recipient (lq2) of a commitment that a
+          prior case-A revert already H-reverted. Consumes the pending_skip
+          set so the boundary gate doesn't apply itself to the freshly-
+          uncommitted replicas (which would give the wrong result from the
+          wrong starting state). Case B NEVER triggers a fresh revert --
+          only case A does, because only a gate on the control side actually
+          invalidates the commitment; a gate on the boundary side just needs
+          to avoid corrupting the already-reverted starting state."""
+        if self._coupling_history is None:
+            return set()
+        skip = set()
+        # Case A: lq is the coherent control side -- fire the revert.
+        if lq in self._coupling_history:
+            skip |= self._revert_shadow_commitment(lq)
+        # Case B: lq is the boundary side -- ONLY consume pending_skip,
+        # never trigger a fresh revert (that would incorrectly revert
+        # a still-valid commitment that no control-side gate has touched).
+        pending = self._pending_skip.pop(lq, None)
+        if pending:
+            skip |= pending
+        return skip
+
     def r(self, p, th, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            if (
-                self._coupling_history is not None
-                and p != Pauli.PauliZ
-                and (abs(th) > self._epsilon)
-                and lq in self._coupling_history
-            ):
-                # A PauliX/PauliY rotation on this qubit can invalidate
-                # any shadow commitment made on a partner qubit's behalf
-                # while this qubit was treated as a fixed Z-basis
-                # control. PauliZ rotations commute with that
-                # commitment and don't need this.
-                for _lq2, targets in self._coupling_history[lq]:
-                    for t_sim, t_idx in targets:
-                        self.sim[t_sim].h(t_idx)
-                del self._coupling_history[lq]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].r(p, th, b[1])
             return
 
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
+        skip = self._invalidate_for_gate(lq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].r(p, th, b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].r(p, th, b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -938,16 +999,19 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].h(b[1])
             return
 
         self._correct(lq)
+        skip = self._invalidate_for_gate(lq)
 
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].h(b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].h(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -959,14 +1023,17 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].s(b[1])
             return
 
+        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].s(b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].s(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -976,14 +1043,17 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].adjs(b[1])
             return
 
+        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].adjs(b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].adjs(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -993,14 +1063,17 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].x(b[1])
             return
 
+        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].x(b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].x(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1010,14 +1083,17 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].y(b[1])
             return
 
+        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].y(b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].y(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1027,14 +1103,17 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].z(b[1])
             return
 
+        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].z(b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].z(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1044,14 +1123,17 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].t(b[1])
             return
 
+        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].t(b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].t(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1061,14 +1143,17 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
+            self._invalidate_for_gate(lq)
             self.sim[b[0]].adjt(b[1])
             return
 
+        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            self.sim[b[0]].adjt(b[1])
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].adjt(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1136,6 +1221,7 @@ class QrackAceBackend:
                 lq1, deque(maxlen=self.history_window)
             )
             hist.append(entry)
+            self._coupling_history_rev[lq2] = lq1
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         lq1_row = lq1 // self._row_length
@@ -1687,10 +1773,6 @@ class QrackAceBackend:
         return [
             "id",
             "u",
-            "u1",
-            "u2",
-            "u3",
-            "r",
             "rx",
             "ry",
             "rz",
@@ -1700,9 +1782,6 @@ class QrackAceBackend:
             "z",
             "s",
             "sdg",
-            "sx",
-            "sxdg",
-            "p",
             "t",
             "tdg",
             "cx",
