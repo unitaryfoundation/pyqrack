@@ -1204,6 +1204,15 @@ class QrackSystem:
             POINTER(c_ulonglong),
         ]
 
+        self.qrack_lib.AreFactorized.restype = c_bool
+        self.qrack_lib.AreFactorized.argtypes = [
+            c_ulonglong,
+            c_ulonglong,
+            POINTER(c_ulonglong),
+            c_ulonglong,
+            POINTER(c_ulonglong),
+        ]
+
         self.qrack_lib.GetUnitaryFidelity.restype = c_double
         self.qrack_lib.GetUnitaryFidelity.argtypes = [c_ulonglong]
 
