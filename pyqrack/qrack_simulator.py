@@ -3202,7 +3202,7 @@ class QrackSimulator:
         Raises:
             Runtimeerror: QrackSimulator raised an exception.
         """
-        result = Qrack.qrack_lib.Separate(self.sid, len(qs), QrackSimulator._ulonglong_byref(qs))
+        Qrack.qrack_lib.Separate(self.sid, len(qs), QrackSimulator._ulonglong_byref(qs))
         self._throw_if_error()
 
     def are_factorized(self, a, b):
@@ -3219,6 +3219,8 @@ class QrackSimulator:
         """
         result = Qrack.qrack_lib.AreFactorized(self.sid, len(a), QrackSimulator._ulonglong_byref(a), len(b), QrackSimulator._ulonglong_byref(b))
         self._throw_if_error()
+
+        return result
 
     def get_unitary_fidelity(self):
         """Get fidelity estimate
