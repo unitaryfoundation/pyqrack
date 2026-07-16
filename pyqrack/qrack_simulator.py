@@ -3161,7 +3161,7 @@ class QrackSimulator:
             qi2: second qubit to be decomposed
 
         Raises:
-            Runtimeerror: QrackSimulator raised an exception.
+            RuntimeError: QrackSimulator raised an exception.
 
         Returns:
             State of both the qubits.
@@ -3180,7 +3180,7 @@ class QrackSimulator:
             t: allowed tolerance
 
         Raises:
-            Runtimeerror: QrackSimulator raised an exception.
+            RuntimeError: QrackSimulator raised an exception.
 
         Returns:
             State of all the qubits.
@@ -3200,24 +3200,25 @@ class QrackSimulator:
             qs: list of qubits to be decomposed
 
         Raises:
-            Runtimeerror: QrackSimulator raised an exception.
+            RuntimeError: QrackSimulator raised an exception.
         """
         Qrack.qrack_lib.Separate(self.sid, len(qs), QrackSimulator._ulonglong_byref(qs))
         self._throw_if_error()
 
-    def are_factorized(self, a, b):
+    def are_factorized(self, a, b, fc = False):
         """Check whether bits in "a" are factorized from bits in "b"
 
-        After flushing all buffers, check whether "a" set of qubits is factorized separate from "b" set of qubits
+        After optionally flushing buffers, check whether "a" set of qubits is factorized separate from "b" set of qubits
 
         Args:
             a: first list of qubits
             b: second list of qubits
+            fc: bool, whether to flush cache
 
         Raises:
-            Runtimeerror: QrackSimulator raised an exception.
+            RuntimeError: QrackSimulator raised an exception.
         """
-        result = Qrack.qrack_lib.AreFactorized(self.sid, len(a), QrackSimulator._ulonglong_byref(a), len(b), QrackSimulator._ulonglong_byref(b))
+        result = Qrack.qrack_lib.AreFactorized(self.sid, len(a), QrackSimulator._ulonglong_byref(a), len(b), QrackSimulator._ulonglong_byref(b), fc)
         self._throw_if_error()
 
         return result

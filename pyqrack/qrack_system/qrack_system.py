@@ -1211,6 +1211,7 @@ class QrackSystem:
             POINTER(c_ulonglong),
             c_ulonglong,
             POINTER(c_ulonglong),
+            c_bool,
         ]
 
         self.qrack_lib.GetUnitaryFidelity.restype = c_double
