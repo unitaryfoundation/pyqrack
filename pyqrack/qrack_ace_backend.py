@@ -356,16 +356,17 @@ class QrackAceBackend:
         # When there are none (e.g. a grid small enough, relative to
         # long_range_rows/columns, that the whole thing is "fully
         # connected" with no QEC boundary at all), we must NOT allocate a
-        # 0-qubit QrackSimulator for the crossbar: a 0-qubit QrackSimulator
-        # can be constructed, but calling .clone() on one crashes the
-        # native Qrack core (segfault), and clone() is called routinely by
-        # measure_shots()/clone(). So the boundary sim is only created when
-        # boundary_count > 0, exactly mirroring how the original LHV-based
-        # code never instantiated anything for the boundary case when
-        # there were no boundary sites.
+        # 0-qubit QrackSimulator for the crossbar. The boundary sim is only
+        # created when boundary_count > 0, exactly mirroring how the original
+        # LHV-based code never instantiated anything for the boundary case
+        # when there were no boundary sites.
         has_boundary = boundary_count > 0
         if has_boundary:
             sim_counts.append(boundary_count)
+
+        use_sdrp = has_boundary and ("QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ)
+        # "Golden value"
+        sdrp = 1.0 - 1.0 / math.sqrt(2.0)
 
         self.sim = []
         for i in range(sim_count + (1 if has_boundary else 0)):
@@ -384,15 +385,18 @@ class QrackAceBackend:
                 )
             )
 
-            # You can still "monkey-patch" this, after the constructor.
-            # if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ:
-            #     # (1 - 1 / sqrt(2)) / 4 (but empirically tuned)
-            #     self.sim[i].set_sdrp(0.073223304703363119)
+            if use_sdrp:
+                # Half the "golden value" (but empirically tuned)
+                self.sim[i].set_sdrp(sdrp)
 
         self._boundary_sim_id = boundary_sim_id if has_boundary else None
 
     def clone(self):
         return QrackAceBackend(to_clone=self)
+
+    def set_sdrp(self, sdrp):
+        for sim in self.sim:
+            sim.set_sdrp(sdrp)
 
     def measure_shots_consensus(self, q, s, n_instances=3, threshold=0.1):
         # Consensus measurement across n_instances independent clones.
