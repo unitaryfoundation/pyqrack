@@ -396,7 +396,7 @@ class QrackAceBackend:
 
     def set_sdrp(self, sdrp):
         for sim in self.sim:
-            self.sim[i].set_sdrp(sdrp)
+            sim.set_sdrp(sdrp)
 
     def measure_shots_consensus(self, q, s, n_instances=3, threshold=0.1):
         # Consensus measurement across n_instances independent clones.
