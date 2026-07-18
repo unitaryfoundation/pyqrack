@@ -231,7 +231,7 @@ class QrackAceBackend:
         is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
         is_near_clifford_tableau_writer=False,
         noise=0,
-        history_window=0,
+        history_window=1,
         to_clone=None,
     ):
         if to_clone:
@@ -309,19 +309,14 @@ class QrackAceBackend:
                 }
                 self._coupling_history_rev = dict(to_clone._coupling_history_rev)
                 self._pending_skip = {k: set(v) for k, v in to_clone._pending_skip.items()}
-                self._pending_resolve = {
-                    k: dict(v) for k, v in to_clone._pending_resolve.items()
-                }
             else:
                 self._coupling_history = {}
                 self._coupling_history_rev = {}
                 self._pending_skip = {}
-                self._pending_resolve = {}
         else:
             self._coupling_history = None
             self._coupling_history_rev = None
             self._pending_skip = None
-            self._pending_resolve = None
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -474,27 +469,37 @@ class QrackAceBackend:
         # (self._epsilon), they carry no real information about which
         # qubit is "more likely 1" -- e.g. a fresh target right after
         # _cx_shadow's H() always reads ~0.5, indistinguishably from a
-        # genuinely-mixed control. This shadow mechanism can only return
-        # ONE definite classical pick per call, so resolving every such
-        # near-tie to a FIXED qubit (as a plain "<" or "<=" comparison
-        # would, once p1/p2 are within epsilon of each other) reintroduces
-        # a systematic bias -- it just moves the bias from "favors q1" to
-        # "always favors q2" instead of removing it. The aggregate
-        # statistics this shadow is meant to approximate (e.g. a real CX
-        # from a maximally-mixed control onto a fresh target makes BOTH
-        # qubits individually read prob=0.5, perfectly correlated) are
+        # genuinely-mixed control. Resolving every such near-tie to a
+        # FIXED qubit's probability (as a plain "<" or "<=" comparison
+        # would) reintroduces a systematic bias -- it just moves the bias
+        # from "favors q1" to "always favors q2" instead of removing it.
+        # The aggregate statistics this shadow is meant to approximate are
         # only reproduced, across many circuit instances, if a genuine
         # tie is broken at random rather than by a fixed rule.
+        #
+        # IMPORTANT (phase-kickback fix): this randomization applies ONLY
+        # to which PROBABILITY VALUE is used for the threshold decision.
+        # It must NEVER change which qubit physically receives the
+        # resulting Z gate -- that must always be q2 (the actual shadow
+        # target), never q1 (the control). The previous version returned
+        # (prob, q1_or_q2) and let the caller apply Z to whichever qubit
+        # won the coin flip, which meant the CONTROL itself received an
+        # unintended Z gate on the near-tie branch roughly half the time
+        # (confirmed empirically: ~50% of ties resolved to the control).
+        # Since the control typically shares a simulator with other
+        # qubits that are supposed to be exactly, coherently entangled
+        # with it (e.g. the "home patch" replica of the target), an
+        # unintended Z landing on the control corrupts that coherent
+        # subsystem directly -- this was the root cause of BSEQ/CHSH
+        # correlations collapsing toward zero whenever both qubits in an
+        # entangled pair received nonzero measurement-basis rotations.
         if abs(p1 - p2) <= self._epsilon:
-            return (p1, q2) if random.random() < 0.5 else (p2, q1)
+            return p1 if random.random() < 0.5 else p2
 
-        if p1 < p2:
-            return p2, q1
-
-        return p1, q2
+        return max(p1, p2)
 
     def _cz_shadow(self, q1, q2):
-        prob_max, t = self._ct_pair_prob(q1, q2)
+        prob_max = self._ct_pair_prob(q1, q2)
         # NOTE: this must be ">=", not ">". H() applied to any qubit in a
         # definite computational-basis state (e.g. a fresh boundary/ancilla
         # qubit, as in _cx_shadow's H-sandwich) lands at EXACTLY prob=0.5,
@@ -504,11 +509,15 @@ class QrackAceBackend:
         # breaks entanglement transfer for the extremely common case of a
         # CX/CY/CZ from a maximally-mixed-looking control onto a fresh
         # target (e.g. H(0); cx(0,1) for a Bell pair).
+        #
+        # The Z gate ALWAYS targets q2 (the actual shadow target) now --
+        # never q1 (the control) -- regardless of which probability value
+        # the tie-break above used for the threshold decision.
         if prob_max >= (0.5 - self._epsilon):
-            if isinstance(t, tuple):
-                self.sim[t[0]].z(t[1])
+            if isinstance(q2, tuple):
+                self.sim[q2[0]].z(q2[1])
             else:
-                t.z()
+                q2.z()
 
     def _qec_x(self, c):
         if isinstance(c, tuple):
@@ -915,82 +924,35 @@ class QrackAceBackend:
 
     def _revert_shadow_commitment(self, lq1):
         """Revert shadow-committed replicas recorded under lq1. H-reverts
-        each committed shadow replica (undoing the stale Z-basis commitment).
-        Stores enough information in _pending_resolve[lq2] (control's
-        LOGICAL qubit lq1, plus which replicas were reverted) that, if no
-        subsequent coupling gate ever consumes _pending_skip[lq2] the
-        ordinary way, _resolve_pending_shadow can later FORCE a definite
-        correlation at the point of actual measurement -- see that method's
-        docstring for why this is the right fix, not a marginal-probability
-        re-derivation (which provably carries no new information for a
-        control whose reduced state is maximally mixed, per the
-        no-signaling theorem: local rotations never change that control's
-        own marginal probability, so re-querying it after a rotation
-        re-derives nothing new)."""
+        each committed shadow replica (undoing the stale Z-basis commitment),
+        stores the reverted tuples in _pending_skip[lq2] so the NEXT gate on
+        that boundary qubit skips those replicas entirely (rotating an H-reverted
+        shadow replica from the wrong starting state gives a wrong result; the
+        right behavior is to skip it and let the next coupling gate re-derive
+        from scratch), and returns the reverted set for the immediate caller to
+        skip as well (for case A, where the control's own rotation should also
+        skip its own shadow replicas that were just un-committed)."""
         if self._coupling_history is None:
             return set()
         hist = self._coupling_history.pop(lq1, None)
         if hist is None:
             return set()
         reverted_all = set()
-        for lq2, shadow_pairs, pauli, anti, ctrl_lq in hist:
+        for lq2, targets in hist:
             reverted = set()
-            resolve_info = self._pending_resolve.setdefault(lq2, {})
-            for b1, b2 in shadow_pairs:
-                t_sim, t_idx = b2
+            for t_sim, t_idx in targets:
                 self.sim[t_sim].h(t_idx)
                 reverted.add((t_sim, t_idx))
-                resolve_info[(t_sim, t_idx)] = ctrl_lq
+            # Store as pending skip for the NEXT gate on lq2 (case B):
+            # when the boundary qubit's own gate runs, it should skip
+            # these replicas rather than applying its gate to the freshly-
+            # H-reverted, uncommitted state.
             if reverted:
                 existing = self._pending_skip.get(lq2, set())
                 self._pending_skip[lq2] = existing | reverted
             self._coupling_history_rev.pop(lq2, None)
             reverted_all |= reverted
         return reverted_all
-
-    def _resolve_pending_shadow(self, lq):
-        """Called at the START of prob()/m(), before the normal decode
-        cascade runs. If lq still has unresolved reverted shadow
-        commitments (meaning no coupling gate consumed and re-derived them
-        via the ordinary _invalidate_for_gate Case B path before
-        measurement was requested), FORCE a definite correlation now,
-        rather than attempting a marginal-probability re-derivation.
-
-        Why force, not re-derive: a control whose reduced state is
-        genuinely maximally mixed (the correct physics for one half of a
-        Bell pair) has a Z-basis marginal probability that is INVARIANT
-        under any local rotation applied to it -- re-querying "the
-        control's current probability" after a rotation returns the exact
-        same uninformative ~0.5 it always would, carrying no new signal to
-        re-derive from. What genuinely IS available, and wasn't available
-        at the earlier shadow-creation time, is the control's ACTUAL,
-        DEFINITE, SAMPLED measurement outcome once it is actually measured.
-        So: force the control to be measured now (self.m on its logical
-        qubit, which recursively handles its own decode if needed), then
-        force this boundary replica's outcome to either match or oppose
-        that definite result, with the match/oppose choice made by a
-        single random draw. This preserves a genuine, maximal-strength
-        correlation (or anti-correlation) for this measurement event,
-        with only the correlation's SIGN left as a fair, unresolved coin
-        flip -- rather than either (a) leaving the replica at its stale,
-        frozen, possibly-wrong commitment from before the invalidating
-        rotation, or (b) independently re-randomizing each qubit's outcome
-        separately, which decorrelates the pair entirely (empirically
-        confirmed: this collapses the average correlation to ~0, not the
-        correct partial value)."""
-        pending = self._pending_resolve.pop(lq, None)
-        if not pending:
-            return
-        skip_set = self._pending_skip.get(lq)
-        for (t_sim, t_idx), ctrl_lq in pending.items():
-            ctrl_result = self.m(ctrl_lq)
-            same = random.random() < 0.5
-            target_result = ctrl_result if same else (not ctrl_result)
-            self.sim[t_sim].force_m(t_idx, target_result)
-            if skip_set is not None:
-                skip_set.discard((t_sim, t_idx))
-        if skip_set is not None and not skip_set:
-            self._pending_skip.pop(lq, None)
 
     def _invalidate_for_gate(self, lq):
         """Called by every single-qubit gate dispatcher. Returns the set of
@@ -1255,10 +1217,6 @@ class QrackAceBackend:
 
     def _apply_coupling(self, pauli, anti, qb1, hq1, qb2, hq2, lq1_lr, lq1=None, lq2=None):
         shadow_targets = []
-        shadow_pairs = []  # (b1, b2): which control replica produced each
-                            # shadow target, so a later force-correlation
-                            # step (see _resolve_pending_shadow) knows what
-                            # to condition on.
         for q1 in qb1:
             b1 = hq1[q1]
             gate_fn, shadow_fn = self._get_gate(pauli, anti, b1[0])
@@ -1269,7 +1227,6 @@ class QrackAceBackend:
                 elif lq1_lr or (b1[1] == b2[1]) or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1))):
                     shadow_fn(b1, b2)
                     shadow_targets.append(b2)
-                    shadow_pairs.append((b1, b2))
 
         if (
             self._coupling_history is not None
@@ -1277,7 +1234,7 @@ class QrackAceBackend:
             and lq2 is not None
             and shadow_targets
         ):
-            entry = (lq2, tuple(shadow_pairs), pauli, anti, lq1)
+            entry = (lq2, tuple(shadow_targets))
             hist = self._coupling_history.setdefault(
                 lq1, deque(maxlen=self.history_window)
             )
@@ -1396,9 +1353,6 @@ class QrackAceBackend:
         if len(hq) < 2:
             b = hq[0]
             return self.sim[b[0]].prob(b[1])
-
-        if self._pending_resolve is not None:
-            self._resolve_pending_shadow(lq)
 
         self._correct(lq)
         if len(hq) == 5:
