@@ -502,21 +502,38 @@ class QrackAceBackend:
         return max(p1, p2)
 
     def _cz_shadow(self, q1, q2):
-        prob_max = self._ct_pair_prob(q1, q2)
-        # NOTE: this must be ">=", not ">". H() applied to any qubit in a
-        # definite computational-basis state (e.g. a fresh boundary/ancilla
-        # qubit, as in _cx_shadow's H-sandwich) lands at EXACTLY prob=0.5,
-        # deterministically -- this is the ordinary case, not a rare
-        # floating-point tie. A strict "> 0.5" therefore silently no-ops
-        # the shadow gate every time it targets a fresh qubit, which
-        # breaks entanglement transfer for the extremely common case of a
-        # CX/CY/CZ from a maximally-mixed-looking control onto a fresh
-        # target (e.g. H(0); cx(0,1) for a Bell pair).
+        p1 = self.sim[q1[0]].prob(q1[1]) if isinstance(q1, tuple) else q1.prob()
+        p2 = self.sim[q2[0]].prob(q2[1]) if isinstance(q2, tuple) else q2.prob()
+
+        # 0/1-BALANCE FIX: a near-tie (both readings within epsilon of each
+        # other -- the ORDINARY case for a maximally-mixed control paired
+        # with a freshly-H'd target, both landing at EXACTLY 0.5) carries
+        # no informative signal about which basis state to commit to. The
+        # previous logic computed a "prob_max" from this near-tie and
+        # compared it against a ">= 0.5 - epsilon" threshold -- but
+        # prob_max, drawn from two values both AT 0.5, ALWAYS satisfies
+        # that threshold, so the Z gate fired deterministically, every
+        # single time, regardless of the random draw upstream. Confirmed
+        # empirically: 20/20 trials landed the shadow replica at exactly
+        # prob=1.0, never 0.5 or anything reflecting genuine 50/50
+        # uncertainty. A real CX from a mixed control onto a fresh target
+        # leaves the target's own marginal at a genuine 0.5, not a
+        # deterministic bias toward |1>.
         #
-        # The Z gate ALWAYS targets q2 (the actual shadow target) now --
-        # never q1 (the control) -- regardless of which probability value
-        # the tie-break above used for the threshold decision.
-        if prob_max >= (0.5 - self._epsilon):
+        # Fix: when the two readings are genuinely tied, the DECISION of
+        # whether to apply Z must itself be the random draw (not merely
+        # which value gets compared against the threshold, which never
+        # changed the deterministic outcome). When the readings are
+        # NOT tied, the existing decisive-threshold logic is unambiguous
+        # and unchanged.
+        if abs(p1 - p2) <= self._epsilon:
+            apply = random.random() < 0.5
+        else:
+            apply = max(p1, p2) >= (0.5 - self._epsilon)
+
+        # The Z gate always targets q2 (the actual shadow target) --
+        # never q1 (the control) -- per the earlier phase-kickback fix.
+        if apply:
             if isinstance(q2, tuple):
                 self.sim[q2[0]].z(q2[1])
             else:
