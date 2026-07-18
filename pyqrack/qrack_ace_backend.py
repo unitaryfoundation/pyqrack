@@ -231,7 +231,7 @@ class QrackAceBackend:
         is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
         is_near_clifford_tableau_writer=False,
         noise=0,
-        history_window=1,
+        history_window=0,
         to_clone=None,
     ):
         if to_clone:
@@ -309,14 +309,17 @@ class QrackAceBackend:
                 }
                 self._coupling_history_rev = dict(to_clone._coupling_history_rev)
                 self._pending_skip = {k: set(v) for k, v in to_clone._pending_skip.items()}
+                self._stale_replicas = {k: set(v) for k, v in to_clone._stale_replicas.items()}
             else:
                 self._coupling_history = {}
                 self._coupling_history_rev = {}
                 self._pending_skip = {}
+                self._stale_replicas = {}
         else:
             self._coupling_history = None
             self._coupling_history_rev = None
             self._pending_skip = None
+            self._stale_replicas = None
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -950,6 +953,8 @@ class QrackAceBackend:
             if reverted:
                 existing = self._pending_skip.get(lq2, set())
                 self._pending_skip[lq2] = existing | reverted
+                existing_stale = self._stale_replicas.get(lq2, set())
+                self._stale_replicas[lq2] = existing_stale | reverted
             self._coupling_history_rev.pop(lq2, None)
             reverted_all |= reverted
         return reverted_all
@@ -1348,11 +1353,49 @@ class QrackAceBackend:
         self.cz(lq1, lq2)
         self.swap(lq1, lq2)
 
+    def _resolve_pending_skip(self, lq):
+        """If lq has replicas recorded as STALE (H-reverted after an
+        invalidating control-side rotation, then skipped by their own
+        later gate because _invalidate_for_gate's Case B already popped
+        _pending_skip to decide what to skip -- consuming that record
+        before it could ever reach measurement time), force those
+        specific replicas to match hq[0] directly.
+
+        NOTE: this deliberately does NOT read _pending_skip, because
+        _invalidate_for_gate's Case B already pops (consumes) it the
+        moment the boundary qubit's own next gate runs -- by the time
+        prob()/m() is called at actual measurement time, _pending_skip is
+        already empty even though the replicas never got their intended
+        rotation. _stale_replicas is a SEPARATE record, populated
+        alongside _pending_skip in _revert_shadow_commitment, that is
+        NOT touched by Case B's pop -- only by this method, at the point
+        where staleness actually needs to be resolved.
+
+        Forcing to match hq[0] requires no randomness (unlike an earlier
+        force-correlate-with-control attempt) because hq[0] -- the
+        replica sharing a real simulator with the control, via the exact
+        gate_fn path in _apply_coupling -- is never itself added to
+        shadow_targets/_pending_skip/_stale_replicas, and is verified
+        exact following the _ct_pair_prob/_cz_shadow phase-kickback fix."""
+        if self._stale_replicas is None:
+            return
+        stale = self._stale_replicas.pop(lq, None)
+        if not stale:
+            return
+        hq = self._unpack(lq)
+        b0 = hq[0]
+        ground_truth = self.sim[b0[0]].m(b0[1])
+        for (t_sim, t_idx) in stale:
+            self.sim[t_sim].force_m(t_idx, ground_truth)
+
     def prob(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
             return self.sim[b[0]].prob(b[1])
+
+        if self._stale_replicas is not None:
+            self._resolve_pending_skip(lq)
 
         self._correct(lq)
         if len(hq) == 5:
