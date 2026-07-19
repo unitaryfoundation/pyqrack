@@ -310,16 +310,19 @@ class QrackAceBackend:
                 self._coupling_history_rev = dict(to_clone._coupling_history_rev)
                 self._pending_skip = {k: set(v) for k, v in to_clone._pending_skip.items()}
                 self._stale_replicas = {k: set(v) for k, v in to_clone._stale_replicas.items()}
+                self._witness_map = {k: dict(v) for k, v in to_clone._witness_map.items()}
             else:
                 self._coupling_history = {}
                 self._coupling_history_rev = {}
                 self._pending_skip = {}
                 self._stale_replicas = {}
+                self._witness_map = {}
         else:
             self._coupling_history = None
             self._coupling_history_rev = None
             self._pending_skip = None
             self._stale_replicas = None
+            self._witness_map = None
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -1239,9 +1242,24 @@ class QrackAceBackend:
 
     def _apply_coupling(self, pauli, anti, qb1, hq1, qb2, hq2, lq1_lr, lq1=None, lq2=None):
         shadow_targets = []
+        witnessed_targets = []  # (shadow_target, witness_replica) pairs --
+                                 # "easy case": a replica of the SAME target
+                                 # logical qubit lives in the SAME simulator
+                                 # as the control replica used for this
+                                 # shadow pair, and is therefore always
+                                 # exactly correct regardless of how many
+                                 # later gates happen to the control. No
+                                 # bounded window, no reactive invalidation
+                                 # needed for these -- see
+                                 # _resolve_witnessed_shadow.
         for q1 in qb1:
             b1 = hq1[q1]
             gate_fn, shadow_fn = self._get_gate(pauli, anti, b1[0])
+            witness = None
+            for b2c in hq2:
+                if b2c[0] == b1[0]:
+                    witness = b2c
+                    break
             for q2 in qb2:
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
@@ -1249,6 +1267,13 @@ class QrackAceBackend:
                 elif lq1_lr or (b1[1] == b2[1]) or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1))):
                     shadow_fn(b1, b2)
                     shadow_targets.append(b2)
+                    if witness is not None and witness != b2:
+                        witnessed_targets.append((b2, witness))
+
+        if lq2 is not None and witnessed_targets and self._witness_map is not None:
+            wmap = self._witness_map.setdefault(lq2, {})
+            for target_replica, witness_replica in witnessed_targets:
+                wmap[target_replica] = witness_replica
 
         if (
             self._coupling_history is not None
@@ -1256,12 +1281,18 @@ class QrackAceBackend:
             and lq2 is not None
             and shadow_targets
         ):
-            entry = (lq2, tuple(shadow_targets))
-            hist = self._coupling_history.setdefault(
-                lq1, deque(maxlen=self.history_window)
-            )
-            hist.append(entry)
-            self._coupling_history_rev[lq2] = lq1
+            # Only the NON-witnessed shadow targets need the bounded,
+            # reactive history/invalidation machinery -- witnessed ones are
+            # always resolvable directly and don't need tracking here at all.
+            witnessed_set = {t for t, _ in witnessed_targets}
+            unwitnessed = tuple(t for t in shadow_targets if t not in witnessed_set)
+            if unwitnessed:
+                entry = (lq2, tuple(unwitnessed))
+                hist = self._coupling_history.setdefault(
+                    lq1, deque(maxlen=self.history_window)
+                )
+                hist.append(entry)
+                self._coupling_history_rev[lq2] = lq1
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         lq1_row = lq1 // self._row_length
@@ -1405,11 +1436,46 @@ class QrackAceBackend:
         for (t_sim, t_idx) in stale:
             self.sim[t_sim].force_m(t_idx, ground_truth)
 
+    def _resolve_witnessed_shadow(self, lq):
+        """The 'easy case' generalization of history_window: if lq has any
+        shadow replicas with a recorded witness (a replica of the SAME
+        logical qubit living in the SAME simulator as the control used for
+        that shadow coupling), force each one to match its witness's
+        CURRENT value now, unconditionally.
+
+        This is deliberately unbounded -- no history_window, no deque, no
+        reactive invalidation on the control's later gates at all. It
+        doesn't need any of that, because the witness is a real quantum
+        register: it automatically, continuously reflects the correct
+        joint state through ANY NUMBER of intervening gates on the
+        control (or on itself), for free, simply by being the same real
+        simulator. No matter how long resolution is deferred -- one gate
+        later or a thousand -- matching the witness at the moment it's
+        actually needed is exactly as correct as matching it immediately
+        would have been. This is why the fix for the 'easy case' doesn't
+        need a window at all, bounded or otherwise: unlike the harder,
+        no-witness case (still handled by the existing bounded
+        _coupling_history / _stale_replicas machinery, left for a
+        belief-propagation-style treatment another day), there's no
+        approximation being deferred here, so there's nothing for a
+        window size to trade off against."""
+        if self._witness_map is None:
+            return
+        wmap = self._witness_map.pop(lq, None)
+        if not wmap:
+            return
+        for (t_sim, t_idx), (w_sim, w_idx) in wmap.items():
+            ground_truth = self.sim[w_sim].m(w_idx)
+            self.sim[t_sim].force_m(t_idx, ground_truth)
+
     def prob(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
             return self.sim[b[0]].prob(b[1])
+
+        if self._witness_map is not None:
+            self._resolve_witnessed_shadow(lq)
 
         if self._stale_replicas is not None:
             self._resolve_pending_skip(lq)
