@@ -2054,15 +2054,44 @@ class QrackAceBackend:
 
         # Two-qubit depolarizing on boundary-crossing and boundary-adjacent gates
         # (same row+column boundary fix as the single-qubit section above)
+        #
+        # BOUNDARY-TO-BOUNDARY vs BOUNDARY-TO-BULK, made explicit:
+        # every boundary qubit has a replica in the one shared "crossbar"
+        # simulator (self._qubits[lq] with len>1 always includes a
+        # boundary_sim_id entry), and _apply_coupling already recognizes
+        # (confirmed directly, by instrumentation) that when BOTH qubits in
+        # a coupling are boundary qubits, their crossbar replicas share a
+        # simulator and get an exact gate_fn application -- one real,
+        # zero-error physical operation, alongside the remaining shadow-
+        # approximated ones needed to keep every other replica correctly
+        # correlated. A boundary-to-bulk coupling gets no such shared
+        # channel at all, since a bulk/interior qubit has no crossbar
+        # replica to share. Per that reasoning: of the physically
+        # simulated qubits directly involved, boundary-to-boundary shares
+        # 2 (both crossbar replicas), boundary-to-bulk shares effectively
+        # 1 (only the single matching home/neighbor-patch replica) --
+        # so boundary-to-boundary should see HALF the residual
+        # (uncorrected) error of boundary-to-bulk, not the same rate.
+        #
+        # The previous formula only approximated this by coincidence for
+        # cx/cy/cz at one specific y value (ratio ~0.57, not 0.5, and
+        # drifting further from 0.5 at other y), and didn't approximate it
+        # at all for swap/iswap (ratio ~0.76). This makes the 1/2 ratio
+        # exact and explicit for both gate categories, rather than an
+        # accidental byproduct of otherwise-unrelated formula choices.
         for a, b in self.get_logical_coupling_map():
-            is_long_a = not _is_boundary(a)
-            is_long_b = not _is_boundary(b)
+            a_boundary = _is_boundary(a)
+            b_boundary = _is_boundary(b)
 
-            if is_long_a and is_long_b:
+            if not (a_boundary or b_boundary):
                 continue
 
-            p2 = 1 - (1 - y) ** 2 if (is_long_a or is_long_b) else y
-            p3 = 1 - (1 - y) ** 3 if (is_long_a or is_long_b) else 1 - (1 - y) ** 2
+            if a_boundary and b_boundary:
+                p2 = 1 - (1 - y) ** (1 / 2)
+                p3 = 1 - (1 - y) ** (3 / 2)
+            else
+                p2 = 1 - (1 - y)
+                p3 = 1 - (1 - y) ** 3
 
             for gate in ["cx", "cy", "cz"]:
                 noise_model.add_quantum_error(depolarizing_error(p2, 2), gate, [a, b])
