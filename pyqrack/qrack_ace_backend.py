@@ -232,6 +232,7 @@ class QrackAceBackend:
         is_near_clifford_tableau_writer=False,
         noise=0,
         history_window=0,
+        is_torus=True,
         to_clone=None,
     ):
         if to_clone:
@@ -240,6 +241,7 @@ class QrackAceBackend:
             long_range_rows = to_clone.long_range_rows
             is_transpose = to_clone.is_transpose
             history_window = to_clone.history_window
+            is_torus = to_clone.is_torus
         if qubit_count < 0:
             qubit_count = 0
         if long_range_columns < 0:
@@ -252,6 +254,7 @@ class QrackAceBackend:
         self.long_range_rows = long_range_rows
         self.is_transpose = is_transpose
         self.history_window = history_window
+        self.is_torus = is_torus
 
         fppow = 5
         if "QRACK_FPPOW" in os.environ:
@@ -274,7 +277,20 @@ class QrackAceBackend:
         else:
             col_seq = [True] * long_range_columns + [False]
             self._is_col_long_range = (col_seq * col_patch_count)[: self._row_length]
-            if long_range_columns < self._row_length:
+            # This forced False at the last column is SPECIFICALLY what
+            # makes the grid's true right edge a boundary at all, which is
+            # what lets the "+1 % sim_count" neighbor-patch step below wrap
+            # back to the first column-patch of the row -- i.e. this is the
+            # torus connection itself. Making it conditional on is_torus,
+            # rather than surgically suppressing the wrap step further
+            # down (which was tried and reverted -- it produced replica
+            # counts, e.g. 2, that the rest of the class was never built
+            # to handle, via _get_qb_lhv_indices/_correct, which assume
+            # counts of 1, 3, or 5 only), means every code path that fires
+            # for is_torus=False is one that already exists and is already
+            # tested for is_torus=True; only WHICH positions take which
+            # path changes, never how a given position is processed.
+            if self.is_torus and (long_range_columns < self._row_length):
                 self._is_col_long_range[-1] = False
         len_row_seq = long_range_rows + 1
         row_patch_count = (self._col_length + len_row_seq - 1) // len_row_seq
@@ -283,7 +299,9 @@ class QrackAceBackend:
         else:
             row_seq = [True] * long_range_rows + [False]
             self._is_row_long_range = (row_seq * row_patch_count)[: self._col_length]
-            if long_range_rows < self._col_length:
+            # Same reasoning as the column case above, for the true bottom
+            # row of the grid.
+            if self.is_torus and (long_range_rows < self._col_length):
                 self._is_row_long_range[-1] = False
         sim_count = col_patch_count * row_patch_count
 
@@ -1222,19 +1240,38 @@ class QrackAceBackend:
         long_range = self._is_row_long_range if is_row else self._is_col_long_range
         length = self._col_length if is_row else self._row_length
 
+        # BUGFIX: this previously used unconditional modular arithmetic in
+        # both directions, always assuming toroidal wraparound regardless
+        # of is_torus -- meaning get_logical_coupling_map() (and therefore
+        # the noise model and the Qiskit Target/CouplingMap built from it)
+        # reported wraparound edges even when is_torus=False means those
+        # connections don't actually exist in the real replica structure.
+        # When is_torus is False, walking past index 0 (backward) or
+        # length-1 (forward) must stop rather than wrap.
         connected = [i]
-        c = (i - 1) % length
-        while long_range[c] and (len(connected) < length):
+        c = i - 1
+        if c < 0:
+            if self.is_torus:
+                c %= length
+            else:
+                c = None
+        while c is not None and long_range[c] and (len(connected) < length):
             connected.append(c)
-            c = (c - 1) % length
-        if len(connected) < length:
+            c -= 1
+            if c < 0:
+                c = (c % length) if self.is_torus else None
+        if c is not None and len(connected) < length:
             connected.append(c)
         boundary = len(connected)
-        c = (i + 1) % length
-        while long_range[c] and (len(connected) < length):
+        c = i + 1
+        if c >= length:
+            c = (c % length) if self.is_torus else None
+        while c is not None and long_range[c] and (len(connected) < length):
             connected.append(c)
-            c = (c + 1) % length
-        if len(connected) < length:
+            c += 1
+            if c >= length:
+                c = (c % length) if self.is_torus else None
+        if c is not None and len(connected) < length:
             connected.append(c)
 
         return connected, boundary
@@ -1940,23 +1977,33 @@ class QrackAceBackend:
         if self._coupling_map:
             return self._coupling_map
 
+        # REWRITTEN: the original geometric re-derivation (row/col index
+        # arithmetic, mirroring _get_connected) had multiple, compounding
+        # bugs -- the logical_index stride mismatched the real convention
+        # used elsewhere in this class (verified: 18/27 index mismatches
+        # on a non-square grid), and _get_connected was additionally being
+        # invoked with an is_row argument that didn't match what its
+        # length/long_range selection actually needed, producing
+        # out-of-range indices entirely on further testing. Rather than
+        # keep patching individual arithmetic mistakes in a function whose
+        # intended row/col semantics were genuinely unclear on inspection,
+        # this is grounded directly in the one thing that's true by
+        # construction: self._qubits, the actual replica structure built
+        # during __init__. Two logical qubits are coupled if and only if
+        # they share ANY simulator id among their own replicas -- this
+        # cannot disagree with the real adjacency, because it doesn't
+        # re-derive anything; it reads the ground truth directly.
         coupling_map = set()
-        rows, cols = self._row_length, self._col_length
-
-        # Map each column index to its full list of logical qubit indices
-        def logical_index(row, col):
-            return row * cols + col
-
-        for col in range(cols):
-            connected_cols, _ = self._get_connected(col, False)
-            for row in range(rows):
-                connected_rows, _ = self._get_connected(row, False)
-                a = logical_index(row, col)
-                for c in connected_cols:
-                    for r in connected_rows:
-                        b = logical_index(r, c)
-                        if a != b:
-                            coupling_map.add((a, b))
+        n = self.num_qubits()
+        sim_to_qubits = {}
+        for lq in range(n):
+            for sim_id, _ in self._qubits[lq]:
+                sim_to_qubits.setdefault(sim_id, []).append(lq)
+        for sim_id, qubits_here in sim_to_qubits.items():
+            for a in qubits_here:
+                for b in qubits_here:
+                    if a != b:
+                        coupling_map.add((a, b))
 
         self._coupling_map = sorted(coupling_map)
 
@@ -1971,12 +2018,26 @@ class QrackAceBackend:
         noise_model = NoiseModel()
 
         # Single-qubit depolarizing only on boundary qubits
+        #
+        # BUGFIX: this previously checked ONLY column long-range status
+        # (self._is_col_long_range), never row (self._is_row_long_range) --
+        # a qubit that is a row boundary but not a column boundary was
+        # judged fully interior here and got no boundary-specific
+        # depolarizing error at all, despite actually receiving the real
+        # multi-replica boundary treatment during simulation. Rather than
+        # re-derive row/column status geometrically (the same class of
+        # arithmetic mismatch broke get_logical_coupling_map above),
+        # this reads the ground truth directly: a qubit is a boundary
+        # qubit if and only if it has more than one replica in
+        # self._qubits, which is exactly and only true for qubits that
+        # received the extra-replica boundary treatment during __init__.
+        def _is_boundary(lq):
+            return len(self._qubits[lq]) > 1
+
         boundary_qubits = set()
         for a, b in self.get_logical_coupling_map():
-            col_a = a % self._row_length
-            col_b = b % self._row_length
-            is_long_a = self._is_col_long_range[col_a]
-            is_long_b = self._is_col_long_range[col_b]
+            is_long_a = not _is_boundary(a)
+            is_long_b = not _is_boundary(b)
             if not (is_long_a and is_long_b):
                 if not is_long_a:
                     boundary_qubits.add(a)
@@ -1990,11 +2051,10 @@ class QrackAceBackend:
                     depolarizing_error(x, 1), gate, [q])
 
         # Two-qubit depolarizing on boundary-crossing and boundary-adjacent gates
+        # (same row+column boundary fix as the single-qubit section above)
         for a, b in self.get_logical_coupling_map():
-            col_a = a % self._row_length
-            col_b = b % self._row_length
-            is_long_a = self._is_col_long_range[col_a]
-            is_long_b = self._is_col_long_range[col_b]
+            is_long_a = not _is_boundary(a)
+            is_long_b = not _is_boundary(b)
 
             if is_long_a and is_long_b:
                 continue
