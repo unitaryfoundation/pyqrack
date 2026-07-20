@@ -2009,82 +2009,38 @@ class QrackAceBackend:
 
         return self._coupling_map
 
-    # Designed by Dan, and implemented by Elara:
-    def create_noise_model(self, x=0.25):
+    # Designed by Dan, Elara (ChatGPT), and (Anthropic) Claude:
+    def create_noise_model(self, x=0.5):
         if not _IS_QISKIT_AER_AVAILABLE:
             raise RuntimeError(
                 "Before trying to run_qiskit_circuit() with QrackAceBackend, you must install Qiskit Aer!"
             )
         noise_model = NoiseModel()
 
-        # BUGFIX: this previously checked ONLY column long-range status
-        # (self._is_col_long_range), never row (self._is_row_long_range) --
-        # a qubit that is a row boundary but not a column boundary was
-        # judged fully interior here and got no boundary-specific
-        # depolarizing error at all, despite actually receiving the real
-        # multi-replica boundary treatment during simulation. Rather than
-        # re-derive row/column status geometrically (the same class of
-        # arithmetic mismatch broke get_logical_coupling_map above),
-        # this reads the ground truth directly: a qubit is a boundary
-        # qubit if and only if it has more than one replica in
-        # self._qubits, which is exactly and only true for qubits that
-        # received the extra-replica boundary treatment during __init__.
-        def _is_boundary(lq):
-            return len(self._qubits[lq]) > 1
+        def _uncommon_sim_fraction(lq1, lq2):
+            sims1 = [qb[0] for qb in self._qubits[lq1]]
+            sims2 = [qb[0] for qb in self._qubits[lq2]]
+            n = 0
+            for s in sims1:
+                if s not in sims2:
+                    n += 1
+            for s in sims2:
+                if s not in sims1:
+                    n += 1
 
-        boundary_qubits = set()
+            return n / (len(sims1) + len(sims2))
+
         for a, b in self.get_logical_coupling_map():
-            is_long_a = not _is_boundary(a)
-            is_long_b = not _is_boundary(b)
-            if not (is_long_a and is_long_b):
-                if not is_long_a:
-                    boundary_qubits.add(a)
-                if not is_long_b:
-                    boundary_qubits.add(b)
+            u = _uncommon_sim_fraction(a, b)
 
-        # Two-qubit depolarizing on boundary-crossing and boundary-adjacent gates
-        # (same row+column boundary fix as the single-qubit section above)
-        #
-        # BOUNDARY-TO-BOUNDARY vs BOUNDARY-TO-BULK, made explicit:
-        # every boundary qubit has a replica in the one shared "crossbar"
-        # simulator (self._qubits[lq] with len>1 always includes a
-        # boundary_sim_id entry), and _apply_coupling already recognizes
-        # (confirmed directly, by instrumentation) that when BOTH qubits in
-        # a coupling are boundary qubits, their crossbar replicas share a
-        # simulator and get an exact gate_fn application -- one real,
-        # zero-error physical operation, alongside the remaining shadow-
-        # approximated ones needed to keep every other replica correctly
-        # correlated. A boundary-to-bulk coupling gets no such shared
-        # channel at all, since a bulk/interior qubit has no crossbar
-        # replica to share. Per that reasoning: of the physically
-        # simulated qubits directly involved, boundary-to-boundary shares
-        # 2 (both crossbar replicas), boundary-to-bulk shares effectively
-        # 1 (only the single matching home/neighbor-patch replica) --
-        # so boundary-to-boundary should see HALF the residual
-        # (uncorrected) error of boundary-to-bulk, not the same rate.
-        #
-        # The previous formula only approximated this by coincidence for
-        # cx/cy/cz at one specific y value (ratio ~0.57, not 0.5, and
-        # drifting further from 0.5 at other y), and didn't approximate it
-        # at all for swap/iswap (ratio ~0.76). This makes the 1/2 ratio
-        # exact and explicit for both gate categories, rather than an
-        # accidental byproduct of otherwise-unrelated formula choices.
-        for a, b in self.get_logical_coupling_map():
-            a_boundary = _is_boundary(a)
-            b_boundary = _is_boundary(b)
-
-            if not (a_boundary or b_boundary):
+            if not u:
                 continue
 
-            if a_boundary and b_boundary:
-                p2 = 1 - (1 - x) ** (1 / 2)
-                p3 = 1 - (1 - x) ** (3 / 2)
-            else
-                p2 = 1 - (1 - x)
-                p3 = 1 - (1 - x) ** 3
+            p = 1 - (1 - x) ** u
+            p3 = 1 - (1 - x) ** (3 * u)
 
             for gate in ["cx", "cy", "cz"]:
-                noise_model.add_quantum_error(depolarizing_error(p2, 2), gate, [a, b])
+                noise_model.add_quantum_error(depolarizing_error(p, 2), gate, [a, b])
             for gate in ["swap", "iswap"]:
                 noise_model.add_quantum_error(depolarizing_error(p3, 2), gate, [a, b])
 
