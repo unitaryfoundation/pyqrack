@@ -2012,15 +2012,13 @@ class QrackAceBackend:
         return self._coupling_map
 
     # Designed by Dan, and implemented by Elara:
-    def create_noise_model(self, x=0.125, y=0.25):
+    def create_noise_model(self, x=0.25):
         if not _IS_QISKIT_AER_AVAILABLE:
             raise RuntimeError(
                 "Before trying to run_qiskit_circuit() with QrackAceBackend, you must install Qiskit Aer!"
             )
         noise_model = NoiseModel()
 
-        # Single-qubit depolarizing only on boundary qubits
-        #
         # BUGFIX: this previously checked ONLY column long-range status
         # (self._is_col_long_range), never row (self._is_row_long_range) --
         # a qubit that is a row boundary but not a column boundary was
@@ -2045,12 +2043,6 @@ class QrackAceBackend:
                     boundary_qubits.add(a)
                 if not is_long_b:
                     boundary_qubits.add(b)
-
-        for q in boundary_qubits:
-            for gate in ["u", "u1", "u2", "u3", "h", "x", "y", "z",
-                         "s", "sdg", "t", "tdg", "rx", "ry", "rz"]:
-                noise_model.add_quantum_error(
-                    depolarizing_error(x, 1), gate, [q])
 
         # Two-qubit depolarizing on boundary-crossing and boundary-adjacent gates
         # (same row+column boundary fix as the single-qubit section above)
@@ -2087,11 +2079,11 @@ class QrackAceBackend:
                 continue
 
             if a_boundary and b_boundary:
-                p2 = 1 - (1 - y) ** (1 / 2)
-                p3 = 1 - (1 - y) ** (3 / 2)
+                p2 = 1 - (1 - x) ** (1 / 2)
+                p3 = 1 - (1 - x) ** (3 / 2)
             else
-                p2 = 1 - (1 - y)
-                p3 = 1 - (1 - y) ** 3
+                p2 = 1 - (1 - x)
+                p3 = 1 - (1 - x) ** 3
 
             for gate in ["cx", "cy", "cz"]:
                 noise_model.add_quantum_error(depolarizing_error(p2, 2), gate, [a, b])
