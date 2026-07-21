@@ -739,8 +739,19 @@ class QrackAceBackend:
             # for this topology -- carried only as far as that cheap
             # analogy supports, per explicit guidance.
             end_caps = [p0, p1, p3, p4]
-            high_count = sum(1 for x in end_caps if x >= 0.5)
-            end_caps_tied = high_count == 2
+            # Classify each end-cap as decisively high / decisively low /
+            # undecided (within epsilon of 0.5), rather than a bare >=0.5
+            # check -- a replica reading EXACTLY 0.5 (e.g. one just
+            # H-reverted by _revert_shadow_commitment, genuinely carrying
+            # zero information) was previously always counted as "high"
+            # via this boundary convention alone.
+            high_count = sum(1 for x in end_caps if x > (0.5 + self._epsilon))
+            low_count = sum(1 for x in end_caps if x < (0.5 - self._epsilon))
+            undecided_count = len(end_caps) - high_count - low_count
+            # Ambiguous (defer to the crossbar/LHV tie-breaker) on a
+            # genuine 2-2 split, OR if any end-cap is undecided -- an
+            # undecided value can't safely be counted toward either side.
+            end_caps_tied = (high_count == 2 and low_count == 2) or (undecided_count > 0)
 
             if not end_caps_tied:
                 prms = math.sqrt(sum(x**2 for x in end_caps) / 4)
@@ -839,11 +850,18 @@ class QrackAceBackend:
                 p2 = self.sim[hq[2][0]].prob(hq[2][1])
                 p_lhv = lhv.prob()
 
-                end_caps_agree = (p1 >= 0.5) == (p2 >= 0.5)
+                # Same fix as the 5-replica branch above: classify p1/p2 as
+                # decisively high / low / undecided rather than a bare
+                # >=0.5 check.
+                p1_high = p1 > (0.5 + self._epsilon)
+                p1_low = p1 < (0.5 - self._epsilon)
+                p2_high = p2 > (0.5 + self._epsilon)
+                p2_low = p2 < (0.5 - self._epsilon)
+                end_caps_agree = (p1_high and p2_high) or (p1_low and p2_low)
                 slot0_disagrees_with_end_caps = (
                     end_caps_agree
                     and (abs(p0 - 0.5) > self._epsilon)
-                    and ((p0 >= 0.5) != (p1 >= 0.5))
+                    and ((p0 >= 0.5) != p1_high)
                 )
                 if slot0_disagrees_with_end_caps:
                     # The end-caps agreeing is not, by itself, reliable
