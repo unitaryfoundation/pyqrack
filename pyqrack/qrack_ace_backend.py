@@ -212,12 +212,6 @@ class QrackAceBackend:
         is_transpose(bool): Rows are long if False, columns are long if True
     """
 
-    # Sweepable vote weights for the 4-source boundary correction pool:
-    # [slot0, slot1, slot2, lhv]. Must sum to an odd number so the
-    # underlying hard-vote tally (independent of the continuous RMS
-    # formula) is always tie-free.
-    _LHV_VOTE_WEIGHTS = [2, 1, 1, 1]
-
     def __init__(
         self,
         qubit_count=1,
