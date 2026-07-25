@@ -87,23 +87,37 @@ class LHVQubit:
         new_y = sin_theta * x + cos_theta * y
         self.bloch = [new_x, new_y, z]
 
+    def u(self, theta, phi, lam):
+        # Apply general single-qubit unitary gate
+        self.rz(lam)
+        self.ry(theta)
+        self.rz(phi)
+
     def s(self):
         self.rz(math.pi / 2)
 
     def adjs(self):
         self.rz(-math.pi / 2)
 
+    def sx(self):
+        self.u(
+            math.pi / 2,
+            -math.pi / 2,
+            math.pi / 2
+        )
+
+    def adjsx(self):
+        self.u(
+            -math.pi / 2,
+            -math.pi / 2,
+            math.pi / 2
+        )
+
     def t(self):
         self.rz(math.pi / 4)
 
     def adjt(self):
         self.rz(-math.pi / 4)
-
-    def u(self, theta, phi, lam):
-        # Apply general single-qubit unitary gate
-        self.rz(lam)
-        self.ry(theta)
-        self.rz(phi)
 
     # Provided verbatim by Elara (the custom OpenAI GPT):
     def mtrx(self, matrix):
@@ -211,12 +225,6 @@ class QrackAceBackend:
         long_range_columns(int): How many ideal rows between QEC boundary rows?
         is_transpose(bool): Rows are long if False, columns are long if True
     """
-
-    # Sweepable vote weights for the 4-source boundary correction pool:
-    # [slot0, slot1, slot2, lhv]. Must sum to an odd number so the
-    # underlying hard-vote tally (independent of the continuous RMS
-    # formula) is always tie-free.
-    _LHV_VOTE_WEIGHTS = [2, 1, 1, 1]
 
     def __init__(
         self,
@@ -1137,6 +1145,46 @@ class QrackAceBackend:
         if lhv is not None:
             lhv.adjs()
 
+    def sx(self, lq):
+        hq = self._unpack(lq)
+        if len(hq) < 2:
+            b = hq[0]
+            self._invalidate_for_gate(lq)
+            self.sim[b[0]].sx(b[1])
+            return
+
+        skip = self._invalidate_for_gate(lq)
+        qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].sx(b[1])
+
+        lhv = self._lhv.get(lq)
+        if lhv is not None:
+            lhv.sx()
+
+    def adjsx(self, lq):
+        hq = self._unpack(lq)
+        if len(hq) < 2:
+            b = hq[0]
+            self._invalidate_for_gate(lq)
+            self.sim[b[0]].adjsx(b[1])
+            return
+
+        skip = self._invalidate_for_gate(lq)
+        qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
+
+        for q in qb:
+            b = hq[q]
+            if (b[0], b[1]) not in skip:
+                self.sim[b[0]].adjsx(b[1])
+
+        lhv = self._lhv.get(lq)
+        if lhv is not None:
+            lhv.adjsx()
+
     def x(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -1733,6 +1781,10 @@ class QrackAceBackend:
             self._sim.s(operation.qubits[0]._index)
         elif name == "sdg":
             self._sim.adjs(operation.qubits[0]._index)
+        elif name == "sx":
+            self._sim.sx(operation.qubits[0]._index)
+        elif name == "sxdg":
+            self._sim.adjsx(operation.qubits[0]._index)
         elif name == "t":
             self._sim.t(operation.qubits[0]._index)
         elif name == "tdg":
@@ -1979,6 +2031,8 @@ class QrackAceBackend:
             "z",
             "s",
             "sdg",
+            "sx",
+            "sxdg",
             "t",
             "tdg",
             "cx",

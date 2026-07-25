@@ -288,6 +288,38 @@ class QrackSimulator:
         Qrack.qrack_lib.S(self.sid, q)
         self._throw_if_error()
 
+    def sx(self, q):
+        """Applies SX (square root of X) gate.
+
+        Applies the 1/4 bit rotation to the qubit at “q.”
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.U(
+            self.sid, q, ctypes.c_double(math.pi / 2), ctypes.c_double(-math.pi / 2), ctypes.c_double(math.pi / 2)
+        )
+        self._throw_if_error()
+
+    def adjsx(self, q):
+        """Applies adjoint of SX (square root of X) gate.
+
+        Applies the 1/4 bit rotation to the qubit at “q.”
+
+        Args:
+            q: the qubit number on which the gate is applied to.
+
+        Raises:
+            RuntimeError: QrackSimulator raised an exception.
+        """
+        Qrack.qrack_lib.U(
+            self.sid, q, ctypes.c_double(-math.pi / 2), ctypes.c_double(-math.pi / 2), ctypes.c_double(math.pi / 2)
+        )
+        self._throw_if_error()
+
     def t(self, q):
         """Applies T gate.
 
@@ -4121,15 +4153,9 @@ class QrackSimulator:
         elif name == "sdg":
             self._sim.adjs(operation.qubits[0]._index)
         elif name == "sx":
-            self._sim.mtrx(
-                [(1 + 1j) / 2, (1 - 1j) / 2, (1 - 1j) / 2, (1 + 1j) / 2],
-                operation.qubits[0]._index,
-            )
+            self._sim.sx(operation.qubits[0]._index)
         elif name == "sxdg":
-            self._sim.mtrx(
-                [(1 - 1j) / 2, (1 + 1j) / 2, (1 + 1j) / 2, (1 - 1j) / 2],
-                operation.qubits[0]._index,
-            )
+            self._sim.adjsx(operation.qubits[0]._index)
         elif name == "t":
             self._sim.t(operation.qubits[0]._index)
         elif name == "tdg":
@@ -4460,6 +4486,8 @@ class QrackSimulator:
             "z",
             "s",
             "sdg",
+            "sx",
+            "sxdg",
             "t",
             "tdg",
             "cu",
