@@ -2112,16 +2112,13 @@ class QrackAceBackend:
             u = _uncommon_sim_fraction(a, b)
             c = 1 - u
 
-            if not u:
-                p = self._sdrp / 2
-                p3 = self._sdrp / 2
-            else:
-                p = 1 - ((1 - x) ** u) * ((1 - self._sdrp / 2) ** c)
-                p3 = 1 - ((1 - x) ** (3 * u)) * ((1 - self._sdrp / 2) ** c)
+            sp = (1 - self._sdrp / 2) ** c
+            p = (1 - x) ** u
+            p3 = p ** 3
 
             for gate in ["cx", "cy", "cz"]:
-                noise_model.add_quantum_error(depolarizing_error(p, 2), gate, [a, b])
+                noise_model.add_quantum_error(depolarizing_error(1 - sp * p, 2), gate, [a, b])
             for gate in ["swap", "iswap"]:
-                noise_model.add_quantum_error(depolarizing_error(p3, 2), gate, [a, b])
+                noise_model.add_quantum_error(depolarizing_error(1 - p3, 2), gate, [a, b])
 
         return noise_model
