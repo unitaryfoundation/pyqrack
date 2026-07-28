@@ -2164,6 +2164,6 @@ class QrackAceBackend:
             for gate in ["cx", "cy", "cz"]:
                 noise_model.add_quantum_error(depolarizing_error(1 - sp * p, 2), gate, [a, b])
             noise_model.add_quantum_error(depolarizing_error(1 - p3, 2), "swap", [a, b])
-            noise_model.add_quantum_error(depolarizing_error(1 - sp * p3, 2), "iswap", [a, b])
+            noise_model.add_quantum_error(depolarizing_error(1 - sp * p * p3, 2), "iswap", [a, b])
 
         return noise_model
