@@ -1523,6 +1523,8 @@ class QrackAceBackend:
                     self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
                 else:
                     self._cx_shadow(_hq1, _hq2)
+                    self._cx_shadow(_hq2, _hq1)
+                    self._cx_shadow(_hq1, _hq2)
             return
 
         if len(hq2) == 1:
@@ -1531,6 +1533,8 @@ class QrackAceBackend:
                 if _hq1[0] == _hq2[0]:
                     self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
                 else:
+                    self._cx_shadow(_hq1, _hq2)
+                    self._cx_shadow(_hq2, _hq1)
                     self._cx_shadow(_hq1, _hq2)
             return
 
