@@ -1506,7 +1506,7 @@ class QrackAceBackend:
         # of the 3 steps -- 3 separate truncation opportunities, not 0.
         hq1 = self._unpack(lq1)
         hq2 = self._unpack(lq2)
-        if len(hq1) == len(hq2) and not sum([0 if hq1[i][0] == hq2[i][0] else 1 for i in len(hq1)]):
+        if len(hq1) == len(hq2) and not sum([0 if hq1[i][0] == hq2[i][0] else 1 for i in range(len(hq1))]):
             for i in range(len(hq1)):
                 sim_id, idx1 = hq1[i]
                 _, idx2 = hq2[i]
