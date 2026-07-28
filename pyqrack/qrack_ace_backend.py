@@ -1494,86 +1494,52 @@ class QrackAceBackend:
         self._cpauli(lq1[0], lq2, True, Pauli.PauliZ)
 
     def swap(self, lq1, lq2):
-        # Fast/exact path: both logical qubits are simple (single-replica,
-        # non-boundary) and happen to live on the SAME underlying
-        # simulator. A native swap() there is pure index relabeling --
-        # no transient entanglement is created, so there's no Schmidt
+        # Fast/exact path: every replica of lq1 lines up, position-for-
+        # position, with the corresponding replica of lq2 on the SAME
+        # underlying simulator. A native swap() there is pure index
+        # relabeling -- no transient entanglement, so no Schmidt
         # decomposition for SDRP to truncate. This is the case the noise
-        # model's common-fraction term assumes is error-free; the 3-CNOT
-        # decomposition below does NOT satisfy that assumption even when
-        # every step lands on a shared simulator, because CNOT itself
-        # passes through a genuinely entangled intermediate state at each
-        # of the 3 steps -- 3 separate truncation opportunities, not 0.
+        # model's common-fraction term assumes is error-free.
         hq1 = self._unpack(lq1)
         hq2 = self._unpack(lq2)
-        if len(hq1) == len(hq2) and not sum([0 if hq1[i][0] == hq2[i][0] else 1 for i in range(len(hq1))]):
+        if len(hq1) == len(hq2) and all(hq1[i][0] == hq2[i][0] for i in range(len(hq1))):
             for i in range(len(hq1)):
                 sim_id, idx1 = hq1[i]
                 _, idx2 = hq2[i]
                 self.sim[sim_id].swap(idx1, idx2)
             return
 
+        # Partial-match cases: one side is a simple (single-replica) qubit,
+        # the other has multiple replicas. Each replica of the multi-
+        # replica side either shares a sim with the simple side (exact
+        # native swap) or doesn't (needs the shadow-gate treatment).
+        # _cx_shadow(c, t) already implements exactly the H / probability-
+        # comparison / conditional-Z / H sequence needed here -- reuse it
+        # directly rather than re-deriving it inline.
         if len(hq1) == 1:
             _hq1 = hq1[0]
             for _hq2 in hq2:
-                if isinstance(_hq2, tuple):
-                    if _hq1[0] == _hq2[0]:
-                        self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
-                        continue
-
-                self._qec_h(_hq2)
-
-                p1 = self.sim[_hq1[0]].prob(_hq1[1]) if isinstance(_hq1, tuple) else _hq1.prob()
-                p2 = self.sim[_hq2[0]].prob(_hq2[1]) if isinstance(_hq2, tuple) else _hq2.prob()
-
-                if abs(p1 - p2) <= self._epsilon:
-                    apply = random.random() < 0.5
+                if _hq1[0] == _hq2[0]:
+                    self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
                 else:
-                    apply = max(p1, p2) >= (0.5 - self._epsilon)
-
-                if apply:
-                    if isinstance(_hq2, tuple):
-                        self.sim[_hq2[0]].z(_hq2[1])
-                    else:
-                        _hq2.z()
-
-                self._qec_h(lq2)
+                    self._cx_shadow(_hq1, _hq2)
             return
 
         if len(hq2) == 1:
             _hq2 = hq2[0]
             for _hq1 in hq1:
-                if isinstance(_hq1, tuple):
-                    if _hq1[0] == _hq2[0]:
-                        self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
-                        continue
-
-                self._qec_h(_hq2)
-
-                p1 = self.sim[_hq1[0]].prob(_hq1[1]) if isinstance(_hq1, tuple) else _hq1.prob()
-                p2 = self.sim[_hq2[0]].prob(_hq2[1]) if isinstance(_hq2, tuple) else _hq2.prob()
-
-                if abs(p1 - p2) <= self._epsilon:
-                    apply = random.random() < 0.5
+                if _hq1[0] == _hq2[0]:
+                    self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
                 else:
-                    apply = max(p1, p2) >= (0.5 - self._epsilon)
-
-                if apply:
-                    if isinstance(_hq2, tuple):
-                        self.sim[_hq2[0]].z(_hq2[1])
-                    else:
-                        _hq2.z()
-
-                self._qec_h(lq2)
+                    self._cx_shadow(_hq1, _hq2)
             return
 
-        # General case:
-        # unchanged, exact CNOT decomposition with the existing shadow-gate
-        # machinery in _apply_coupling handling any cross-simulator pairs.
+        # General case (both sides multi-replica, not fully sim-matched):
+        # unchanged, exact CNOT decomposition with the existing
+        # shadow-gate machinery in _apply_coupling handling cross-sim pairs.
         self.cx(lq1, lq2)
         self.cx(lq2, lq1)
         self.cx(lq1, lq2)
-
 
     def iswap(self, lq1, lq2):
         self.swap(lq1, lq2)
