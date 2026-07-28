@@ -396,9 +396,13 @@ class QrackAceBackend:
         if has_boundary:
             sim_counts.append(boundary_count)
 
-        use_sdrp = has_boundary and ("QRACK_QUNIT_SEPARABILITY_THRESHOLD" not in os.environ)
-        # "Golden value"
-        sdrp = 1.0 - 1.0 / math.sqrt(2.0)
+        if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" in os.environ:
+            self._sdrp = min(1, float(os.environ["QRACK_QUNIT_SEPARABILITY_THRESHOLD"]))
+            use_sdrp = False
+        else:
+            # "Golden value"
+            self._sdrp = 1.0 - 1.0 / math.sqrt(2.0)
+            use_sdrp = has_boundary
 
         self.sim = []
         for i in range(sim_count + (1 if has_boundary else 0)):
@@ -419,7 +423,7 @@ class QrackAceBackend:
 
             if use_sdrp:
                 # Half the "golden value" (but empirically tuned)
-                self.sim[i].set_sdrp(sdrp)
+                self.sim[i].set_sdrp(self._sdrp)
 
         self._boundary_sim_id = boundary_sim_id if has_boundary else None
 
@@ -427,6 +431,8 @@ class QrackAceBackend:
         return QrackAceBackend(to_clone=self)
 
     def set_sdrp(self, sdrp):
+        sdrp = min(1, sdrp)
+        self._sdrp = sdrp
         for sim in self.sim:
             sim.set_sdrp(sdrp)
 
@@ -2106,12 +2112,14 @@ class QrackAceBackend:
 
         for a, b in self.get_logical_coupling_map():
             u = _uncommon_sim_fraction(a, b)
+            c = 1 - u
 
             if not u:
-                continue
-
-            p = 1 - (1 - x) ** u
-            p3 = 1 - (1 - x) ** (3 * u)
+                p = self._sdrp / 2
+                p3 = self._sdrp / 2
+            else:
+                p = 1 - ((1 - x) ** u) * ((1 - self._sdrp / 2) ** c)
+                p3 = 1 - ((1 - x) ** (3 * u)) * ((1 - self._sdrp / 2) ** c)
 
             for gate in ["cx", "cy", "cz"]:
                 noise_model.add_quantum_error(depolarizing_error(p, 2), gate, [a, b])
