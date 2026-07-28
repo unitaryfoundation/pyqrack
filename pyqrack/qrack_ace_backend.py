@@ -1510,28 +1510,41 @@ class QrackAceBackend:
             return
 
         # Partial-match cases: one side is a simple (single-replica) qubit,
-        # the other has multiple replicas. Each replica of the multi-
-        # replica side either shares a sim with the simple side (exact
-        # native swap) or doesn't (needs the shadow-gate treatment).
-        # _cx_shadow(c, t) already implements exactly the H / probability-
-        # comparison / conditional-Z / H sequence needed here -- reuse it
-        # directly rather than re-deriving it inline.
+        # the other has multiple replicas. For the multi-replica side's
+        # non-matching replicas, the correct decomposition (verified
+        # empirically against an exact reference) needs TWO shadow calls,
+        # not one: a shadow-CX using bulk's ORIGINAL value (mirrors the
+        # real 3-CNOT decomposition's first CNOT, which every replica
+        # needs, not just the matched one), then the exact atomic swap for
+        # whichever replica shares a sim (steps 1+2+3 combined for that
+        # one pair), then a second shadow-CX using bulk's now-UPDATED
+        # value (mirrors the third CNOT, which requires the SECOND CNOT's
+        # update to have already happened -- the matched replica's exact
+        # swap provides that update for everyone, not just itself).
+        # Skipping the first shadow call (using only the second) measured
+        # higher error against an exact reference; this ordering does not.
         if len(hq1) == 1:
             _hq1 = hq1[0]
-            for _hq2 in hq2:
-                if _hq1[0] == _hq2[0]:
-                    self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
-                else:
-                    self._cx_shadow(_hq1, _hq2)
+            non_matching = [h for h in hq2 if h[0] != _hq1[0]]
+            matching = [h for h in hq2 if h[0] == _hq1[0]]
+            for _hq2 in non_matching:
+                self._cx_shadow(_hq1, _hq2)
+            for _hq2 in matching:
+                self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
+            for _hq2 in non_matching:
+                self._cx_shadow(_hq1, _hq2)
             return
 
         if len(hq2) == 1:
             _hq2 = hq2[0]
-            for _hq1 in hq1:
-                if _hq1[0] == _hq2[0]:
-                    self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
-                else:
-                    self._cx_shadow(_hq2, _hq1)
+            non_matching = [h for h in hq1 if h[0] != _hq2[0]]
+            matching = [h for h in hq1 if h[0] == _hq2[0]]
+            for _hq1 in non_matching:
+                self._cx_shadow(_hq2, _hq1)
+            for _hq1 in matching:
+                self.sim[_hq2[0]].swap(_hq2[1], _hq1[1])
+            for _hq1 in non_matching:
+                self._cx_shadow(_hq2, _hq1)
             return
 
         # General case (both sides multi-replica, not fully sim-matched):
@@ -2159,11 +2172,11 @@ class QrackAceBackend:
 
             sp = (1 - self._sdrp / 2) ** c
             p = (1 - x) ** u
-            p3 = p ** 3
+            p2 = p ** 2
 
             for gate in ["cx", "cy", "cz"]:
                 noise_model.add_quantum_error(depolarizing_error(1 - sp * p, 2), gate, [a, b])
-            noise_model.add_quantum_error(depolarizing_error(1 - p3, 2), "swap", [a, b])
-            noise_model.add_quantum_error(depolarizing_error(1 - sp * p * p3, 2), "iswap", [a, b])
+            noise_model.add_quantum_error(depolarizing_error(1 - p2, 2), "swap", [a, b])
+            noise_model.add_quantum_error(depolarizing_error(1 - sp * p * p2, 2), "iswap", [a, b])
 
         return noise_model
