@@ -1493,6 +1493,49 @@ class QrackAceBackend:
         self._cpauli(lq1[0], lq2, True, Pauli.PauliZ)
 
     def swap(self, lq1, lq2):
+        # Fast/exact path: every replica of lq1 lines up, position-for-
+        # position, with the corresponding replica of lq2 on the SAME
+        # underlying simulator. A native swap() there is pure index
+        # relabeling -- no transient entanglement, so no Schmidt
+        # decomposition for SDRP to truncate. This is the case the noise
+        # model's common-fraction term assumes is error-free.
+        hq1 = self._unpack(lq1)
+        hq2 = self._unpack(lq2)
+        if len(hq1) == len(hq2) and all(hq1[i][0] == hq2[i][0] for i in range(len(hq1))):
+            for i in range(len(hq1)):
+                sim_id, idx1 = hq1[i]
+                _, idx2 = hq2[i]
+                self.sim[sim_id].swap(idx1, idx2)
+            return
+
+        # Partial-match cases: one side is a simple (single-replica) qubit,
+        # the other has multiple replicas. Each replica of the multi-
+        # replica side either shares a sim with the simple side (exact
+        # native swap) or doesn't (needs the shadow-gate treatment).
+        # _cx_shadow(c, t) already implements exactly the H / probability-
+        # comparison / conditional-Z / H sequence needed here -- reuse it
+        # directly rather than re-deriving it inline.
+        if len(hq1) == 1:
+            _hq1 = hq1[0]
+            for _hq2 in hq2:
+                if _hq1[0] == _hq2[0]:
+                    self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
+                else:
+                    self._cx_shadow(_hq1, _hq2)
+            return
+
+        if len(hq2) == 1:
+            _hq2 = hq2[0]
+            for _hq1 in hq1:
+                if _hq1[0] == _hq2[0]:
+                    self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
+                else:
+                    self._cx_shadow(_hq1, _hq2)
+            return
+
+        # General case (both sides multi-replica, not fully sim-matched):
+        # unchanged, exact CNOT decomposition with the existing
+        # shadow-gate machinery in _apply_coupling handling cross-sim pairs.
         self.cx(lq1, lq2)
         self.cx(lq2, lq1)
         self.cx(lq1, lq2)
@@ -2118,7 +2161,7 @@ class QrackAceBackend:
 
             for gate in ["cx", "cy", "cz"]:
                 noise_model.add_quantum_error(depolarizing_error(1 - sp * p, 2), gate, [a, b])
-            for gate in ["swap", "iswap"]:
-                noise_model.add_quantum_error(depolarizing_error(1 - p3, 2), gate, [a, b])
+            noise_model.add_quantum_error(depolarizing_error(1 - p3, 2), "swap", [a, b])
+            noise_model.add_quantum_error(depolarizing_error(1 - sp * p3, 2), "iswap", [a, b])
 
         return noise_model
