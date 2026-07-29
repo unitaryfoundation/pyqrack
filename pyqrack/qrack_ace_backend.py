@@ -1501,11 +1501,24 @@ class QrackAceBackend:
         # model's common-fraction term assumes is error-free.
         hq1 = self._unpack(lq1)
         hq2 = self._unpack(lq2)
+
+        # _cpauli normally wraps every coupling gate with _correct() before
+        # and after, to reconcile multi-replica consensus. This method
+        # calls the underlying simulators (and _cx_shadow) directly,
+        # bypassing that wrapper entirely -- _correct() is a no-op for
+        # single-replica (bulk) qubits, so this is always safe to call, and
+        # only actually matters (and was being silently skipped) whenever
+        # either side is a multi-replica boundary qubit.
+        self._correct(lq1)
+        self._correct(lq2)
+
         if len(hq1) == len(hq2) and all(hq1[i][0] == hq2[i][0] for i in range(len(hq1))):
             for i in range(len(hq1)):
                 sim_id, idx1 = hq1[i]
                 _, idx2 = hq2[i]
                 self.sim[sim_id].swap(idx1, idx2)
+            self._correct(lq1, True)
+            self._correct(lq2, True)
             return
 
         # Partial-match cases: one side is a simple (single-replica) qubit,
@@ -1532,6 +1545,8 @@ class QrackAceBackend:
                 self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
             for _hq2 in non_matching:
                 self._cx_shadow(_hq1, _hq2)
+            self._correct(lq1, True)
+            self._correct(lq2, True)
             return
 
         if len(hq2) == 1:
@@ -1544,11 +1559,15 @@ class QrackAceBackend:
                 self.sim[_hq2[0]].swap(_hq2[1], _hq1[1])
             for _hq1 in non_matching:
                 self._cx_shadow(_hq2, _hq1)
+            self._correct(lq1, True)
+            self._correct(lq2, True)
             return
 
         # General case (both sides multi-replica, not fully sim-matched):
         # unchanged, exact CNOT decomposition with the existing
         # shadow-gate machinery in _apply_coupling handling cross-sim pairs.
+        # cx() already wraps itself with _correct() via _cpauli, so no
+        # extra wrapping needed here.
         self.cx(lq1, lq2)
         self.cx(lq2, lq1)
         self.cx(lq1, lq2)
