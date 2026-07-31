@@ -488,17 +488,16 @@ class QrackAceBackend:
 
     def _factor_width(self, width, is_transpose=False):
         if self.is_1d_chain:
-            row_len = width
-            col_len = 1
+            self._col_length, self._row_length = 1, width
         else:
             col_len = math.floor(math.sqrt(width))
             while ((width // col_len) * col_len) != width:
                 col_len -= 1
             row_len = width // col_len
 
-        self._col_length, self._row_length = (
-            (row_len, col_len) if is_transpose else (col_len, row_len)
-        )
+            self._col_length, self._row_length = (
+                (row_len, col_len) if is_transpose else (col_len, row_len)
+            )
 
     def _ct_pair_prob(self, q1, q2):
         p1 = self.sim[q1[0]].prob(q1[1]) if isinstance(q1, tuple) else q1.prob()
