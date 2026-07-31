@@ -251,6 +251,7 @@ class QrackAceBackend:
             is_transpose = to_clone.is_transpose
             history_window = to_clone.history_window
             is_torus = to_clone.is_torus
+            is_1d_chain = to_clone.is_1d_chain
         if qubit_count < 0:
             qubit_count = 0
         if long_range_columns < 0:
@@ -258,7 +259,7 @@ class QrackAceBackend:
         if history_window < 0:
             history_window = 0
 
-        self._is_1d_chain = is_1d_chain
+        self.is_1d_chain = is_1d_chain
         self._factor_width(qubit_count, is_transpose)
         self.long_range_columns = long_range_columns
         self.long_range_rows = long_range_rows
@@ -486,7 +487,7 @@ class QrackAceBackend:
         return self._col_length
 
     def _factor_width(self, width, is_transpose=False):
-        if self._is_1d_chain:
+        if self.is_1d_chain:
             row_len = width
             col_len = 1
         else:
