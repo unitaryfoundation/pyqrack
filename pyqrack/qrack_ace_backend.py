@@ -241,6 +241,7 @@ class QrackAceBackend:
         noise=0,
         history_window=0,
         is_torus=True,
+        is_1d_chain=False,
         to_clone=None,
     ):
         if to_clone:
@@ -257,6 +258,7 @@ class QrackAceBackend:
         if history_window < 0:
             history_window = 0
 
+        self._is_1d_chain = is_1d_chain
         self._factor_width(qubit_count, is_transpose)
         self.long_range_columns = long_range_columns
         self.long_range_rows = long_range_rows
@@ -398,11 +400,9 @@ class QrackAceBackend:
 
         if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" in os.environ:
             self._sdrp = min(1, float(os.environ["QRACK_QUNIT_SEPARABILITY_THRESHOLD"]))
-            use_sdrp = False
         else:
             # "Golden value"
-            self._sdrp = 1.0 - 1.0 / math.sqrt(2.0)
-            use_sdrp = has_boundary
+            self._sdrp = 0.0
 
         self.sim = []
         for i in range(sim_count + (1 if has_boundary else 0)):
@@ -420,10 +420,6 @@ class QrackAceBackend:
                     noise=noise,
                 )
             )
-
-            if use_sdrp:
-                # Half the "golden value" (but empirically tuned)
-                self.sim[i].set_sdrp(self._sdrp)
 
         self._boundary_sim_id = boundary_sim_id if has_boundary else None
 
@@ -490,10 +486,14 @@ class QrackAceBackend:
         return self._col_length
 
     def _factor_width(self, width, is_transpose=False):
-        col_len = math.floor(math.sqrt(width))
-        while ((width // col_len) * col_len) != width:
-            col_len -= 1
-        row_len = width // col_len
+        if self._is_1d_chain:
+            row_len = width
+            col_len = 1
+        else:
+            col_len = math.floor(math.sqrt(width))
+            while ((width // col_len) * col_len) != width:
+                col_len -= 1
+            row_len = width // col_len
 
         self._col_length, self._row_length = (
             (row_len, col_len) if is_transpose else (col_len, row_len)
