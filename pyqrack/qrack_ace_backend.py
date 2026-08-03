@@ -1441,6 +1441,7 @@ class QrackAceBackend:
         lq2_lr = len(hq2) == 1
 
         self._correct(lq1)
+        self._correct(lq2)
 
         qb1, _ = QrackAceBackend._get_qb_lhv_indices(hq1)
         qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
