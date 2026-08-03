@@ -368,9 +368,10 @@ class QrackAceBackend:
                     qubit.append((boundary_sim_id, boundary_count))
                     boundary_count += 1
 
-                    self._lhv[tot_qubits] = LHVQubit(
-                        to_clone=(to_clone._lhv[tot_qubits] if to_clone else None)
-                    )
+                    if (not to_clone) or (tot_qubits in to_clone._lhv):
+                        self._lhv[tot_qubits] = LHVQubit(
+                            to_clone=(to_clone._lhv[tot_qubits] if to_clone else None)
+                        )
 
                 if (not c) and (not r):
                     t_sim_id = (sim_id + col_patch_count) % sim_count
@@ -384,7 +385,9 @@ class QrackAceBackend:
                 if not c:
                     sim_id = (sim_id + 1) % sim_count
 
-                self._qubits.append(qubit)
+                self._qubits.append(
+                    list(to_clone._qubits[tot_qubits]) if to_clone else qubit
+                )
                 tot_qubits += 1
 
         # The crossbar's size is fixed by how many boundary sites exist.
@@ -859,6 +862,15 @@ class QrackAceBackend:
                 for q in range(3):
                     if syndrome[q] > (0.5 + self._epsilon):
                         self.sim[hq[q][0]].x(hq[q][1])
+                # end_caps_agree is referenced unconditionally below (to
+                # decide whether the rotation step is worth doing at all);
+                # this branch has no separate "end-caps vs slot0" concept
+                # the way the has-LHV branch does, so the analogous check
+                # is simply whether all 3 replicas already decisively
+                # agree with each other.
+                all_high = all(x > (0.5 + self._epsilon) for x in p)
+                all_low = all(x < (0.5 - self._epsilon) for x in p)
+                end_caps_agree = all_high or all_low
             else:
                 # Conditional tie-breaking cascade, NOT a fixed-weight pool.
                 # A fixed weight on slot0/lhv pulls every decision toward
