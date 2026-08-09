@@ -72,3 +72,27 @@ class QrackStabilizer(QrackSimulator):
     def set_quadrant(self, q, b):
         Qrack.qrack_lib.SetQuadrant(self.sid, q, b)
         self._throw_if_error()
+
+    @staticmethod
+    def get_qiskit_basis_gates():
+        return [
+            "id",
+            "rz",
+            "t",
+            "tdg",
+            "h",
+            "x",
+            "y",
+            "z",
+            "s",
+            "sdg",
+            "sx",
+            "sxdg",
+            "cx",
+            "cy",
+            "cz",
+            "swap",
+            "iswap",
+            "reset",
+            "measure",
+        ]
