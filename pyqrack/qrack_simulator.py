@@ -1125,16 +1125,19 @@ class QrackSimulator:
         Returns:
             Measurement result of all qubits.
         """
-        num_q = self.num_qubits()
-        num_words = (num_q + 63) // 64
-        _r = (ctypes.c_ulonglong * num_words)()
-        Qrack.qrack_lib.MAllLong(self.sid, _r)
+        n = self.num_qubits()
+        bits_per_word = 64
+        n_words = (n + bits_per_word - 1) // bits_per_word
+        words = (ctypes.c_ulonglong * n_words)()
+
+        Qrack.qrack_lib.MAllLong(self.sid, words)
         self._throw_if_error()
-        r = 0
-        for w in range(num_words):
-            r <<= 64
-            r |= _r[w]
-        return r
+
+        result = 0
+        for i, w in enumerate(words):
+            result |= int(w) << (bits_per_word * i)
+        return result
+
 
     def measure_pauli(self, b, q):
         """Pauli Measurement gate
