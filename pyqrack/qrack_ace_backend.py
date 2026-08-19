@@ -242,7 +242,6 @@ class QrackAceBackend:
         history_window=0,
         is_torus=True,
         is_1d_chain=False,
-        recursion_depth=0,
         to_clone=None,
     ):
         if to_clone:
@@ -253,15 +252,12 @@ class QrackAceBackend:
             history_window = to_clone.history_window
             is_torus = to_clone.is_torus
             is_1d_chain = to_clone.is_1d_chain
-            recursion_depth = to_clone.recursion_depth
         if qubit_count < 0:
             qubit_count = 0
         if long_range_columns < 0:
             long_range_columns = 0
         if history_window < 0:
             history_window = 0
-        if recursion_depth < 0:
-            recursion_depth = 0
 
         self.is_1d_chain = is_1d_chain
         self._factor_width(qubit_count, is_transpose)
@@ -270,7 +266,6 @@ class QrackAceBackend:
         self.is_transpose = is_transpose
         self.history_window = history_window
         self.is_torus = is_torus
-        self.recursion_depth = recursion_depth
 
         fppow = 5
         if "QRACK_FPPOW" in os.environ:
@@ -394,66 +389,6 @@ class QrackAceBackend:
                     list(to_clone._qubits[tot_qubits]) if to_clone else qubit
                 )
                 tot_qubits += 1
-
-        # Recursion ("bricklayer" nested repetition-code) scratch and
-        # ancilla allocation. Only boundary/corner sites (len(qubit) in
-        # {3, 5}) get any of this -- a bulk site has no elided replica to
-        # anchor a repetition code onto in the first place. Two DEDICATED
-        # scratch qubits and two DEDICATED ancilla qubits are allocated per
-        # level, per side (side 0 = home-patch replica, side 1 = the
-        # neighbor-patch shadow replica), and placed in the SAME patch
-        # simulator as that level's center qubit -- never a shared/global
-        # sim -- specifically so the encode and syndrome-extraction gates
-        # below are genuine, local, same-simulator CNOTs, not the cross-sim
-        # ".prob() shadow" approximation used everywhere else in this
-        # class. "Dedicated" means: allocated once per layer and reused
-        # (measured + reset) on every later correction cycle -- a layer is
-        # encoded exactly once, never re-encoded, and never shares its
-        # scratch/ancilla with another layer or boundary site.
-        #
-        # Repetition code, not the [[5,1,3]] perfect code, by deliberate
-        # choice: measured head-to-head against this simulator's own noise
-        # model (see git history / conversation record), the perfect
-        # code's much longer non-fault-tolerant encode+syndrome circuit
-        # (~59 gates vs. repetition's ~6) makes ITS OWN correction
-        # machinery the dominant error source at every nonzero noise level
-        # tested -- an order of magnitude worse logical error rate than
-        # repetition code, not better. Repetition code's shorter circuit
-        # and narrower (2-data-qubit) ancilla exposure per syndrome check
-        # gives it a far more forgiving threshold in this regime.
-        self._recursion = {}
-        if self.recursion_depth > 0:
-            for lq, qubit in enumerate(self._qubits):
-                if len(qubit) < 3:
-                    continue
-                sides = {}
-                for side in (0, 1):
-                    patch_sim_id = qubit[side][0]
-                    levels = []
-                    for level in range(self.recursion_depth):
-                        base = sim_counts[patch_sim_id]
-                        scratch_a = (patch_sim_id, base)
-                        scratch_b = (patch_sim_id, base + 1)
-                        anc_a = (patch_sim_id, base + 2)
-                        anc_b = (patch_sim_id, base + 3)
-                        sim_counts[patch_sim_id] += 4
-                        encoded = False
-                        if (
-                            to_clone
-                            and lq in to_clone._recursion
-                            and side in to_clone._recursion[lq]
-                            and level < len(to_clone._recursion[lq][side])
-                        ):
-                            encoded = to_clone._recursion[lq][side][level]["encoded"]
-                        levels.append(
-                            {
-                                "scratch": (scratch_a, scratch_b),
-                                "ancilla": (anc_a, anc_b),
-                                "encoded": encoded,
-                            }
-                        )
-                    sides[side] = levels
-                self._recursion[lq] = sides
 
         # The crossbar's size is fixed by how many boundary sites exist.
         # When there are none (e.g. a grid small enough, relative to
@@ -703,137 +638,6 @@ class QrackAceBackend:
         self._qec_x(c)
         self._cy_shadow(c, t)
         self._qec_x(c)
-
-    def _recursion_encode_layer(self, lq):
-        """Encode every not-yet-encoded recursion layer for lq, on every
-        side, walking outward level by level. Real CNOTs only: every
-        scratch qubit touched here was allocated into the SAME patch
-        simulator as the center it's fanned out from, so this is genuine
-        entangling hardware, never the cross-sim ".prob() shadow" trick
-        used for the base pseudo-repetition replicas elsewhere in this
-        class. A layer is encoded exactly once -- re-running this after
-        the first time is a no-op for that layer, by design, since
-        re-encoding would overwrite whatever the syndrome-correction
-        cycles have since preserved and defeat the whole point of the
-        redundancy.
-        """
-        sides = self._recursion.get(lq)
-        if not sides:
-            return
-
-        hq = self._qubits[lq]
-        for side, levels in sides.items():
-            sim_id = hq[side][0]
-            center = hq[side]
-            for level in levels:
-                scratch_a, scratch_b = level["scratch"]
-                if not level["encoded"]:
-                    self.sim[sim_id].mcx([center[1]], scratch_a[1])
-                    self.sim[sim_id].mcx([center[1]], scratch_b[1])
-                    level["encoded"] = True
-                # Whether freshly encoded or already-encoded from a prior
-                # call, the next level (if any) always chains from this
-                # level's scratch_b -- a linear accretion outward from the
-                # boundary, never a branching tree, so ancilla/scratch
-                # count stays linear in recursion_depth.
-                center = scratch_b
-
-    def _recursion_correct_layer(
-        self, sim_id, center, scratch_a, scratch_b, anc_a, anc_b, phase=False
-    ):
-        """Genuine (non-oracle) 3-qubit repetition-code syndrome
-        extraction and correction for a single recursion layer's triple,
-        using that layer's own dedicated, reused ancilla pair. Unlike the
-        base pseudo-repetition correction elsewhere in this class, no
-        .prob() value is ever read here to decide a correction -- every
-        decision comes from an actual projective measurement of the
-        ancilla, exactly like a real repetition-code QEC cycle. phase=True
-        runs the same bit-flip circuit under an H-conjugation to catch
-        phase-flip errors instead, matching the existing convention in
-        _correct().
-        """
-        qs = (center, scratch_a, scratch_b)
-        if phase:
-            for q in qs:
-                self.sim[sim_id].h(q[1])
-
-        # anc_a <- parity(center, scratch_a); anc_b <- parity(scratch_a, scratch_b)
-        self.sim[sim_id].mcx([center[1]], anc_a[1])
-        self.sim[sim_id].mcx([scratch_a[1]], anc_a[1])
-        self.sim[sim_id].mcx([scratch_a[1]], anc_b[1])
-        self.sim[sim_id].mcx([scratch_b[1]], anc_b[1])
-
-        s0 = self.sim[sim_id].m(anc_a[1])
-        s1 = self.sim[sim_id].m(anc_b[1])
-
-        # Reset the ancilla to |0> immediately so it's ready for reuse on
-        # the very next correction cycle -- this pair is never re-created.
-        if s0:
-            self.sim[sim_id].x(anc_a[1])
-        if s1:
-            self.sim[sim_id].x(anc_b[1])
-
-        # Standard 3-qubit repetition-code syndrome decode table.
-        if s0 and not s1:
-            self.sim[sim_id].x(center[1])
-        elif s1 and not s0:
-            self.sim[sim_id].x(scratch_b[1])
-        elif s0 and s1:
-            self.sim[sim_id].x(scratch_a[1])
-        # else: (not s0) and (not s1) -- no disagreement, nothing to do.
-
-        if phase:
-            for q in qs:
-                self.sim[sim_id].h(q[1])
-
-    def _correct_recursion(self, lq, phase=False):
-        """Run the full recursion-layer correction for lq: encode any
-        not-yet-encoded layers, then syndrome-correct every level, on
-        every side, walking outward from the boundary replica. This is
-        deliberately separate from the base _correct() pseudo-repetition
-        cascade -- it is a second, independent, genuinely physical
-        correction pathway layered on top of it, not a replacement.
-        """
-        sides = self._recursion.get(lq)
-        if not sides:
-            return
-
-        self._recursion_encode_layer(lq)
-
-        hq = self._qubits[lq]
-        for side, levels in sides.items():
-            sim_id = hq[side][0]
-            center = hq[side]
-            for level in levels:
-                scratch_a, scratch_b = level["scratch"]
-                anc_a, anc_b = level["ancilla"]
-                self._recursion_correct_layer(
-                    sim_id, center, scratch_a, scratch_b, anc_a, anc_b, phase=phase
-                )
-                center = scratch_b
-
-    def _recursion_active_qubits(self, lq):
-        """Every currently-ENCODED recursion-layer scratch qubit for lq,
-        across every side and level, flattened to a plain list of
-        (sim_id, idx) refs. Only an already-encoded layer's scratch pair
-        is included: an un-encoded layer's scratch qubits are still
-        sitting at a bare |0>, carrying no logical information yet, so a
-        transversal gate must never touch them -- that would corrupt the
-        |0> baseline the eventual _recursion_encode_layer() call depends
-        on. Used by every transversal single-qubit gate method below to
-        keep a boundary qubit's recursion replicas in sync with its base
-        replicas, the same way those methods already keep hq[1:] in sync
-        with hq[0]."""
-        sides = self._recursion.get(lq)
-        if not sides:
-            return []
-        out = []
-        for levels in sides.values():
-            for level in levels:
-                if level["encoded"]:
-                    out.append(level["scratch"][0])
-                    out.append(level["scratch"][1])
-        return out
 
     def _unpack(self, lq):
         return self._qubits[lq]
@@ -1179,11 +983,6 @@ class QrackAceBackend:
             if lq in self._lhv:
                 self._lhv[lq].h()
 
-        # Second, independent, genuinely physical correction pathway --
-        # see _correct_recursion's docstring. A no-op when recursion_depth
-        # is 0 or lq isn't a boundary/corner site.
-        self._correct_recursion(lq, phase=phase)
-
     def apply_magnetic_bias(self, q, b):
         if b == 0:
             return
@@ -1213,9 +1012,6 @@ class QrackAceBackend:
             b = hq[q]
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].u(b[1], th, ph, lm)
-
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].u(b[1], th, ph, lm)
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1305,9 +1101,6 @@ class QrackAceBackend:
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].r(p, th, b[1])
 
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].r(p, th, b[1])
-
         lhv = self._lhv.get(lq)
         if lhv is not None:
             if p == Pauli.PauliX:
@@ -1337,9 +1130,6 @@ class QrackAceBackend:
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].h(b[1])
 
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].h(b[1])
-
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.h()
@@ -1362,9 +1152,6 @@ class QrackAceBackend:
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].s(b[1])
 
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].s(b[1])
-
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.s()
@@ -1384,9 +1171,6 @@ class QrackAceBackend:
             b = hq[q]
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].adjs(b[1])
-
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].adjs(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1408,9 +1192,6 @@ class QrackAceBackend:
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].sx(b[1])
 
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].sx(b[1])
-
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.sx()
@@ -1430,9 +1211,6 @@ class QrackAceBackend:
             b = hq[q]
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].adjsx(b[1])
-
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].adjsx(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1454,9 +1232,6 @@ class QrackAceBackend:
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].x(b[1])
 
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].x(b[1])
-
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.x()
@@ -1476,9 +1251,6 @@ class QrackAceBackend:
             b = hq[q]
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].y(b[1])
-
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].y(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1500,9 +1272,6 @@ class QrackAceBackend:
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].z(b[1])
 
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].z(b[1])
-
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.z()
@@ -1523,9 +1292,6 @@ class QrackAceBackend:
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].t(b[1])
 
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].t(b[1])
-
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.t()
@@ -1545,9 +1311,6 @@ class QrackAceBackend:
             b = hq[q]
             if (b[0], b[1]) not in skip:
                 self.sim[b[0]].adjt(b[1])
-
-        for b in self._recursion_active_qubits(lq):
-            self.sim[b[0]].adjt(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
