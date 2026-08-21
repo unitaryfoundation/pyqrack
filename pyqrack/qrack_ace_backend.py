@@ -1448,10 +1448,8 @@ class QrackAceBackend:
                         # either invariant, so this specific gadget doesn't
                         # apply to them directly -- left as a documented
                         # gap for a later pass, not silently unhandled.
-                        anc1 = self._detect_ancilla[b1[0]]
-                        sim1 = self.sim[b1[0]]
-                        anc2 = self._detect_ancilla[b2[0]]
-                        sim2 = self.sim[b2[0]]
+                        anc = self._detect_ancilla[b1[0]]
+                        sim = self.sim[b1[0]]
                         sim.mcx([b1[1]], anc1)
                         gate_fn([b1[1]], b2[1])
                         sim.mcx([b1[1]], anc1)
