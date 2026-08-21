@@ -1452,13 +1452,10 @@ class QrackAceBackend:
                         sim1 = self.sim[b1[0]]
                         anc2 = self._detect_ancilla[b2[0]]
                         sim2 = self.sim[b2[0]]
-                        sim1.mcx([b1[1]], anc1)
-                        sim2.mcx([b2[1]], anc2)
+                        sim.mcx([b1[1]], anc1)
                         gate_fn([b1[1]], b2[1])
-                        sim1.mcx([b1[1]], anc1)
-                        sim2.mcx([b2[1]], anc2)
-                        sim1.force_m(anc1, False)
-                        sim2.force_m(anc2, False)
+                        sim.mcx([b1[1]], anc1)
+                        sim.force_m(anc1, False)
                     else:
                         gate_fn([b1[1]], b2[1])
                 elif lq1_lr or (b1[1] == b2[1]) or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1))):
