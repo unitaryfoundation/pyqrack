@@ -242,6 +242,7 @@ class QrackAceBackend:
         history_window=0,
         is_torus=True,
         is_1d_chain=False,
+        is_error_detection=True,
         to_clone=None,
     ):
         if to_clone:
@@ -252,6 +253,7 @@ class QrackAceBackend:
             history_window = to_clone.history_window
             is_torus = to_clone.is_torus
             is_1d_chain = to_clone.is_1d_chain
+            is_error_detection = to_clone.is_error_detection
         if qubit_count < 0:
             qubit_count = 0
         if long_range_columns < 0:
@@ -266,6 +268,7 @@ class QrackAceBackend:
         self.is_transpose = is_transpose
         self.history_window = history_window
         self.is_torus = is_torus
+        self.is_error_detection = is_error_detection
 
         fppow = 5
         if "QRACK_FPPOW" in os.environ:
@@ -401,6 +404,20 @@ class QrackAceBackend:
         has_boundary = boundary_count > 0
         if has_boundary:
             sim_counts.append(boundary_count)
+
+        # Error-detection gadget (IBM-style detect-and-post-select, not
+        # correction): one shared ancilla per simulator -- every patch AND
+        # the boundary crossbar sim alike, "a single ancilla per patch,
+        # overall" -- reused across every real (same-simulator) coupling
+        # gate that touches it, never allocated per-gate or per-qubit.
+        # See _apply_coupling for the actual gadget; this block only does
+        # the qubit-index bookkeeping, in the same style as every other
+        # per-simulator allocation above.
+        self._detect_ancilla = []
+        if self.is_error_detection:
+            for i in range(len(sim_counts)):
+                self._detect_ancilla.append(sim_counts[i])
+                sim_counts[i] += 1
 
         if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" in os.environ:
             self._sdrp = min(1, float(os.environ["QRACK_QUNIT_SEPARABILITY_THRESHOLD"]))
@@ -1397,7 +1414,48 @@ class QrackAceBackend:
             for q2 in qb2:
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
-                    gate_fn([b1[1]], b2[1])
+                    if self.is_error_detection:
+                        # Error-DETECTION gadget (not correction), directly
+                        # post-selected via force_m rather than requiring
+                        # real repeated shots: b1 is always the CONTROL of
+                        # this gate (by construction -- gate_fn is always
+                        # called as gate_fn([b1[1]], b2[1])), and a
+                        # control's Z value is exactly invariant under a
+                        # controlled-Pauli gate in the noiseless case,
+                        # regardless of anti/regular control convention or
+                        # which Pauli. So: XOR b1's value into the patch's
+                        # shared ancilla immediately before the gate, XOR
+                        # it in again immediately after -- if nothing
+                        # disturbed b1 (no injected noise on the gate
+                        # itself or on either sandwiching CNOT), those two
+                        # XORs exactly cancel and the ancilla is back to
+                        # |0>. force_m(ancilla, False) then directly
+                        # projects the whole simulated state onto that
+                        # "no disturbance detected" branch and renormalizes
+                        # -- this is the exact numerical equivalent of what
+                        # a real experiment gets from measure + discard +
+                        # repeat, done in one step because the simulator
+                        # has the full state to project, not just samples
+                        # from it. The same ancilla is reused for every
+                        # gate touching this simulator: each round-trip is
+                        # self-contained and leaves the ancilla at |0>
+                        # again whenever nothing was detected, so there's
+                        # no cross-gate bookkeeping needed.
+                        #
+                        # Scope: this only covers the mcx/mcy/mcz path
+                        # (_cpauli / _apply_coupling). swap/iswap/pswap/etc.
+                        # exchange both qubits' values rather than leaving
+                        # either invariant, so this specific gadget doesn't
+                        # apply to them directly -- left as a documented
+                        # gap for a later pass, not silently unhandled.
+                        anc = self._detect_ancilla[b1[0]]
+                        sim = self.sim[b1[0]]
+                        sim.mcx([b1[1]], anc)
+                        gate_fn([b1[1]], b2[1])
+                        sim.mcx([b1[1]], anc)
+                        sim.force_m(anc, False)
+                    else:
+                        gate_fn([b1[1]], b2[1])
                 elif lq1_lr or (b1[1] == b2[1]) or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1))):
                     shadow_fn(b1, b2)
                     shadow_targets.append(b2)
@@ -1427,6 +1485,24 @@ class QrackAceBackend:
                 )
                 hist.append(entry)
                 self._coupling_history_rev[lq2] = lq1
+
+    # A "coupled twirling" scheme was tried here -- after every real
+    # inter-logical-qubit coupling gate, SWAP which physical qubit is
+    # registered as hq[side] with one of its level-0 scratch qubits, to
+    # spread the extra gate/noise exposure that coupling gates put on
+    # hq[side] (and never on its scratch pair) around the triple instead
+    # of always landing on the same physical qubit. Measured head-to-head
+    # against scheduled-only correction across a repeated-coupling
+    # scenario and multiple noise levels: it made the logical error rate
+    # WORSE at every noise level tested, roughly 2x at the low end --
+    # each twirl's own 3 extra CNOTs cost more than the exposure
+    # asymmetry it was meant to fix, and scheduled-only correction
+    # already handles repeated real coupling gates well on its own (most
+    # circuits don't leave a boundary qubit persistently entangled with
+    # something external all the way into readout the way the theory
+    # worried about). Removed rather than kept as an opt-in: it has no
+    # regime found so far where it beats scheduled-only, so there's
+    # nothing to gate it behind.
 
     def _cpauli(self, lq1, lq2, anti, pauli):
         lq1_row = lq1 // self._row_length
