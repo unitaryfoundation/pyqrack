@@ -1450,10 +1450,10 @@ class QrackAceBackend:
                         # gap for a later pass, not silently unhandled.
                         anc = self._detect_ancilla[b1[0]]
                         sim = self.sim[b1[0]]
-                        sim.mcx([b1[1]], anc1)
+                        sim.mcx([b1[1]], anc)
                         gate_fn([b1[1]], b2[1])
-                        sim.mcx([b1[1]], anc1)
-                        sim.force_m(anc1, False)
+                        sim.mcx([b1[1]], anc)
+                        sim.force_m(anc, False)
                     else:
                         gate_fn([b1[1]], b2[1])
                 elif lq1_lr or (b1[1] == b2[1]) or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1))):
