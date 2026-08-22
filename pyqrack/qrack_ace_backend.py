@@ -631,10 +631,55 @@ class QrackAceBackend:
         else:
             t.adjs()
 
+    def _detect_swap(self, sim_id, idx1, idx2):
+        """Same detect-and-post-select gadget as _apply_coupling's real
+        gate branch, generalized to SWAP's own invariant instead of
+        CNOT's. SWAP exchanges two qubits' values, but their XOR
+        (parity) is exactly conserved in the noiseless case:
+        idx1_before ^ idx2_before == idx1_after ^ idx2_after, regardless
+        of either qubit's individual value -- captured the same way,
+        just with two capture-CNOTs (one per qubit) into the shared
+        per-simulator ancilla instead of one.
+        """
+        sim = self.sim[sim_id]
+        if not self.is_error_detection:
+            sim.swap(idx1, idx2)
+            return
+        anc = self._detect_ancilla[sim_id]
+        sim.mcx([idx1], anc)
+        sim.mcx([idx2], anc)
+        sim.swap(idx1, idx2)
+        sim.mcx([idx1], anc)
+        sim.mcx([idx2], anc)
+        sim.force_m(anc, False)
+
+    def _anti_shadow_wrap(self, c, t, middle_fn):
+        """Shared gadget for _anti_c{x,y,z}_shadow: all three bracket
+        their genuinely cross-sim shadow call with two _qec_x(c) calls,
+        and nothing else ever touches c in between -- the shadow call
+        underneath only ever reads c via .prob(), never gates it (same
+        property _apply_coupling's real branch relies on for its own
+        control-invariance check). So X;X on c should net to identity,
+        in the noiseless case, regardless of c's current value or basis
+        -- exactly as protectable as the CNOT-sandwich case, just with
+        X instead of CNOT as the bracketing gate.
+        """
+        if not (self.is_error_detection and isinstance(c, tuple)):
+            self._qec_x(c)
+            middle_fn(c, t)
+            self._qec_x(c)
+            return
+        anc = self._detect_ancilla[c[0]]
+        sim = self.sim[c[0]]
+        sim.mcx([c[1]], anc)
+        self._qec_x(c)
+        middle_fn(c, t)
+        self._qec_x(c)
+        sim.mcx([c[1]], anc)
+        sim.force_m(anc, False)
+
     def _anti_cz_shadow(self, c, t):
-        self._qec_x(c)
-        self._cz_shadow(c, t)
-        self._qec_x(c)
+        self._anti_shadow_wrap(c, t, self._cz_shadow)
 
     def _cx_shadow(self, c, t):
         self._qec_h(t)
@@ -642,9 +687,7 @@ class QrackAceBackend:
         self._qec_h(t)
 
     def _anti_cx_shadow(self, c, t):
-        self._qec_x(c)
-        self._cx_shadow(c, t)
-        self._qec_x(c)
+        self._anti_shadow_wrap(c, t, self._cx_shadow)
 
     def _cy_shadow(self, c, t):
         self._qec_adjs(t)
@@ -652,9 +695,7 @@ class QrackAceBackend:
         self._qec_s(t)
 
     def _anti_cy_shadow(self, c, t):
-        self._qec_x(c)
-        self._cy_shadow(c, t)
-        self._qec_x(c)
+        self._anti_shadow_wrap(c, t, self._cy_shadow)
 
     def _unpack(self, lq):
         return self._qubits[lq]
@@ -1441,6 +1482,28 @@ class QrackAceBackend:
                         # again whenever nothing was detected, so there's
                         # no cross-gate bookkeeping needed.
                         #
+                        # Deliberately single-patch, not multi-patch: this
+                        # protects b1 exactly where the real gate touches
+                        # it. A multi-patch version (sandwiching every
+                        # replica of lq1 across every patch it lives in)
+                        # was tried and measured worse -- RCS XEB against
+                        # this architecture's own intrinsic approximation
+                        # error confirmed the single-patch version here is
+                        # the one that actually works well; the multi-patch
+                        # generalization added cost without benefit.
+                        #
+                        # Also worth being explicit about: what this
+                        # catches is NOT the same thing as the `noise=`
+                        # parameter's injected depolarizing/Pauli channel.
+                        # It's this architecture's own INTRINSIC error --
+                        # the approximation inherent in the elided
+                        # shadow-coupling / replica-consistency scheme,
+                        # present even at noise=0. Testing this gadget
+                        # against `noise=p` instead measures something
+                        # different (and actively penalizes it, since the
+                        # sandwiching CNOTs are then subject to that same
+                        # injected noise too) -- see conversation record.
+                        #
                         # Scope: this only covers the mcx/mcy/mcz path
                         # (_cpauli / _apply_coupling). swap/iswap/pswap/etc.
                         # exchange both qubits' values rather than leaving
@@ -1676,7 +1739,7 @@ class QrackAceBackend:
             for i in range(len(hq1)):
                 sim_id, idx1 = hq1[i]
                 _, idx2 = hq2[i]
-                self.sim[sim_id].swap(idx1, idx2)
+                self._detect_swap(sim_id, idx1, idx2)
             # No post-swap correction: this branch is a native index
             # relabeling applied identically to every matching replica
             # pair, with zero Schmidt-truncation opportunity -- verified
@@ -1705,7 +1768,7 @@ class QrackAceBackend:
             for _hq2 in non_matching:
                 self._cx_shadow(_hq1, _hq2)
             for _hq2 in matching:
-                self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
+                self._detect_swap(_hq1[0], _hq1[1], _hq2[1])
             for _hq2 in non_matching:
                 self._cx_shadow(_hq1, _hq2)
             # No correction on lq1 (bulk, single-replica): already a
@@ -1724,7 +1787,7 @@ class QrackAceBackend:
             for _hq1 in non_matching:
                 self._cx_shadow(_hq2, _hq1)
             for _hq1 in matching:
-                self.sim[_hq2[0]].swap(_hq2[1], _hq1[1])
+                self._detect_swap(_hq2[0], _hq2[1], _hq1[1])
             for _hq1 in non_matching:
                 self._cx_shadow(_hq2, _hq1)
             self._correct(lq1)
@@ -2352,7 +2415,45 @@ class QrackAceBackend:
 
             return n / (len(sims1) + len(sims2))
 
-        for a, b in self.get_logical_coupling_map():
+        coupling_map = self.get_logical_coupling_map()
+
+        # Error-detection damping (cx/cy/cz only -- see below for why not
+        # swap/iswap): a qubit only ever gets the gadget's benefit when it
+        # actually plays CONTROL in some real (u=0) gate somewhere in the
+        # coupling map -- that's what gives its replica a chance to be
+        # swept clean via _apply_coupling's capture-sandwich-force_m
+        # before any shadow decision reads its .prob(). This is a
+        # structural fact about each qubit individually, computed once
+        # here, not a property of the circuit or a global constant --
+        # which is exactly why this can't be reproduced by a user just
+        # passing a smaller x: x scales every pair uniformly, and this
+        # doesn't apply uniformly, either across qubits (only ones with a
+        # real-gate opportunity qualify) or across gate types (see below).
+        has_real_partner = set()
+        if self.is_error_detection:
+            for lq1, lq2 in coupling_map:
+                if _uncommon_sim_fraction(lq1, lq2) == 0:
+                    has_real_partner.add(lq1)
+
+        # This factor is a theory-derived placeholder, not an empirical
+        # fit -- deliberately, per instruction not to chase a regression
+        # right now. It reflects that the gadget's control-invariance
+        # check is a Z-basis check: it exactly catches the X/Y-type
+        # disturbances that would degrade a Z-basis .prob() reading (the
+        # only thing _cz_shadow's decision actually depends on), while a
+        # Z-type disturbance on the control doesn't degrade that reading
+        # in the first place and so was never a threat to the shadow
+        # decision to begin with. That argument alone would suggest
+        # damping close to the full X/Y-type share of the channel -- but
+        # this is a STRUCTURAL possibility (the control CAN be swept
+        # clean somewhere in the map), not a per-execution guarantee that
+        # it WAS, before any specific shadow read in a specific circuit.
+        # 0.5 is a deliberately conservative middle estimate given that
+        # gap, not a derived bound; replace with a fitted value once (or
+        # if) empirical calibration against real XEB data happens.
+        _ERROR_DETECTION_DAMPING = 0.5
+
+        for a, b in coupling_map:
             u = _uncommon_sim_fraction(a, b)
             c = 1 - u
 
@@ -2375,6 +2476,14 @@ class QrackAceBackend:
             # Pauli-string convention is big-endian relative to the qubit
             # list: the LAST qubit corresponds to the LEFTMOST character).
             p_shadow_ccz = 1 - sp * p
+            if a in has_real_partner:
+                # a is the control for this pair (_cpauli(lq1=a, lq2=b,
+                # ...) is always called with a as the coupling source),
+                # and a has at least one real-gate opportunity elsewhere
+                # in the map -- so its .prob() reading, which THIS
+                # shadow decision partly depends on, has a structural
+                # chance of having been kept clean. Damp accordingly.
+                p_shadow_ccz *= _ERROR_DETECTION_DAMPING
             noise_model.add_quantum_error(
                 pauli_error([("ZI", p_shadow_ccz), ("II", 1 - p_shadow_ccz)]), "cz", [a, b]
             )
@@ -2427,6 +2536,22 @@ class QrackAceBackend:
             # same condition to stay consistent with what the gate does.
             if (is_a_simple != is_b_simple) and has_match:
                 p_net_swap = 2 * p * (1 - p)
+                # swap() now routes its own matching-replica gate through
+                # _detect_swap (a genuine same-simulator, parity-invariant
+                # gadget: idx1^idx2 is exactly conserved across a SWAP,
+                # the same way a CNOT's control is conserved -- see
+                # _detect_swap), so this IS damped now, unlike the stale
+                # "swap/iswap deliberately not damped" note this replaced.
+                # Gate on whichever side bears the error (the boundary
+                # qubit), using the same has_real_partner structural
+                # proxy as the cx/cy/cz case above -- the matching-replica
+                # branch needs the same "shares a simulator with
+                # something else" precondition _uncommon_sim_fraction==0
+                # already captures, so reusing that set here keeps this
+                # consistent rather than re-deriving a parallel condition.
+                boundary_qubit = b if is_a_simple else a
+                if boundary_qubit in has_real_partner:
+                    p_net_swap *= _ERROR_DETECTION_DAMPING
                 if is_a_simple:
                     # a is bulk, b is boundary -> error lands on b
                     noise_model.add_quantum_error(
@@ -2458,6 +2583,14 @@ class QrackAceBackend:
             # previous formula.
             if (is_a_simple != is_b_simple) and has_match:
                 p_cz = 1 - sp * p  # same per-call formula as standalone cz
+                if boundary_qubit in has_real_partner:
+                    # this cz component is the SAME kind of shadow-driven
+                    # term as the main cx/cy/cz loop above (see that
+                    # comment for the mechanism); p_net_swap was already
+                    # damped above, independently, since it comes from a
+                    # different gate (the now-protected native swap, not
+                    # this cz component).
+                    p_cz *= _ERROR_DETECTION_DAMPING
                 p_i = (1 - p_net_swap) * (1 - p_cz)
                 p_x = p_net_swap * (1 - p_cz)
                 p_z = (1 - p_net_swap) * p_cz
