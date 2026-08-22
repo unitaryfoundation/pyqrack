@@ -2397,7 +2397,7 @@ class QrackAceBackend:
         return self._coupling_map
 
     # Designed by Dan, Elara (ChatGPT), and (Anthropic) Claude:
-    def create_noise_model(self, x=0.5):
+    def create_noise_model(self, x=0.5, y=0.5):
         if not _IS_QISKIT_AER_AVAILABLE:
             raise RuntimeError(
                 "Before trying to run_qiskit_circuit() with QrackAceBackend, you must install Qiskit Aer!"
@@ -2453,7 +2453,8 @@ class QrackAceBackend:
         # 0.5 is a deliberately conservative middle estimate given that
         # gap, not a derived bound; replace with a fitted value once (or
         # if) empirical calibration against real XEB data happens.
-        _ERROR_DETECTION_DAMPING = 0.5
+        # _ERROR_DETECTION_DAMPING = 0.5
+        # (Use "y" instead.)
 
         for a, b in coupling_map:
             u = _uncommon_sim_fraction(a, b)
@@ -2485,7 +2486,7 @@ class QrackAceBackend:
                 # in the map -- so its .prob() reading, which THIS
                 # shadow decision partly depends on, has a structural
                 # chance of having been kept clean. Damp accordingly.
-                p_shadow_ccz *= _ERROR_DETECTION_DAMPING
+                p_shadow_ccz *= y
             noise_model.add_quantum_error(
                 pauli_error([("ZI", p_shadow_ccz), ("II", 1 - p_shadow_ccz)]), "cz", [a, b]
             )
@@ -2553,7 +2554,7 @@ class QrackAceBackend:
                 # consistent rather than re-deriving a parallel condition.
                 boundary_qubit = b if is_a_simple else a
                 if boundary_qubit in has_real_partner:
-                    p_net_swap *= _ERROR_DETECTION_DAMPING
+                    p_net_swap *= y
                 if is_a_simple:
                     # a is bulk, b is boundary -> error lands on b
                     noise_model.add_quantum_error(
@@ -2592,7 +2593,7 @@ class QrackAceBackend:
                     # damped above, independently, since it comes from a
                     # different gate (the now-protected native swap, not
                     # this cz component).
-                    p_cz *= _ERROR_DETECTION_DAMPING
+                    p_cz *= y
                 p_i = (1 - p_net_swap) * (1 - p_cz)
                 p_x = p_net_swap * (1 - p_cz)
                 p_z = (1 - p_net_swap) * p_cz
