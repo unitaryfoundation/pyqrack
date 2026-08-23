@@ -1455,42 +1455,25 @@ class QrackAceBackend:
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
                     if self.is_error_detection:
-                        # Error-DETECTION gadget (not correction), directly
-                        # post-selected via force_m rather than requiring
-                        # real repeated shots: b1 is always the CONTROL of
-                        # this gate (by construction -- gate_fn is always
-                        # called as gate_fn([b1[1]], b2[1])), and a
-                        # control's Z value is exactly invariant under a
-                        # controlled-Pauli gate in the noiseless case,
-                        # regardless of anti/regular control convention or
-                        # which Pauli. So: XOR b1's value into the patch's
-                        # shared ancilla immediately before the gate, XOR
-                        # it in again immediately after -- if nothing
-                        # disturbed b1 (no injected noise on the gate
-                        # itself or on either sandwiching CNOT), those two
-                        # XORs exactly cancel and the ancilla is back to
-                        # |0>. force_m(ancilla, False) then directly
-                        # projects the whole simulated state onto that
-                        # "no disturbance detected" branch and renormalizes
-                        # -- this is the exact numerical equivalent of what
-                        # a real experiment gets from measure + discard +
-                        # repeat, done in one step because the simulator
-                        # has the full state to project, not just samples
-                        # from it. The same ancilla is reused for every
-                        # gate touching this simulator: each round-trip is
-                        # self-contained and leaves the ancilla at |0>
-                        # again whenever nothing was detected, so there's
-                        # no cross-gate bookkeeping needed.
-                        #
-                        # Deliberately single-patch, not multi-patch: this
-                        # protects b1 exactly where the real gate touches
-                        # it. A multi-patch version (sandwiching every
-                        # replica of lq1 across every patch it lives in)
-                        # was tried and measured worse -- RCS XEB against
-                        # this architecture's own intrinsic approximation
-                        # error confirmed the single-patch version here is
-                        # the one that actually works well; the multi-patch
-                        # generalization added cost without benefit.
+                        # Single-patch, not multi-patch: force_m's
+                        # post-selection isn't local to the one
+                        # simulator it's physically called on -- the
+                        # projection it performs reflects the "lab
+                        # frame" ground truth for whatever it's checking,
+                        # not an independent per-patch fact. Since every
+                        # replica of a boundary qubit is meant to
+                        # represent the SAME logical value, checking that
+                        # invariant via any one patch that has a real
+                        # gate touching it already captures the full
+                        # syndrome -- separately re-checking lq1's other
+                        # replicas in their own patches doesn't add new
+                        # independent information, it just adds their
+                        # own extra gate exposure for no additional
+                        # benefit. So: XOR b1's value into ITS OWN
+                        # patch's ancilla immediately before the gate,
+                        # XOR it in again immediately after, force_m that
+                        # one ancilla -- b1 only, not every replica of
+                        # lq1.
                         #
                         # Also worth being explicit about: what this
                         # catches is NOT the same thing as the `noise=`
@@ -1504,17 +1487,46 @@ class QrackAceBackend:
                         # sandwiching CNOTs are then subject to that same
                         # injected noise too) -- see conversation record.
                         #
-                        # Scope: this only covers the mcx/mcy/mcz path
-                        # (_cpauli / _apply_coupling). swap/iswap/pswap/etc.
-                        # exchange both qubits' values rather than leaving
-                        # either invariant, so this specific gadget doesn't
-                        # apply to them directly -- left as a documented
-                        # gap for a later pass, not silently unhandled.
+                        # Scope: still only the mcx/mcy/mcz path
+                        # (_cpauli / _apply_coupling); swap/iswap/etc.
+                        # get their own dedicated gadget (_detect_swap),
+                        # and the anti-controlled shadow variants get
+                        # theirs (_anti_shadow_wrap) -- see those.
+                        #
+                        # CZ specifically also checks b2, not just b1:
+                        # unlike CX/CY, where the target's Z-population
+                        # legitimately, intentionally changes (that IS
+                        # the entangling operation -- not an error), CZ
+                        # is diagonal in the computational basis and
+                        # NEVER changes either qubit's Z-population, only
+                        # a relative phase. So b2 is an equally valid
+                        # invariance check here, for this gate family
+                        # only. Combined as one XOR parity (b1^b2), same
+                        # pattern as the SWAP gadget: catches either
+                        # participant's first-order (O(p)) disturbance,
+                        # only misses the second-order (O(p^2)) case
+                        # where both are disturbed simultaneously in a
+                        # way that cancels in the combined parity.
+                        # (Considered and rejected checking b1 in BOTH
+                        # Z and X bases instead, to catch phase-type
+                        # errors on the control too -- doesn't work: CX/CY
+                        # genuinely, intentionally entangle control with
+                        # target, which legitimately degrades the
+                        # control's own X/Y-basis coherence as correct
+                        # gate behavior, not error. A detector for that
+                        # would flag every successful entangling gate and
+                        # destroy the entanglement the gate was supposed
+                        # to create.)
+                        check_b2_too = pauli == Pauli.PauliZ
                         anc = self._detect_ancilla[b1[0]]
                         sim = self.sim[b1[0]]
                         sim.mcx([b1[1]], anc)
+                        if check_b2_too:
+                            sim.mcx([b2[1]], anc)
                         gate_fn([b1[1]], b2[1])
                         sim.mcx([b1[1]], anc)
+                        if check_b2_too:
+                            sim.mcx([b2[1]], anc)
                         sim.force_m(anc, False)
                     else:
                         gate_fn([b1[1]], b2[1])
@@ -2429,11 +2441,23 @@ class QrackAceBackend:
         # passing a smaller x: x scales every pair uniformly, and this
         # doesn't apply uniformly, either across qubits (only ones with a
         # real-gate opportunity qualify) or across gate types (see below).
+        #
+        # Both sides of a real (u=0) pair get added, not just the control:
+        # CZ's own gadget check now covers its target too (CZ is diagonal
+        # -- unlike CX/CY, it never changes either qubit's Z-population,
+        # so the target is an equally valid invariance check there, see
+        # _apply_coupling). The coupling map doesn't distinguish which
+        # gate type a future circuit will actually use for a given pair,
+        # so this necessarily overstates the CX/CY case slightly (where
+        # only the control gets swept) -- an approximation on top of an
+        # already-approximate placeholder, not a new source of precision
+        # lost.
         has_real_partner = set()
         if self.is_error_detection:
             for lq1, lq2 in coupling_map:
                 if _uncommon_sim_fraction(lq1, lq2) == 0:
                     has_real_partner.add(lq1)
+                    has_real_partner.add(lq2)
 
         # This factor is a theory-derived placeholder, not an empirical
         # fit -- deliberately, per instruction not to chase a regression
