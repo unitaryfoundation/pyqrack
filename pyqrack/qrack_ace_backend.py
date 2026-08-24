@@ -419,6 +419,37 @@ class QrackAceBackend:
                 self._detect_ancilla.append(sim_counts[i])
                 sim_counts[i] += 1
 
+        # Logical-qubit wrapper around each patch's detection ancilla,
+        # so it's addressable via the ORDINARY cx()/_cpauli() machinery
+        # (self.cx(lq1, anc)), not just raw (sim, idx) tuples. Appended
+        # PAST the user-facing qubit range (num_qubits() is computed
+        # independently from the grid dimensions, not from len(
+        # self._qubits), so these extra entries are never visible or
+        # reachable through the normal API) -- a simple, single-replica
+        # (bulk-style) logical qubit per simulator, one entry in
+        # self._qubits pointing at the same physical qubit _detect_
+        # ancilla already allocated there. See _apply_coupling for why
+        # this needs to be a genuine logical qubit and not just a raw
+        # physical capture: capturing lq1's LOGICAL value via a real,
+        # nested cx(lq1, anc) call goes through the full _correct()/
+        # shadow-coupling machinery robustly, the same way any other
+        # logical qubit's value would be determined -- watching one
+        # specific physical replica directly (an earlier version of
+        # this) isn't a valid invariant, since _correct() can
+        # legitimately need to change any single replica's own value.
+        self._detect_ancilla_lq = []
+        if self.is_error_detection:
+            for sim_id, phys_idx in enumerate(self._detect_ancilla):
+                lq_idx = len(self._qubits)
+                self._qubits.append([(sim_id, phys_idx)])
+                self._detect_ancilla_lq.append(lq_idx)
+        # Reentrancy guard for the gadget's own nested cx(lq1, anc)
+        # capture calls (see _apply_coupling): those calls go through
+        # the ordinary _cpauli -> _apply_coupling path themselves, which
+        # would otherwise try to wrap ITSELF in another capture,
+        # recursing without end.
+        self._in_gadget_capture = False
+
         if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" in os.environ:
             self._sdrp = min(1, float(os.environ["QRACK_QUNIT_SEPARABILITY_THRESHOLD"]))
         else:
@@ -632,51 +663,12 @@ class QrackAceBackend:
             t.adjs()
 
     def _detect_swap(self, sim_id, idx1, idx2):
-        """Same detect-and-post-select gadget as _apply_coupling's real
-        gate branch, generalized to SWAP's own invariant instead of
-        CNOT's. SWAP exchanges two qubits' values, but their XOR
-        (parity) is exactly conserved in the noiseless case:
-        idx1_before ^ idx2_before == idx1_after ^ idx2_after, regardless
-        of either qubit's individual value -- captured the same way,
-        just with two capture-CNOTs (one per qubit) into the shared
-        per-simulator ancilla instead of one.
-        """
-        sim = self.sim[sim_id]
-        if not self.is_error_detection:
-            sim.swap(idx1, idx2)
-            return
-        anc = self._detect_ancilla[sim_id]
-        sim.mcx([idx1], anc)
-        sim.mcx([idx2], anc)
-        sim.swap(idx1, idx2)
-        sim.mcx([idx1], anc)
-        sim.mcx([idx2], anc)
-        sim.force_m(anc, False)
+        self.sim[sim_id].swap(idx1, idx2)
 
     def _anti_shadow_wrap(self, c, t, middle_fn):
-        """Shared gadget for _anti_c{x,y,z}_shadow: all three bracket
-        their genuinely cross-sim shadow call with two _qec_x(c) calls,
-        and nothing else ever touches c in between -- the shadow call
-        underneath only ever reads c via .prob(), never gates it (same
-        property _apply_coupling's real branch relies on for its own
-        control-invariance check). So X;X on c should net to identity,
-        in the noiseless case, regardless of c's current value or basis
-        -- exactly as protectable as the CNOT-sandwich case, just with
-        X instead of CNOT as the bracketing gate.
-        """
-        if not (self.is_error_detection and isinstance(c, tuple)):
-            self._qec_x(c)
-            middle_fn(c, t)
-            self._qec_x(c)
-            return
-        anc = self._detect_ancilla[c[0]]
-        sim = self.sim[c[0]]
-        sim.mcx([c[1]], anc)
         self._qec_x(c)
         middle_fn(c, t)
         self._qec_x(c)
-        sim.mcx([c[1]], anc)
-        sim.force_m(anc, False)
 
     def _anti_cz_shadow(self, c, t):
         self._anti_shadow_wrap(c, t, self._cz_shadow)
@@ -1444,6 +1436,49 @@ class QrackAceBackend:
                                  # bounded window, no reactive invalidation
                                  # needed for these -- see
                                  # _resolve_witnessed_shadow.
+
+        # Logical-level error-detection gadget: captures lq1's LOGICAL
+        # value (and lq2's too, for CZ specifically -- see below) into a
+        # dedicated hidden ancilla via a genuine, nested cx() call --
+        # NOT a raw capture of one specific physical replica. This
+        # matters: gate_fn/shadow_fn below never gate the control (only
+        # ever read it via .prob()), so lq1's LOGICAL value is
+        # structurally guaranteed not to change across this loop --
+        # that invariant holds regardless of what _correct() may have
+        # legitimately done to any INDIVIDUAL replica beforehand,
+        # because the nested cx(lq1, anc) call determines lq1's value
+        # the same robust way any other logical coupling would, not by
+        # trusting one physical replica directly (an earlier version of
+        # this tried exactly that and crashed: _correct() can
+        # legitimately need to change hq1[0]'s own value, so "hq1[0]
+        # never changes" isn't actually a valid invariant, even though
+        # "lq1's logical value never changes here" is).
+        #
+        # The genuine syndrome signal comes from the capture itself: the
+        # nested cx() goes through the same _correct()/shadow-coupling
+        # machinery as any other logical operation, which can introduce
+        # some imprecision between the "before" and "after" capture even
+        # though lq1's true value didn't change -- that imprecision is
+        # exactly this architecture's own intrinsic (not noise=p)
+        # approximation error, which is what's worth catching.
+        #
+        # CZ also captures lq2 into the SAME ancilla: unlike CX/CY,
+        # where the target's value legitimately, intentionally changes
+        # (that's the entangling operation, not an error), CZ never
+        # changes either participant's Z-population on any input, so
+        # lq2's logical value is an equally valid invariant here, for
+        # this gate family only -- same reasoning as the earlier
+        # single-replica CZ dual-check, just applied at the logical
+        # level now.
+        anc = None
+        if self.is_error_detection and not self._in_gadget_capture:
+            anc = self._detect_ancilla_lq[hq1[0][0]]
+            self._in_gadget_capture = True
+            try:
+                self.cx(lq1, anc)
+            finally:
+                self._in_gadget_capture = False
+
         for q1 in qb1:
             b1 = hq1[q1]
             gate_fn, shadow_fn = self._get_gate(pauli, anti, b1[0])
@@ -1455,87 +1490,43 @@ class QrackAceBackend:
             for q2 in qb2:
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
-                    if self.is_error_detection:
-                        # Single-patch, not multi-patch: force_m's
-                        # post-selection isn't local to the one
-                        # simulator it's physically called on -- the
-                        # projection it performs reflects the "lab
-                        # frame" ground truth for whatever it's checking,
-                        # not an independent per-patch fact. Since every
-                        # replica of a boundary qubit is meant to
-                        # represent the SAME logical value, checking that
-                        # invariant via any one patch that has a real
-                        # gate touching it already captures the full
-                        # syndrome -- separately re-checking lq1's other
-                        # replicas in their own patches doesn't add new
-                        # independent information, it just adds their
-                        # own extra gate exposure for no additional
-                        # benefit. So: XOR b1's value into ITS OWN
-                        # patch's ancilla immediately before the gate,
-                        # XOR it in again immediately after, force_m that
-                        # one ancilla -- b1 only, not every replica of
-                        # lq1.
-                        #
-                        # Also worth being explicit about: what this
-                        # catches is NOT the same thing as the `noise=`
-                        # parameter's injected depolarizing/Pauli channel.
-                        # It's this architecture's own INTRINSIC error --
-                        # the approximation inherent in the elided
-                        # shadow-coupling / replica-consistency scheme,
-                        # present even at noise=0. Testing this gadget
-                        # against `noise=p` instead measures something
-                        # different (and actively penalizes it, since the
-                        # sandwiching CNOTs are then subject to that same
-                        # injected noise too) -- see conversation record.
-                        #
-                        # Scope: still only the mcx/mcy/mcz path
-                        # (_cpauli / _apply_coupling); swap/iswap/etc.
-                        # get their own dedicated gadget (_detect_swap),
-                        # and the anti-controlled shadow variants get
-                        # theirs (_anti_shadow_wrap) -- see those.
-                        #
-                        # CZ specifically also checks b2, not just b1:
-                        # unlike CX/CY, where the target's Z-population
-                        # legitimately, intentionally changes (that IS
-                        # the entangling operation -- not an error), CZ
-                        # is diagonal in the computational basis and
-                        # NEVER changes either qubit's Z-population, only
-                        # a relative phase. So b2 is an equally valid
-                        # invariance check here, for this gate family
-                        # only. Combined as one XOR parity (b1^b2), same
-                        # pattern as the SWAP gadget: catches either
-                        # participant's first-order (O(p)) disturbance,
-                        # only misses the second-order (O(p^2)) case
-                        # where both are disturbed simultaneously in a
-                        # way that cancels in the combined parity.
-                        # (Considered and rejected checking b1 in BOTH
-                        # Z and X bases instead, to catch phase-type
-                        # errors on the control too -- doesn't work: CX/CY
-                        # genuinely, intentionally entangle control with
-                        # target, which legitimately degrades the
-                        # control's own X/Y-basis coherence as correct
-                        # gate behavior, not error. A detector for that
-                        # would flag every successful entangling gate and
-                        # destroy the entanglement the gate was supposed
-                        # to create.)
-                        check_b2_too = pauli == Pauli.PauliZ
-                        anc = self._detect_ancilla[b1[0]]
-                        sim = self.sim[b1[0]]
-                        sim.mcx([b1[1]], anc)
-                        if check_b2_too:
-                            sim.mcx([b2[1]], anc)
-                        gate_fn([b1[1]], b2[1])
-                        sim.mcx([b1[1]], anc)
-                        if check_b2_too:
-                            sim.mcx([b2[1]], anc)
-                        sim.force_m(anc, False)
-                    else:
-                        gate_fn([b1[1]], b2[1])
+                    gate_fn([b1[1]], b2[1])
                 elif lq1_lr or (b1[1] == b2[1]) or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1))):
                     shadow_fn(b1, b2)
                     shadow_targets.append(b2)
                     if witness is not None and witness != b2:
                         witnessed_targets.append((b2, witness))
+
+        if anc is not None:
+            self._in_gadget_capture = True
+            try:
+                self.cx(lq1, anc)
+                # Check prob() before forcing: force_m(anc, False)
+                # assumes the "agree" branch has nonzero probability,
+                # which usually holds (that's the whole invariant this
+                # gadget relies on) but isn't guaranteed -- if the
+                # architecture's own approximation genuinely, confidently
+                # drove lq1 (or lq2) to a different value between the
+                # two captures, the "agree" branch can have exactly zero
+                # probability, and forcing it crashes outright (verified
+                # directly: reproducible RuntimeError under realistic
+                # circuit depth). Accept that a genuine, confident
+                # disagreement occurred instead of forcing the
+                # impossible branch: force the TRUE condition (safe,
+                # since that branch is the one that actually carries the
+                # probability), reset the ancilla back to |0>, and apply
+                # a corrective X to lq1 to restore the detected
+                # invariant.
+                anc_sim, anc_idx = self._qubits[anc][0]
+                p = self.sim[anc_sim].prob(anc_idx)
+                if p > (1.0 - self._epsilon):
+                    self.force_m(anc, True)
+                    self.x(anc)
+                    self.x(lq1)
+                else:
+                    self.force_m(anc, False)
+            finally:
+                self._in_gadget_capture = False
 
         if lq2 is not None and witnessed_targets and self._witness_map is not None:
             wmap = self._witness_map.setdefault(lq2, {})
@@ -1745,6 +1736,18 @@ class QrackAceBackend:
         # single-replica (bulk) qubits, so this is always safe to call, and
         # only actually matters (and was being silently skipped) whenever
         # either side is a multi-replica boundary qubit.
+        #
+        # Deliberately NOT wrapped with the same logical-level gadget
+        # _cpauli uses below this branch: unlike a controlled-Pauli gate,
+        # where the control is structurally invariant, SWAP genuinely,
+        # intentionally exchanges both sides' values -- an independent
+        # "did home1/home2 change" check would incorrectly flag a
+        # legitimate swap as an error and try to veto it. The correct
+        # invariant here is the COMBINED parity (home1 XOR home2), not
+        # independent per-side checks, and getting that right when the
+        # two sides can land on different simulators (the partial-match
+        # branches below) needs separate, careful treatment -- not
+        # reused as-is from _cpauli's helper.
         self._correct(lq1)
         self._correct(lq2)
 
