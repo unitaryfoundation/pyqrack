@@ -1536,7 +1536,39 @@ class QrackAceBackend:
             for q2 in qb2:
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
-                    if self.repetition_code_depth > 0:
+                    if self.repetition_code_depth > 0 and pauli != Pauli.PauliZ:
+                        # pauli == PauliZ (CZ family) deliberately falls
+                        # through to the is_error_detection branch below
+                        # instead, EVEN when repetition_code_depth > 0:
+                        # create_noise_model()'s own formulas say CZ's
+                        # expected shadow error is Z-type (phase), not
+                        # X/Y-type, but this code's syndrome is a Z-BASIS
+                        # check -- structurally blind to Z-type error by
+                        # construction, the same way the detection gadget
+                        # is. Conjugating the check into the X-basis to
+                        # catch phase instead doesn't work: CZ genuinely,
+                        # intentionally creates X-basis entanglement as
+                        # part of correctly doing its job (CZ|+>|+> is
+                        # entangled, not separable) the same way CX/CY
+                        # genuinely disturb coherence as part of theirs --
+                        # an X-basis check would flag every successful CZ
+                        # as "disturbed" and destroy real entanglement,
+                        # same failure mode already found and rejected
+                        # for CX/CY earlier this session. So for CZ, this
+                        # code's own syndrome would be acting on noise
+                        # from its own encode/correct machinery, almost
+                        # uncorrelated with anything real -- sometimes
+                        # accidentally helping, sometimes actively
+                        # flipping a qubit that was fine, which is a
+                        # variance-inflating failure mode, not just a
+                        # wash. Detection alone (below) still applies to
+                        # CZ normally -- its Z-basis check IS valid there
+                        # (CZ never flips either qubit's Z-population),
+                        # it just doesn't specifically target the
+                        # Z-type error the model predicts is dominant;
+                        # there's no version of this code that DOES
+                        # target it without the above problem.
+                        #
                         # Genuine ancilla-based majority-vote repetition
                         # code, chained across repetition_code_depth
                         # levels, strictly scoped to one atomic
