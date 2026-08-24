@@ -1555,14 +1555,14 @@ class QrackAceBackend:
                 self.force_m(anc2, False)
             # XOR check
             self.cx(lq2, anc3)
-            anc_sim, anc_idx = self._qubits[anc2][0]
+            anc_sim, anc_idx = self._qubits[anc3][0]
             p = self.sim[anc_sim].prob(anc_idx)
             if p > (1.0 - self._epsilon):
-                self.force_m(anc2, True)
-                self.x(anc2)
-                self.x(lq2)
+                self.force_m(anc3, True)
+                self.x(anc3)
+                self.x(lq)
             else:
-                self.force_m(anc2, False)
+                self.force_m(anc3, False)
             self._in_gadget_capture = False
 
         if lq2 is not None and witnessed_targets and self._witness_map is not None:
