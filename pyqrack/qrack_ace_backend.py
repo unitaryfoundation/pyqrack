@@ -1763,6 +1763,16 @@ class QrackAceBackend:
             # with or without this call).
             return
 
+        anc = None
+        if self.is_error_detection and not self._in_gadget_capture:
+            anc = self._detect_ancilla_lq[hq1[0][0]]
+            self._in_gadget_capture = True
+            try:
+                self.cx(lq1, anc)
+                self.cx(lq2, anc)
+            finally:
+                self._in_gadget_capture = False
+
         # Partial-match cases: one side is a simple (single-replica) qubit,
         # the other has multiple replicas. For the multi-replica side's
         # non-matching replicas, the correct decomposition (verified
@@ -1794,9 +1804,7 @@ class QrackAceBackend:
             # error is already Z-basis-population-visible and doesn't need
             # an H-rotation first to become detectable.
             self._correct(lq2)
-            return
-
-        if len(hq2) == 1 and any(h[0] == hq2[0][0] for h in hq1):
+        elif len(hq2) == 1 and any(h[0] == hq2[0][0] for h in hq1):
             _hq2 = hq2[0]
             non_matching = [h for h in hq1 if h[0] != _hq2[0]]
             matching = [h for h in hq1 if h[0] == _hq2[0]]
@@ -1807,18 +1815,52 @@ class QrackAceBackend:
             for _hq1 in non_matching:
                 self._cx_shadow(_hq2, _hq1)
             self._correct(lq1)
-            return
+        else:
+            # General case: no shared simulator at all (e.g. two simple
+            # qubits on entirely different sims -- nothing to anchor an exact
+            # swap on, verified the sandwich branches above give WRONG,
+            # deterministic results here: 100/100 failures vs 0/15 for this
+            # fallback), or both sides multi-replica and not fully matched:
+            # cx() already wraps itself with _correct() via _cpauli, so no
+            # extra wrapping needed here.
+            self.cx(lq1, lq2)
+            self.cx(lq2, lq1)
+            self.cx(lq1, lq2)
 
-        # General case: no shared simulator at all (e.g. two simple
-        # qubits on entirely different sims -- nothing to anchor an exact
-        # swap on, verified the sandwich branches above give WRONG,
-        # deterministic results here: 100/100 failures vs 0/15 for this
-        # fallback), or both sides multi-replica and not fully matched:
-        # cx() already wraps itself with _correct() via _cpauli, so no
-        # extra wrapping needed here.
-        self.cx(lq1, lq2)
-        self.cx(lq2, lq1)
-        self.cx(lq1, lq2)
+        if anc is not None:
+            self._in_gadget_capture = True
+            try:
+                self.cx(lq1, anc)
+                self.cx(lq2, anc)
+                # Check prob() before forcing: force_m(anc, False)
+                # assumes the "agree" branch has nonzero probability,
+                # which usually holds (that's the whole invariant this
+                # gadget relies on) but isn't guaranteed -- if the
+                # architecture's own approximation genuinely, confidently
+                # drove lq1 (or lq2) to a different value between the
+                # two captures, the "agree" branch can have exactly zero
+                # probability, and forcing it crashes outright (verified
+                # directly: reproducible RuntimeError under realistic
+                # circuit depth). Accept that a genuine, confident
+                # disagreement occurred instead of forcing the
+                # impossible branch: force the TRUE condition (safe,
+                # since that branch is the one that actually carries the
+                # probability), reset the ancilla back to |0>, and apply
+                # a corrective X to the boundary qubit to restore the
+                # detected invariant.
+                anc_sim, anc_idx = self._qubits[anc][0]
+                p = self.sim[anc_sim].prob(anc_idx)
+                if p > (1.0 - self._epsilon):
+                    self.force_m(anc, True)
+                    self.x(anc)
+                    if len(hq1) == 1:
+                        self.x(lq2)
+                    else:
+                        self.x(lq1)
+                else:
+                    self.force_m(anc, False)
+            finally:
+                self._in_gadget_capture = False
 
     def iswap(self, lq1, lq2):
         self.swap(lq1, lq2)
