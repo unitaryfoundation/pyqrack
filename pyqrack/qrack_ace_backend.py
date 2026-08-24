@@ -1560,7 +1560,7 @@ class QrackAceBackend:
             if p > (1.0 - self._epsilon):
                 self.force_m(anc3, True)
                 self.x(anc3)
-                self.x(lq)
+                self.x(lq2)
             else:
                 self.force_m(anc3, False)
             self._in_gadget_capture = False
