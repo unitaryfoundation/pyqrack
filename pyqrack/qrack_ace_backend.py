@@ -243,6 +243,7 @@ class QrackAceBackend:
         is_torus=True,
         is_1d_chain=False,
         is_error_detection=True,
+        repetition_code_depth=0,
         to_clone=None,
     ):
         if to_clone:
@@ -254,8 +255,11 @@ class QrackAceBackend:
             is_torus = to_clone.is_torus
             is_1d_chain = to_clone.is_1d_chain
             is_error_detection = to_clone.is_error_detection
+            repetition_code_depth = to_clone.repetition_code_depth
         if qubit_count < 0:
             qubit_count = 0
+        if repetition_code_depth < 0:
+            repetition_code_depth = 0
         if long_range_columns < 0:
             long_range_columns = 0
         if history_window < 0:
@@ -269,6 +273,65 @@ class QrackAceBackend:
         self.history_window = history_window
         self.is_torus = is_torus
         self.is_error_detection = is_error_detection
+        # EXPERIMENTAL, default off pending real validation (see
+        # conversation record): a genuine ancilla-based majority-vote
+        # repetition code around the real-gate branch, strictly scoped to
+        # a single atomic transaction -- encode, correct, uncompute, all
+        # in one touch, nothing persisting afterward. Unlike the earlier
+        # recursion_depth design (removed), this never survives past one
+        # gate: the scratch pair is entangled with the boundary replica,
+        # used for a real majority-vote correction, then immediately
+        # disentangled again by re-running the same encoding CNOTs, which
+        # exactly undoes the encode IF the correction succeeded. So there
+        # is nothing left over to conflict with later, unrelated
+        # entanglement the boundary replica picks up from the rest of the
+        # circuit -- the same "no persistence" property that makes
+        # is_error_detection work, with genuine correction (not just
+        # detect-and-postselect) layered on top of it for this one path.
+        # Isolated single-gate testing (no accumulated history) predicts
+        # nothing by design -- see is_error_detection's own history for
+        # why that test is the wrong one to trust here. A from-scratch,
+        # simplified reproduction of a real RCS benchmark in this
+        # environment was inconclusive (both too small a sample and, on
+        # inspection, not a faithful match to the circuit distribution
+        # that produced the validated is_error_detection numbers) -- this
+        # needs a real test via nn_qab.py / nn_qab_consensus.py, at
+        # reasonable n, before its default should change.
+        #
+        # When is_error_detection is ALSO on: the two now run layered,
+        # not exclusively -- detection wraps just the real gate itself
+        # (catches and cleans whatever THIS specific touch injects,
+        # immediately, cheaply), and the repetition code's own majority
+        # vote, wrapping the whole encode/gate/correct/uncompute
+        # transaction, is left to handle whatever's left: accumulated
+        # drift from earlier touches, or anything the inner detection
+        # missed. The hypothesis worth testing (not yet confirmed) is
+        # that stripping the immediate, single-source disturbance out
+        # first leaves a smaller, more diffuse residual for the majority
+        # vote to judge -- closer to the independent-per-replica error a
+        # repetition code is actually built to correct, rather than a
+        # residual still correlated with one specific recent event.
+        #
+        # depth > 1: chained, still fully atomic -- level 0 is exactly
+        # the depth=1 behavior (b1 + 2 fresh scratch); level k's
+        # scratch_b becomes level (k+1)'s center, encoded into ITS OWN
+        # fresh pair, all still inside the SAME encode/gate/correct/
+        # uncompute transaction, nothing persisting past it. Correction
+        # (and uncompute) run deepest level first, one level fully
+        # resolved and uncomputed before the next-shallower level's own
+        # correction runs -- so by the time level 0 checks b1 against
+        # its scratch pair, scratch_b (the far end of the chain) has
+        # already been independently verified by every deeper level,
+        # rather than being a raw, uncorrected qubit. This is the "get
+        # experimental" recursion request -- unvalidated the same way
+        # depth=1 already is, just with the dial available to test
+        # whether more nesting helps, does nothing, or costs more in
+        # gate exposure than it recovers (this pattern has gone every
+        # one of those three ways elsewhere this session, depending on
+        # the mechanism -- see is_error_detection's own history, and the
+        # abandoned perfect-code experiment, for both a case where more
+        # machinery helped and one where it didn't).
+        self.repetition_code_depth = repetition_code_depth
 
         fppow = 5
         if "QRACK_FPPOW" in os.environ:
@@ -418,6 +481,24 @@ class QrackAceBackend:
             for i in range(len(sim_counts)):
                 self._detect_ancilla.append(sim_counts[i])
                 sim_counts[i] += 1
+
+        # depth-many (scratch_a, scratch_b, anc_a, anc_b) tuples per
+        # simulator -- one per nesting level, only allocated when
+        # repetition_code_depth > 0. Deliberately NOT reusing
+        # _detect_ancilla's single slot: is_error_detection still runs
+        # independently (see _apply_coupling, the "inner" detection layer
+        # wraps just the real gate itself), so both can be active on the
+        # same touch, and each needs its own qubits regardless.
+        self._repcode_scratch = []
+        if self.repetition_code_depth > 0:
+            for i in range(len(sim_counts)):
+                levels = []
+                for _level in range(self.repetition_code_depth):
+                    scratch_a, scratch_b = sim_counts[i], sim_counts[i] + 1
+                    anc_a, anc_b = sim_counts[i] + 2, sim_counts[i] + 3
+                    levels.append((scratch_a, scratch_b, anc_a, anc_b))
+                    sim_counts[i] += 4
+                self._repcode_scratch.append(levels)
 
         if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" in os.environ:
             self._sdrp = min(1, float(os.environ["QRACK_QUNIT_SEPARABILITY_THRESHOLD"]))
@@ -1455,7 +1536,92 @@ class QrackAceBackend:
             for q2 in qb2:
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
-                    if self.is_error_detection:
+                    if self.repetition_code_depth > 0:
+                        # Genuine ancilla-based majority-vote repetition
+                        # code, chained across repetition_code_depth
+                        # levels, strictly scoped to one atomic
+                        # transaction -- see the constructor docstring
+                        # for the full rationale. b1 only (not every
+                        # replica of lq1): same "single-patch, not
+                        # multi-patch" reasoning as the is_error_detection
+                        # branch below applies here too -- the correction
+                        # reflects the "lab frame" ground truth via a real
+                        # measurement, so redundantly repeating it
+                        # per-replica doesn't add independent information,
+                        # only extra gate exposure.
+                        sim = self.sim[b1[0]]
+                        b1i = b1[1]
+                        levels = self._repcode_scratch[b1[0]]
+
+                        # Encode: walk outward, level 0 first. level 0's
+                        # center is b1 itself; each subsequent level's
+                        # center is the PREVIOUS level's scratch_b,
+                        # chained, all still inside this one transaction.
+                        center = b1i
+                        chain = []
+                        for sa, sb, aa, ab in levels:
+                            sim.mcx([center], sa)
+                            sim.mcx([center], sb)
+                            chain.append((center, sa, sb, aa, ab))
+                            center = sb
+
+                        # The actual (possibly noisy) requested gate --
+                        # optionally with its own inner detection layer
+                        # (is_error_detection), scoped tightly to just
+                        # this gate: catches and cleans whatever THIS
+                        # touch directly injects, immediately, before any
+                        # level of the repetition code's own (broader-
+                        # scope) syndrome below ever sees it. This
+                        # doesn't disturb b1's entanglement with the
+                        # chain -- the detection ancilla is a separate
+                        # qubit, entangled and disentangled with b1
+                        # alone, and its force_m projects the whole joint
+                        # state consistently, since the chain is still
+                        # correlated with b1 throughout.
+                        if self.is_error_detection:
+                            det_anc = self._detect_ancilla[b1[0]]
+                            sim.mcx([b1i], det_anc)
+                            gate_fn([b1[1]], b2[1])
+                            sim.mcx([b1i], det_anc)
+                            sim.force_m(det_anc, False)
+                        else:
+                            gate_fn([b1[1]], b2[1])
+
+                        # Correct + uncompute, deepest level first: each
+                        # level is FULLY resolved (syndrome, correct,
+                        # uncompute) before the next-shallower level's own
+                        # correction runs, so by the time level 0 checks
+                        # b1 against its scratch pair, the far end of the
+                        # chain has already been independently verified
+                        # by every deeper level rather than being a raw,
+                        # uncorrected qubit.
+                        for center, sa, sb, aa, ab in reversed(chain):
+                            sim.mcx([center], aa)
+                            sim.mcx([sa], aa)
+                            sim.mcx([sa], ab)
+                            sim.mcx([sb], ab)
+                            s0 = sim.m(aa)
+                            s1 = sim.m(ab)
+                            if s0:
+                                sim.x(aa)
+                            if s1:
+                                sim.x(ab)
+                            if s0 and not s1:
+                                sim.x(center)
+                            elif s1 and not s0:
+                                sim.x(sb)
+                            elif s0 and s1:
+                                sim.x(sa)
+                            # Uncompute THIS level immediately: re-running
+                            # its encode CNOTs exactly reverses them IF
+                            # the correction just above succeeded (all
+                            # three now agree), returning this level's
+                            # scratch pair to |0> before the next-
+                            # shallower level's own correct+uncompute
+                            # runs.
+                            sim.mcx([center], sa)
+                            sim.mcx([center], sb)
+                    elif self.is_error_detection:
                         # Single-patch, not multi-patch: force_m's
                         # post-selection isn't local to the one
                         # simulator it's physically called on -- the
