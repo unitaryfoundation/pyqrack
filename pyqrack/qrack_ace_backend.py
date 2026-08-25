@@ -1477,7 +1477,7 @@ class QrackAceBackend:
         # single-replica CZ dual-check, just applied at the logical
         # level now.
         anc1, anc2 = None, None
-        if self.is_error_detection and not self._in_gadget_capture:
+        if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
             anc1 = self._detect_ancilla1_lq[hq1[0][0]]
             self._in_gadget_capture = True
             # Control bit-flip
@@ -1637,7 +1637,7 @@ class QrackAceBackend:
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
 
     def cy(self, lq1, lq2):
-        if self.is_error_detection:
+        if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
             self.adjs(lq2)
             self.cx(lq1, lq2)
             self.s(lq2)
@@ -1645,7 +1645,7 @@ class QrackAceBackend:
             self._cpauli(lq1, lq2, False, Pauli.PauliY)
 
     def cz(self, lq1, lq2):
-        if self.is_error_detection:
+        if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
             self.h(lq2)
             self.cx(lq1, lq2)
             self.h(lq2)
@@ -1656,7 +1656,7 @@ class QrackAceBackend:
         self._cpauli(lq1, lq2, True, Pauli.PauliX)
 
     def acy(self, lq1, lq2):
-        if self.is_error_detection:
+        if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
             self.adjs(lq2)
             self.acx(lq1, lq2)
             self.s(lq2)
@@ -1664,7 +1664,7 @@ class QrackAceBackend:
             self._cpauli(lq1, lq2, True, Pauli.PauliY)
 
     def acz(self, lq1, lq2):
-        if self.is_error_detection:
+        if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
             self.h(lq2)
             self.acx(lq1, lq2)
             self.h(lq2)
@@ -1809,7 +1809,7 @@ class QrackAceBackend:
             return
 
         anc1, anc2 = None, None
-        if self.is_error_detection and not self._in_gadget_capture:
+        if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
             if len(hq2) == 1:
                 anc1 = self._detect_ancilla1_lq[hq1[0][0]]
                 anc2 = self._detect_ancilla2_lq[hq1[0][0]]
