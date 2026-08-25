@@ -2642,7 +2642,6 @@ class QrackAceBackend:
             # same condition to stay consistent with what the gate does.
             if (is_a_simple != is_b_simple) and has_match:
                 p_net_swap = 2 * p * (1 - p)
-                p_damped_net_swap = p_net_swap
                 # swap()'s own anc1/anc2 cross-check (verifying lq1's new
                 # value against lq2's old, and vice versa -- see swap())
                 # wraps the ENTIRE call, every branch, not specifically
@@ -2658,27 +2657,17 @@ class QrackAceBackend:
                 # sides whenever is_error_detection is on, full stop, no
                 # len(hq)>1-style precondition the way _cpauli's anc2
                 # has.
-                if is_a_simple:
-                    # a is bulk, b is boundary -> error lands on b
-                    noise_model.add_quantum_error(
-                        pauli_error([("XI", p_net_swap), ("II", 1 - p_net_swap)]), "swap", [a, b]
-                    )
-                else:
-                    # b is bulk, a is boundary -> error lands on a
-                    noise_model.add_quantum_error(
-                        pauli_error([("IX", p_net_swap), ("II", 1 - p_net_swap)]), "swap", [a, b]
-                    )
                 if self.is_error_detection:
-                    p_damped_net_swap *= y
+                    p_net_swap *= y
                 if is_a_simple:
                     # a is bulk, b is boundary -> error lands on b
                     noise_model.add_quantum_error(
-                        pauli_error([("ZI", p_damped_net_swap), ("II", 1 - p_damped_net_swap)]), "swap", [a, b]
+                        pauli_error([("XI", p_net_swap), ("II", 1 - p_net_swap)]) ("ZI", p_net_swap), "swap", [a, b]
                     )
                 else:
                     # b is bulk, a is boundary -> error lands on a
                     noise_model.add_quantum_error(
-                        pauli_error([("IZ", p_damped_net_swap), ("II", 1 - p_damped_net_swap)]), "swap", [a, b]
+                        pauli_error([("IX", p_net_swap), ("II", 1 - p_net_swap)]), ("IZ", p_net_swap), "swap", [a, b]
                     )
             else:
                 p2 = p**2
@@ -2714,8 +2703,8 @@ class QrackAceBackend:
                     p_cz *= y
                 p_i = (1 - p_net_swap) * (1 - p_cz)
                 p_x = p_net_swap * (1 - p_cz)
-                p_z = (1 - p_damped_net_swap) * p_cz
-                p_y = math.sqrt(y) * p_net_swap * p_cz
+                p_z = (1 - p_net_swap) * p_cz
+                p_y = p_net_swap * p_cz
                 if is_a_simple:
                     terms = [("II", p_i), ("XI", p_x), ("ZI", p_z), ("YI", p_y)]
                 else:
