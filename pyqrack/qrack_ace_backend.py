@@ -1478,23 +1478,20 @@ class QrackAceBackend:
         # this gate family only -- same reasoning as the earlier
         # single-replica CZ dual-check, just applied at the logical
         # level now.
-        anc1, anc2, anc3 = None, None, None
+        anc1, anc2 = None, None
         if self.is_error_detection and not self._in_gadget_capture:
             anc1 = self._detect_ancilla1_lq[hq1[0][0]]
             self._in_gadget_capture = True
             # Control bit-flip
             self.cx(lq1, anc1)
             if len(hq1) > 1:
-                anc2 = self._detect_ancilla1_lq[hq2[0][0]]
-                # Control bit-flip
-                self.cx(lq1, anc2)
-                anc3 = self._detect_ancilla2_lq[hq1[0][0]]
+                anc2 = self._detect_ancilla2_lq[hq1[0][0]]
                 # XOR on target
-                self.cx(lq2, anc3)
+                self.cx(lq2, anc2)
                 if anti:
-                    self.acx(lq1, anc3)
+                    self.acx(lq1, anc2)
                 else:
-                    self.cx(lq1, anc3)
+                    self.cx(lq1, anc2)
             self._in_gadget_capture = False
 
         for q1 in qb1:
@@ -1546,26 +1543,16 @@ class QrackAceBackend:
 
         if anc2 is not None:
             self._in_gadget_capture = True
-            # Control bit-flip
-            self.cx(lq1, anc2)
+            # XOR check
+            self.cx(lq2, anc2)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
             if p > (1.0 - self._epsilon):
                 self.force_m(anc2, True)
                 self.x(anc2)
-                self.x(lq1)
-            else:
-                self.force_m(anc2, False)
-            # XOR check
-            self.cx(lq2, anc3)
-            anc_sim, anc_idx = self._qubits[anc3][0]
-            p = self.sim[anc_sim].prob(anc_idx)
-            if p > (1.0 - self._epsilon):
-                self.force_m(anc3, True)
-                self.x(anc3)
                 self.x(lq2)
             else:
-                self.force_m(anc3, False)
+                self.force_m(anc2, False)
             self._in_gadget_capture = False
 
         if lq2 is not None and witnessed_targets and self._witness_map is not None:
