@@ -274,11 +274,11 @@ class QrackAceBackend:
         if "QRACK_FPPOW" in os.environ:
             fppow = int(os.environ.get("QRACK_FPPOW"))
         if fppow < 5:
-            self._epsilon = 2**-9
+            self._epsilon = 2**-8
         elif fppow > 5:
-            self._epsilon = 2**-51
+            self._epsilon = 2**-50
         else:
-            self._epsilon = 2**-22
+            self._epsilon = 2**-21
 
         self._coupling_map = None
 
@@ -406,17 +406,20 @@ class QrackAceBackend:
             sim_counts.append(boundary_count)
 
         # Error-detection gadget (IBM-style detect-and-post-select, not
-        # correction): one shared ancilla per simulator -- every patch AND
+        # correction): two shared ancillae per simulator -- every patch AND
         # the boundary crossbar sim alike, "a single ancilla per patch,
         # overall" -- reused across every real (same-simulator) coupling
         # gate that touches it, never allocated per-gate or per-qubit.
         # See _apply_coupling for the actual gadget; this block only does
         # the qubit-index bookkeeping, in the same style as every other
         # per-simulator allocation above.
-        self._detect_ancilla = []
+        self._detect_ancilla1 = []
+        self._detect_ancilla2 = []
         if self.is_error_detection:
             for i in range(len(sim_counts)):
-                self._detect_ancilla.append(sim_counts[i])
+                self._detect_ancilla1.append(sim_counts[i])
+                sim_counts[i] += 1
+                self._detect_ancilla2.append(sim_counts[i])
                 sim_counts[i] += 1
 
         # Logical-qubit wrapper around each patch's detection ancilla,
@@ -437,12 +440,17 @@ class QrackAceBackend:
         # specific physical replica directly (an earlier version of
         # this) isn't a valid invariant, since _correct() can
         # legitimately need to change any single replica's own value.
-        self._detect_ancilla_lq = []
+        self._detect_ancilla1_lq = []
+        self._detect_ancilla2_lq = []
         if self.is_error_detection:
-            for sim_id, phys_idx in enumerate(self._detect_ancilla):
+            for sim_id, phys_idx in enumerate(self._detect_ancilla1):
                 lq_idx = len(self._qubits)
                 self._qubits.append([(sim_id, phys_idx)])
-                self._detect_ancilla_lq.append(lq_idx)
+                self._detect_ancilla1_lq.append(lq_idx)
+            for sim_id, phys_idx in enumerate(self._detect_ancilla2):
+                lq_idx = len(self._qubits)
+                self._qubits.append([(sim_id, phys_idx)])
+                self._detect_ancilla2_lq.append(lq_idx)
         # Reentrancy guard for the gadget's own nested cx(lq1, anc)
         # capture calls (see _apply_coupling): those calls go through
         # the ordinary _cpauli -> _apply_coupling path themselves, which
@@ -1470,14 +1478,21 @@ class QrackAceBackend:
         # this gate family only -- same reasoning as the earlier
         # single-replica CZ dual-check, just applied at the logical
         # level now.
-        anc = None
+        anc1, anc2, anc3 = None, None, None
         if self.is_error_detection and not self._in_gadget_capture:
-            anc = self._detect_ancilla_lq[hq1[0][0]]
+            anc1 = self._detect_ancilla1_lq[hq1[0][0]]
             self._in_gadget_capture = True
-            try:
-                self.cx(lq1, anc)
-            finally:
-                self._in_gadget_capture = False
+            # Control bit-flip
+            self.cx(lq1, anc1)
+            if len(hq1) > 1:
+                anc2 = self._detect_ancilla1_lq[hq2[0][0]]
+                # Control bit-flip
+                self.cx(lq2, anc2)
+                anc3 = self._detect_ancilla2_lq[hq2[0][0]]
+                # XOR on target
+                self.cx(lq2, anc3)
+                self.cx(lq1, anc3)
+            self._in_gadget_capture = False
 
         for q1 in qb1:
             b1 = hq1[q1]
@@ -1497,36 +1512,58 @@ class QrackAceBackend:
                     if witness is not None and witness != b2:
                         witnessed_targets.append((b2, witness))
 
-        if anc is not None:
+        if anc1 is not None:
             self._in_gadget_capture = True
-            try:
-                self.cx(lq1, anc)
-                # Check prob() before forcing: force_m(anc, False)
-                # assumes the "agree" branch has nonzero probability,
-                # which usually holds (that's the whole invariant this
-                # gadget relies on) but isn't guaranteed -- if the
-                # architecture's own approximation genuinely, confidently
-                # drove lq1 (or lq2) to a different value between the
-                # two captures, the "agree" branch can have exactly zero
-                # probability, and forcing it crashes outright (verified
-                # directly: reproducible RuntimeError under realistic
-                # circuit depth). Accept that a genuine, confident
-                # disagreement occurred instead of forcing the
-                # impossible branch: force the TRUE condition (safe,
-                # since that branch is the one that actually carries the
-                # probability), reset the ancilla back to |0>, and apply
-                # a corrective X to lq1 to restore the detected
-                # invariant.
-                anc_sim, anc_idx = self._qubits[anc][0]
-                p = self.sim[anc_sim].prob(anc_idx)
-                if p > (1.0 - self._epsilon):
-                    self.force_m(anc, True)
-                    self.x(anc)
-                    self.x(lq1)
-                else:
-                    self.force_m(anc, False)
-            finally:
-                self._in_gadget_capture = False
+            self.cx(lq1, anc1)
+            # Check prob() before forcing: force_m(anc, False)
+            # assumes the "agree" branch has nonzero probability,
+            # which usually holds (that's the whole invariant this
+            # gadget relies on) but isn't guaranteed -- if the
+            # architecture's own approximation genuinely, confidently
+            # drove lq1 (or lq2) to a different value between the
+            # two captures, the "agree" branch can have exactly zero
+            # probability, and forcing it crashes outright (verified
+            # directly: reproducible RuntimeError under realistic
+            # circuit depth). Accept that a genuine, confident
+            # disagreement occurred instead of forcing the
+            # impossible branch: force the TRUE condition (safe,
+            # since that branch is the one that actually carries the
+            # probability), reset the ancilla back to |0>, and apply
+            # a corrective X to lq1 to restore the detected
+            # invariant.
+            anc_sim, anc_idx = self._qubits[anc1][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if p > (1.0 - self._epsilon):
+                self.force_m(anc1, True)
+                self.x(anc1)
+                self.x(lq1)
+            else:
+                self.force_m(anc1, False)
+            self._in_gadget_capture = False
+
+        if anc2 is not None:
+            self._in_gadget_capture = True
+            # Control bit-flip
+            self.cx(lq1, anc2)
+            anc_sim, anc_idx = self._qubits[anc2][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if p > (1.0 - self._epsilon):
+                self.force_m(anc2, True)
+                self.x(anc2)
+                self.x(lq1)
+            else:
+                self.force_m(anc2, False)
+            # XOR check
+            self.cx(lq2, anc3)
+            anc_sim, anc_idx = self._qubits[anc3][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if p > (1.0 - self._epsilon):
+                self.force_m(anc3, True)
+                self.x(anc3)
+                self.x(lq2)
+            else:
+                self.force_m(anc3, False)
+            self._in_gadget_capture = False
 
         if lq2 is not None and witnessed_targets and self._witness_map is not None:
             wmap = self._witness_map.setdefault(lq2, {})
@@ -1612,61 +1649,81 @@ class QrackAceBackend:
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
 
     def cy(self, lq1, lq2):
-        self._cpauli(lq1, lq2, False, Pauli.PauliY)
+        if self.is_error_detection:
+            self.adjs(lq2)
+            self.cx(lq1, lq2)
+            self.s(lq2)
+        else:
+            self._cpauli(lq1, lq2, False, Pauli.PauliY)
 
     def cz(self, lq1, lq2):
-        self._cpauli(lq1, lq2, False, Pauli.PauliZ)
+        if self.is_error_detection:
+            self.h(lq2)
+            self.cx(lq1, lq2)
+            self.h(lq2)
+        else:
+            self._cpauli(lq1, lq2, False, Pauli.PauliZ)
 
     def acx(self, lq1, lq2):
         self._cpauli(lq1, lq2, True, Pauli.PauliX)
 
     def acy(self, lq1, lq2):
-        self._cpauli(lq1, lq2, True, Pauli.PauliY)
+        if self.is_error_detection:
+            self.adjs(lq2)
+            self.acx(lq1, lq2)
+            self.s(lq2)
+        else:
+            self._cpauli(lq1, lq2, True, Pauli.PauliY)
 
     def acz(self, lq1, lq2):
-        self._cpauli(lq1, lq2, True, Pauli.PauliZ)
+        if self.is_error_detection:
+            self.h(lq2)
+            self.acx(lq1, lq2)
+            self.h(lq2)
+        else:
+            self._cpauli(lq1, lq2, True, Pauli.PauliZ)
 
     def mcx(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
                 "QrackAceBackend.mcx() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self._cpauli(lq1[0], lq2, False, Pauli.PauliX)
+        self.cx(lq1[0], lq2)
 
     def mcy(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
                 "QrackAceBackend.mcy() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self._cpauli(lq1[0], lq2, False, Pauli.PauliY)
+        self.cy(lq1[0], lq2)
 
     def mcz(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
                 "QrackAceBackend.mcz() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self._cpauli(lq1[0], lq2, False, Pauli.PauliZ)
+        self.cz(lq1[0], lq2)
 
     def macx(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
                 "QrackAceBackend.macx() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self._cpauli(lq1[0], lq2, True, Pauli.PauliX)
+        self.acx(lq1[0], lq2)
 
     def macy(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
                 "QrackAceBackend.macy() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self._cpauli(lq1[0], lq2, True, Pauli.PauliY)
+        self.acy(lq1[0], lq2)
 
     def macz(self, lq1, lq2):
         if len(lq1) > 1:
             raise RuntimeError(
                 "QrackAceBackend.macz() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self._cpauli(lq1[0], lq2, True, Pauli.PauliZ)
+        self.acz(lq1[0], lq2)
 
     def swap(self, lq1, lq2):
         hq1 = self._unpack(lq1)
@@ -1763,15 +1820,18 @@ class QrackAceBackend:
             # with or without this call).
             return
 
-        anc = None
+        anc1, anc2 = None, None
         if self.is_error_detection and not self._in_gadget_capture:
-            anc = self._detect_ancilla_lq[hq1[0][0]]
+            if len(hq2) == 1:
+                anc1 = self._detect_ancilla1_lq[hq1[0][0]]
+                anc2 = self._detect_ancilla2_lq[hq1[0][0]]
+            else:
+                anc1 = self._detect_ancilla1_lq[hq2[0][0]]
+                anc2 = self._detect_ancilla2_lq[hq2[0][0]]
             self._in_gadget_capture = True
-            try:
-                self.cx(lq1, anc)
-                self.cx(lq2, anc)
-            finally:
-                self._in_gadget_capture = False
+            self.cx(lq1, anc1)
+            self.cx(lq2, anc2)
+            self._in_gadget_capture = False
 
         # Partial-match cases: one side is a simple (single-replica) qubit,
         # the other has multiple replicas. For the multi-replica side's
@@ -1827,40 +1887,27 @@ class QrackAceBackend:
             self.cx(lq2, lq1)
             self.cx(lq1, lq2)
 
-        if anc is not None:
+        if anc1 is not None:
             self._in_gadget_capture = True
-            try:
-                self.cx(lq1, anc)
-                self.cx(lq2, anc)
-                # Check prob() before forcing: force_m(anc, False)
-                # assumes the "agree" branch has nonzero probability,
-                # which usually holds (that's the whole invariant this
-                # gadget relies on) but isn't guaranteed -- if the
-                # architecture's own approximation genuinely, confidently
-                # drove lq1 (or lq2) to a different value between the
-                # two captures, the "agree" branch can have exactly zero
-                # probability, and forcing it crashes outright (verified
-                # directly: reproducible RuntimeError under realistic
-                # circuit depth). Accept that a genuine, confident
-                # disagreement occurred instead of forcing the
-                # impossible branch: force the TRUE condition (safe,
-                # since that branch is the one that actually carries the
-                # probability), reset the ancilla back to |0>, and apply
-                # a corrective X to the boundary qubit to restore the
-                # detected invariant.
-                anc_sim, anc_idx = self._qubits[anc][0]
-                p = self.sim[anc_sim].prob(anc_idx)
-                if p > (1.0 - self._epsilon):
-                    self.force_m(anc, True)
-                    self.x(anc)
-                    if len(hq1) == 1:
-                        self.x(lq2)
-                    else:
-                        self.x(lq1)
-                else:
-                    self.force_m(anc, False)
-            finally:
-                self._in_gadget_capture = False
+            self.cx(lq1, anc2)
+            self.cx(lq2, anc1)
+            anc_sim, anc_idx = self._qubits[anc1][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if p > (1.0 - self._epsilon):
+                self.force_m(anc1, True)
+                self.x(anc1)
+                self.x(lq1)
+            else:
+                self.force_m(anc1, False)
+            anc_sim, anc_idx = self._qubits[anc2][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if p > (1.0 - self._epsilon):
+                self.force_m(anc2, True)
+                self.x(anc2)
+                self.x(lq2)
+            else:
+                self.force_m(anc2, False)
+            self._in_gadget_capture = False
 
     def iswap(self, lq1, lq2):
         self.swap(lq1, lq2)
