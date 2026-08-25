@@ -1487,11 +1487,14 @@ class QrackAceBackend:
             if len(hq1) > 1:
                 anc2 = self._detect_ancilla1_lq[hq2[0][0]]
                 # Control bit-flip
-                self.cx(lq2, anc2)
+                self.cx(lq1, anc2)
                 anc3 = self._detect_ancilla2_lq[hq1[0][0]]
                 # XOR on target
                 self.cx(lq2, anc3)
-                self.cx(lq1, anc3)
+                if anti:
+                    self.acx(lq1, anc3)
+                else:
+                    self.cx(lq1, anc3)
             self._in_gadget_capture = False
 
         for q1 in qb1:
