@@ -1888,22 +1888,22 @@ class QrackAceBackend:
             self.h(lq2)
             self.cx(lq1, anc2)
             self.cx(lq2, anc1)
-            anc_sim, anc_idx = self._qubits[anc1][0]
-            p = self.sim[anc_sim].prob(anc_idx)
-            if p > 0.5:
-                self.force_m(anc1, True)
-                self.x(anc1)
-                self.x(lq1)
-            else:
-                self.force_m(anc1, False)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
             if p > 0.5:
                 self.force_m(anc2, True)
                 self.x(anc2)
-                self.x(lq2)
+                self.x(lq1)
             else:
                 self.force_m(anc2, False)
+            anc_sim, anc_idx = self._qubits[anc1][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if p > 0.5:
+                self.force_m(anc1, True)
+                self.x(anc1)
+                self.x(lq2)
+            else:
+                self.force_m(anc1, False)
             self.h(lq1)
             self.h(lq2)
             self._in_gadget_capture = False
