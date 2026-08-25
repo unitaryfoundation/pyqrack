@@ -1607,8 +1607,9 @@ class QrackAceBackend:
         lq1_lr = len(hq1) == 1
         lq2_lr = len(hq2) == 1
 
-        self._correct(lq1)
-        self._correct(lq2)
+        if not self._in_gadget_capture:
+            self._correct(lq1)
+            self._correct(lq2)
 
         qb1, _ = QrackAceBackend._get_qb_lhv_indices(hq1)
         qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
@@ -1619,6 +1620,9 @@ class QrackAceBackend:
         if lq2 in self._lhv:
             ctrl_prob = self.sim[hq1[0][0]].prob(hq1[0][1])
             _cpauli_lhv(ctrl_prob, self._lhv[lq2], pauli, anti)
+
+        if self._in_gadget_capture:
+            return
 
         # No post-coupling correction on lq1 (the control): _cz_shadow only
         # ever calls .z() on the target, never gates the control -- only
@@ -1817,8 +1821,12 @@ class QrackAceBackend:
                 anc1 = self._detect_ancilla1_lq[hq2[0][0]]
                 anc2 = self._detect_ancilla2_lq[hq2[0][0]]
             self._in_gadget_capture = True
+            self.h(lq1)
+            self.h(lq2)
             self.cx(lq1, anc1)
             self.cx(lq2, anc2)
+            self.h(lq1)
+            self.h(lq2)
             self._in_gadget_capture = False
 
         # Partial-match cases: one side is a simple (single-replica) qubit,
@@ -1877,6 +1885,8 @@ class QrackAceBackend:
 
         if anc1 is not None:
             self._in_gadget_capture = True
+            self.h(lq1)
+            self.h(lq2)
             self.cx(lq1, anc2)
             self.cx(lq2, anc1)
             anc_sim, anc_idx = self._qubits[anc1][0]
@@ -1895,6 +1905,8 @@ class QrackAceBackend:
                 self.x(lq2)
             else:
                 self.force_m(anc2, False)
+            self.h(lq1)
+            self.h(lq2)
             self._in_gadget_capture = False
 
     def iswap(self, lq1, lq2):
@@ -2640,6 +2652,7 @@ class QrackAceBackend:
             # same condition to stay consistent with what the gate does.
             if (is_a_simple != is_b_simple) and has_match:
                 p_net_swap = 2 * p * (1 - p)
+                p_damped_net_swap = p_net_swap
                 # swap()'s own anc1/anc2 cross-check (verifying lq1's new
                 # value against lq2's old, and vice versa -- see swap())
                 # wraps the ENTIRE call, every branch, not specifically
@@ -2655,8 +2668,6 @@ class QrackAceBackend:
                 # sides whenever is_error_detection is on, full stop, no
                 # len(hq)>1-style precondition the way _cpauli's anc2
                 # has.
-                if self.is_error_detection:
-                    p_net_swap *= y
                 if is_a_simple:
                     # a is bulk, b is boundary -> error lands on b
                     noise_model.add_quantum_error(
@@ -2666,6 +2677,18 @@ class QrackAceBackend:
                     # b is bulk, a is boundary -> error lands on a
                     noise_model.add_quantum_error(
                         pauli_error([("IX", p_net_swap), ("II", 1 - p_net_swap)]), "swap", [a, b]
+                    )
+                if self.is_error_detection:
+                    p_damped_net_swap *= y
+                if is_a_simple:
+                    # a is bulk, b is boundary -> error lands on b
+                    noise_model.add_quantum_error(
+                        pauli_error([("ZI", p_damped_net_swap), ("II", 1 - p_damped_net_swap)]), "swap", [a, b]
+                    )
+                else:
+                    # b is bulk, a is boundary -> error lands on a
+                    noise_model.add_quantum_error(
+                        pauli_error([("IZ", p_damped_net_swap), ("II", 1 - p_damped_net_swap)]), "swap", [a, b]
                     )
             else:
                 p2 = p**2
@@ -2701,8 +2724,8 @@ class QrackAceBackend:
                     p_cz *= y
                 p_i = (1 - p_net_swap) * (1 - p_cz)
                 p_x = p_net_swap * (1 - p_cz)
-                p_z = (1 - p_net_swap) * p_cz
-                p_y = p_net_swap * p_cz
+                p_z = (1 - p_damped_net_swap) * p_cz
+                p_y = math.sqrt(y) * p_net_swap * p_cz
                 if is_a_simple:
                     terms = [("II", p_i), ("XI", p_x), ("ZI", p_z), ("YI", p_y)]
                 else:
