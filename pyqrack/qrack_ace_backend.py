@@ -274,11 +274,14 @@ class QrackAceBackend:
         if "QRACK_FPPOW" in os.environ:
             fppow = int(os.environ.get("QRACK_FPPOW"))
         if fppow < 5:
-            self._epsilon = 2**-8
+            self._epsilon = 2**-9
+            self._ps_epsilon = 2**-5
         elif fppow > 5:
-            self._epsilon = 2**-50
+            self._epsilon = 2**-51
+            self._ps_epsilon = 2**-25
         else:
-            self._epsilon = 2**-21
+            self._epsilon = 2**-22
+            self._ps_epsilon = 2**-12
 
         self._coupling_map = None
 
@@ -1531,7 +1534,7 @@ class QrackAceBackend:
             # invariant.
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p > 0.5:
+            if p >= (1.0 - self._ps_epsilon):
                 self.force_m(anc1, True)
                 self.x(anc1)
                 self.x(lq1)
@@ -1545,7 +1548,7 @@ class QrackAceBackend:
             self.cx(lq2, anc2)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p > 0.5:
+            if p >= (1.0 - self._ps_epsilon):
                 self.force_m(anc2, True)
                 self.x(anc2)
                 self.x(lq2)
@@ -1885,7 +1888,7 @@ class QrackAceBackend:
             self.cx(lq2, anc1)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p > 0.5:
+            if p >= (1.0 - self._ps_epsilon):
                 self.force_m(anc2, True)
                 self.x(anc2)
                 self.x(lq1)
@@ -1893,7 +1896,7 @@ class QrackAceBackend:
                 self.force_m(anc2, False)
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p > 0.5:
+            if p >= (1.0 - self._ps_epsilon):
                 self.force_m(anc1, True)
                 self.x(anc1)
                 self.x(lq2)
