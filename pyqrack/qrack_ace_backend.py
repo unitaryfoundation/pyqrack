@@ -1533,7 +1533,7 @@ class QrackAceBackend:
             # invariant.
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p > (1.0 - self._epsilon):
+            if p > 0.5:
                 self.force_m(anc1, True)
                 self.x(anc1)
                 self.x(lq1)
@@ -1547,7 +1547,7 @@ class QrackAceBackend:
             self.cx(lq2, anc2)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p > (1.0 - self._epsilon):
+            if p > 0.5:
                 self.force_m(anc2, True)
                 self.x(anc2)
                 self.x(lq2)
@@ -1883,7 +1883,7 @@ class QrackAceBackend:
             self.cx(lq2, anc1)
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p > (1.0 - self._epsilon):
+            if p > 0.5:
                 self.force_m(anc1, True)
                 self.x(anc1)
                 self.x(lq1)
@@ -1891,7 +1891,7 @@ class QrackAceBackend:
                 self.force_m(anc1, False)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p > (1.0 - self._epsilon):
+            if p > 0.5:
                 self.force_m(anc2, True)
                 self.x(anc2)
                 self.x(lq2)
