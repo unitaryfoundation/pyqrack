@@ -1178,9 +1178,7 @@ class QrackAceBackend:
             self.sim[b[0]].h(b[1])
             return
 
-        self._correct(lq)
         skip = self._invalidate_for_gate(lq)
-
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
@@ -2511,35 +2509,32 @@ class QrackAceBackend:
 
         coupling_map = self.get_logical_coupling_map()
 
-        # Error-detection damping (cx/cy/cz only -- see below for why not
-        # swap/iswap): a qubit only ever gets the gadget's benefit when it
-        # actually plays CONTROL in some real (u=0) gate somewhere in the
-        # coupling map -- that's what gives its replica a chance to be
-        # swept clean via _apply_coupling's capture-sandwich-force_m
-        # before any shadow decision reads its .prob(). This is a
-        # structural fact about each qubit individually, computed once
-        # here, not a property of the circuit or a global constant --
-        # which is exactly why this can't be reproduced by a user just
-        # passing a smaller x: x scales every pair uniformly, and this
-        # doesn't apply uniformly, either across qubits (only ones with a
-        # real-gate opportunity qualify) or across gate types (see below).
-        #
-        # Both sides of a real (u=0) pair get added, not just the control:
-        # CZ's own gadget check now covers its target too (CZ is diagonal
-        # -- unlike CX/CY, it never changes either qubit's Z-population,
-        # so the target is an equally valid invariance check there, see
-        # _apply_coupling). The coupling map doesn't distinguish which
-        # gate type a future circuit will actually use for a given pair,
-        # so this necessarily overstates the CX/CY case slightly (where
-        # only the control gets swept) -- an approximation on top of an
-        # already-approximate placeholder, not a new source of precision
-        # lost.
-        has_real_partner = set()
-        if self.is_error_detection:
-            for lq1, lq2 in coupling_map:
-                if _uncommon_sim_fraction(lq1, lq2) == 0:
-                    has_real_partner.add(lq1)
-                    has_real_partner.add(lq2)
+        # Error-detection damping (cx/cy/cz; swap/iswap handled
+        # separately below): the current gadget structurally requires
+        # lq1 (== "a" for a given coupling_map entry, since a always
+        # plays the control's role for that entry -- confirmed against
+        # _cpauli's own convention) to be a multi-replica (boundary)
+        # qubit -- see _cpauli: anc1 (the control-invariance capture) is
+        # unconditional but structurally trivial for a single-replica
+        # control (_correct() is already a no-op there, nothing for the
+        # gadget to protect against), and anc2 (the target-value
+        # verification against the CX/ACX-predicted output) is
+        # explicitly gated on len(hq1) > 1. Both halves are gated the
+        # same, simple way: whether a itself is boundary. This replaces
+        # an older version keyed on _uncommon_sim_fraction(lq1,lq2)==0
+        # ("does this pair share a simulator"), which matched an EARLIER
+        # gadget that wrapped gate_fn alone and only ever ran on the
+        # real (same-sim) branch -- that gadget was subsequently proven
+        # a mathematically guaranteed no-op (gate_fn structurally never
+        # touches its control's Z-value regardless of the control's
+        # incoming state, verified directly to floating-point
+        # precision) and replaced with the current mechanism, which
+        # doesn't care whether a and b share a simulator at all: the
+        # nested cx(lq1, anc) capture goes through the full logical
+        # coupling machinery (shadow or real, whichever applies) and
+        # works the same way regardless. So this is checked directly,
+        # per pair, from len(self._qubits[a]) -- no precomputed set
+        # needed.
 
         # This factor is a theory-derived placeholder, not an empirical
         # fit -- deliberately, per instruction not to chase a regression
@@ -2583,13 +2578,13 @@ class QrackAceBackend:
             # Pauli-string convention is big-endian relative to the qubit
             # list: the LAST qubit corresponds to the LEFTMOST character).
             p_shadow_ccz = 1 - sp * p
-            if a in has_real_partner:
+            if self.is_error_detection and len(self._qubits[a]) > 1:
                 # a is the control for this pair (_cpauli(lq1=a, lq2=b,
-                # ...) is always called with a as the coupling source),
-                # and a has at least one real-gate opportunity elsewhere
-                # in the map -- so its .prob() reading, which THIS
-                # shadow decision partly depends on, has a structural
-                # chance of having been kept clean. Damp accordingly.
+                # ...) is always called with a as the coupling source).
+                # Both gadget halves that protect this pair (anc1 on a,
+                # anc2 verifying b) are structurally live exactly when a
+                # itself is boundary -- see the comment above this loop.
+                # Damp accordingly.
                 p_shadow_ccz *= y
             noise_model.add_quantum_error(
                 pauli_error([("ZI", p_shadow_ccz), ("II", 1 - p_shadow_ccz)]), "cz", [a, b]
@@ -2643,21 +2638,22 @@ class QrackAceBackend:
             # same condition to stay consistent with what the gate does.
             if (is_a_simple != is_b_simple) and has_match:
                 p_net_swap = 2 * p * (1 - p)
-                # swap() now routes its own matching-replica gate through
-                # _detect_swap (a genuine same-simulator, parity-invariant
-                # gadget: idx1^idx2 is exactly conserved across a SWAP,
-                # the same way a CNOT's control is conserved -- see
-                # _detect_swap), so this IS damped now, unlike the stale
-                # "swap/iswap deliberately not damped" note this replaced.
-                # Gate on whichever side bears the error (the boundary
-                # qubit), using the same has_real_partner structural
-                # proxy as the cx/cy/cz case above -- the matching-replica
-                # branch needs the same "shares a simulator with
-                # something else" precondition _uncommon_sim_fraction==0
-                # already captures, so reusing that set here keeps this
-                # consistent rather than re-deriving a parallel condition.
-                boundary_qubit = b if is_a_simple else a
-                if boundary_qubit in has_real_partner:
+                # swap()'s own anc1/anc2 cross-check (verifying lq1's new
+                # value against lq2's old, and vice versa -- see swap())
+                # wraps the ENTIRE call, every branch, not specifically
+                # this matching-replica step -- _detect_swap itself is
+                # just a plain swap(), carrying no gadget of its own
+                # (an earlier per-replica parity gadget living there was
+                # proven a mathematically guaranteed no-op, the same way
+                # the old cx/cy/cz gadget was, and was simplified away).
+                # So this IS damped, unlike the stale "swap/iswap
+                # deliberately not damped" note this replaced -- but
+                # unconditionally so, not gated on any structural
+                # per-qubit condition: swap()'s gadget captures both
+                # sides whenever is_error_detection is on, full stop, no
+                # len(hq)>1-style precondition the way _cpauli's anc2
+                # has.
+                if self.is_error_detection:
                     p_net_swap *= y
                 if is_a_simple:
                     # a is bulk, b is boundary -> error lands on b
@@ -2690,12 +2686,15 @@ class QrackAceBackend:
             # previous formula.
             if (is_a_simple != is_b_simple) and has_match:
                 p_cz = 1 - sp * p  # same per-call formula as standalone cz
-                if boundary_qubit in has_real_partner:
-                    # this cz component is the SAME kind of shadow-driven
-                    # term as the main cx/cy/cz loop above (see that
-                    # comment for the mechanism); p_net_swap was already
-                    # damped above, independently, since it comes from a
-                    # different gate (the now-protected native swap, not
+                if self.is_error_detection and len(self._qubits[a]) > 1:
+                    # this cz component is routed through cx() when
+                    # is_error_detection is on (see cz()'s own wrapper),
+                    # so it's the SAME kind of shadow-driven term, gated
+                    # the SAME way, as the main cx/cy/cz loop above (see
+                    # that comment for the mechanism); p_net_swap was
+                    # already damped above, independently, since it comes
+                    # from a different gate (the now-protected native
+                    # swap, not
                     # this cz component).
                     p_cz *= y
                 p_i = (1 - p_net_swap) * (1 - p_cz)
