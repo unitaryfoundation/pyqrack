@@ -1821,12 +1821,8 @@ class QrackAceBackend:
                 anc1 = self._detect_ancilla1_lq[hq2[0][0]]
                 anc2 = self._detect_ancilla2_lq[hq2[0][0]]
             self._in_gadget_capture = True
-            self.h(lq1)
-            self.h(lq2)
             self.cx(lq1, anc1)
             self.cx(lq2, anc2)
-            self.h(lq1)
-            self.h(lq2)
             self._in_gadget_capture = False
 
         # Partial-match cases: one side is a simple (single-replica) qubit,
@@ -1885,8 +1881,6 @@ class QrackAceBackend:
 
         if anc1 is not None:
             self._in_gadget_capture = True
-            self.h(lq1)
-            self.h(lq2)
             self.cx(lq1, anc2)
             self.cx(lq2, anc1)
             anc_sim, anc_idx = self._qubits[anc2][0]
@@ -1905,8 +1899,6 @@ class QrackAceBackend:
                 self.x(lq2)
             else:
                 self.force_m(anc1, False)
-            self.h(lq1)
-            self.h(lq2)
             self._in_gadget_capture = False
 
     def iswap(self, lq1, lq2):
