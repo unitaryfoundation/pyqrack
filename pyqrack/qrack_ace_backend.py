@@ -270,13 +270,13 @@ class QrackAceBackend:
         self.is_error_detection = is_error_detection
 
         if Qrack.fppow < 5:
-            self._epsilon = 2**-9
+            self._epsilon = 2**-11
             self._ps_epsilon = 2**-6
         elif Qrack.fppow > 5:
-            self._epsilon = 2**-52
+            self._epsilon = 2**-54
             self._ps_epsilon = 2**-27
         else:
-            self._epsilon = 2**-22
+            self._epsilon = 2**-24
             self._ps_epsilon = 2**-12
 
         self._coupling_map = None
@@ -2056,7 +2056,7 @@ class QrackAceBackend:
         for q in qb:
             b = hq[q]
             p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
-            if p < self._epsilon:
+            if p <= self._ps_epsilon:
                 if self.sim[b[0]].m(b[1]) != result:
                     self.sim[b[0]].x(b[1])
             else:
@@ -2083,7 +2083,7 @@ class QrackAceBackend:
         for q in qb:
             b = hq[q]
             p = self.sim[b[0]].prob(b[1]) if result else (1 - self.sim[b[0]].prob(b[1]))
-            if p < self._epsilon:
+            if p <= self._ps_epsilon:
                 if self.sim[b[0]].m(b[1]) != result:
                     self.sim[b[0]].x(b[1])
             else:
