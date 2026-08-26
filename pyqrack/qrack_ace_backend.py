@@ -2603,23 +2603,55 @@ class QrackAceBackend:
                 pauli_error([("YI", p_shadow_ccz), ("II", 1 - p_shadow_ccz)]), "cy", [a, b]
             )
 
-            # swap: X-type error confined to whichever side is the
-            # boundary (multi-replica) qubit -- the sandwiched swap
-            # implementation's two _cx_shadow calls on that qubit, with
-            # nothing in between that mixes Z/X basis. No sp term: the
-            # matched-replica portion of ANY swap is a native index
+            # swap: Z-type (phase-flip) error confined to whichever side
+            # is the boundary (multi-replica) qubit -- the sandwiched
+            # swap implementation's two _cx_shadow calls on that qubit,
+            # with nothing in between that mixes Z/X basis. No sp term:
+            # the matched-replica portion of ANY swap is a native index
             # relabeling with zero truncation opportunity, unlike cx/cy/cz
             # which retain a real SDRP-driven common-fraction cost even
-            # when not crossing simulators. Two consecutive X-errors
-            # cancel (X . X = I), so they XOR-compose as 2*p*(1-p), NOT
-            # OR-compose as 1-p**2 the way the previous formula assumed --
+            # when not crossing simulators. Two consecutive Z-errors
+            # cancel (Z . Z = I), so they XOR-compose as 2*p*(1-p), NOT
+            # OR-compose as 1-p**2 the way an earlier formula assumed --
             # these diverge substantially away from p~1 (e.g. p=0.5:
-            # 0.5 vs 0.75; p=0.1: 0.18 vs 0.99). Verified empirically on
-            # an isolated swap (no prior circuit history, to avoid
-            # conflating this gate's own error with pre-existing state):
-            # the non-boundary side showed exactly 0.00000 error in both
-            # bases, and the boundary side showed clear Z-basis-dominant
-            # disturbance (X-basis nearly untouched), matching X-type.
+            # 0.5 vs 0.75; p=0.1: 0.18 vs 0.99).
+            #
+            # Error type re-verified directly against THIS file (the
+            # gadget mechanics changed substantially since the type was
+            # first derived -- swap()'s own cross-check gadget, the
+            # _correct()-skip-during-capture fix, and the post-selection
+            # floor threshold are all new), to make sure none of that
+            # changed the underlying picture. It hasn't: _cx_shadow
+            # itself is untouched by any of it. Reading the LOGICAL
+            # prob(lq) still tells you nothing (0.00000 deviation in
+            # both bases on a single isolated swap, gadget on or off --
+            # it calls _correct() internally and reconciles across every
+            # replica, the same masking this file has run into more than
+            # once). Reading the RAW, non-matching replica directly
+            # (bypassing that reconciliation) gives a clean, deterministic
+            # result, confirmed on both non-matching replicas, WITH
+            # is_error_detection on and off alike: Z-basis deviation
+            # exactly 0.0, X-basis deviation exactly 1.0. X-basis
+            # disturbance means the error is Z-type, not X-type -- and
+            # this has a direct mechanical explanation: _cx_shadow is a
+            # Z-basis-only approximation (a .prob()-based decision
+            # updating the target's Z-population, the same way a real
+            # CNOT's classical truth table would), with no mechanism to
+            # preserve or transfer genuine X-basis coherence to a
+            # non-matching replica -- that coherence is structurally,
+            # completely lost there, while the Z-population it's built to
+            # track comes through exactly. (This is also, incidentally,
+            # why a Z-basis-only correction gadget is the right design
+            # here, not a missing feature: the non-matching replicas have
+            # no genuine X-basis fact for an X-basis check to test in the
+            # first place, so a phase check built the same way as the
+            # working Z-basis one -- reconciling across all replicas via
+            # a nested logical capture -- ends up "correcting" against
+            # replicas that carry pure noise in that basis, which is
+            # actively worse than leaving it alone. Confirmed directly: a
+            # prior attempt at exactly that produced a spurious ~54%
+            # Z-basis corruption rate on the very value this file's
+            # gadget is supposed to be protecting.)
             #
             # Only handles the case where exactly one side is a simple
             # (single-replica) qubit -- the general case (both sides
@@ -2637,7 +2669,7 @@ class QrackAceBackend:
             has_match = any(s in sims_b for s in sims_a)
 
             # Mirrors swap()'s own guard: the sandwich path (and its
-            # X-type error model) only applies when a matching replica
+            # Z-type error model) only applies when a matching replica
             # actually anchors it. A simple/simple pair with no shared
             # sim routes through the general 3-CNOT fallback in swap()
             # itself now (verified: the sandwich path gave 100/100 wrong
@@ -2656,21 +2688,23 @@ class QrackAceBackend:
                 # So this IS damped, unlike the stale "swap/iswap
                 # deliberately not damped" note this replaced -- but
                 # unconditionally so, not gated on any structural
-                # per-qubit condition: swap()'s gadget captures both
-                # sides whenever is_error_detection is on, full stop, no
-                # len(hq)>1-style precondition the way _cpauli's anc2
-                # has.
+                # per-qubit condition BEYOND the "at least one side is
+                # boundary" precondition this whole branch already
+                # requires: swap()'s gadget captures both sides whenever
+                # is_error_detection is on and either side qualifies, no
+                # separate len(hq)>1-style gate the way _cpauli's anc2
+                # has on top of that.
                 if self.is_error_detection:
                     p_net_swap *= y
                 if is_a_simple:
                     # a is bulk, b is boundary -> error lands on b
                     noise_model.add_quantum_error(
-                        pauli_error([("XI", p_net_swap), ("II", 1 - p_net_swap)]) ("ZI", p_net_swap), "swap", [a, b]
+                        pauli_error([("ZI", p_net_swap), ("II", 1 - p_net_swap)]), "swap", [a, b]
                     )
                 else:
                     # b is bulk, a is boundary -> error lands on a
                     noise_model.add_quantum_error(
-                        pauli_error([("IX", p_net_swap), ("II", 1 - p_net_swap)]), ("IZ", p_net_swap), "swap", [a, b]
+                        pauli_error([("IZ", p_net_swap), ("II", 1 - p_net_swap)]), "swap", [a, b]
                     )
             else:
                 p2 = p**2
@@ -2691,6 +2725,15 @@ class QrackAceBackend:
             # model). Only covers the case where exactly one side is
             # simple; the general (both-boundary) fallback keeps the
             # previous formula.
+            #
+            # p_net_swap is Z-type (see above), and p_cz is ALSO Z-type
+            # (CZ's shadow error is Z-type-dominant: _cz_shadow applies
+            # its decision directly, with no H-conjugation the way CX/CY
+            # get, so its own error stays in the type it's built from).
+            # Two independent Z-type errors compose by XOR, the same
+            # principle p_net_swap's own derivation already uses (Z*Z=I,
+            # so both-occurring cancels): this collapses from a mixed
+            # 4-term (I,X,Z,Y) channel down to a plain 2-term (I,Z) one.
             if (is_a_simple != is_b_simple) and has_match:
                 p_cz = 1 - sp * p  # same per-call formula as standalone cz
                 if self.is_error_detection and len(self._qubits[a]) > 1:
@@ -2704,14 +2747,11 @@ class QrackAceBackend:
                     # swap, not
                     # this cz component).
                     p_cz *= y
-                p_i = (1 - p_net_swap) * (1 - p_cz)
-                p_x = p_net_swap * (1 - p_cz)
-                p_z = (1 - p_net_swap) * p_cz
-                p_y = p_net_swap * p_cz
+                p_net_iswap = p_net_swap * (1 - p_cz) + p_cz * (1 - p_net_swap)
                 if is_a_simple:
-                    terms = [("II", p_i), ("XI", p_x), ("ZI", p_z), ("YI", p_y)]
+                    terms = [("II", 1 - p_net_iswap), ("ZI", p_net_iswap)]
                 else:
-                    terms = [("II", p_i), ("IX", p_x), ("IZ", p_z), ("IY", p_y)]
+                    terms = [("II", 1 - p_net_iswap), ("IZ", p_net_iswap)]
                 noise_model.add_quantum_error(pauli_error(terms), "iswap", [a, b])
             else:
                 p2 = p**2
