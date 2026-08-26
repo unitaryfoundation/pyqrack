@@ -11,6 +11,7 @@ import sys
 import time
 from collections import deque
 
+from .qrack_system import Qrack
 from .qrack_simulator import QrackSimulator
 from .pauli import Pauli
 
@@ -270,15 +271,12 @@ class QrackAceBackend:
         self.is_torus = is_torus
         self.is_error_detection = is_error_detection
 
-        fppow = 5
-        if "QRACK_FPPOW" in os.environ:
-            fppow = int(os.environ.get("QRACK_FPPOW"))
-        if fppow < 5:
+        if Qrack.fppow < 5:
             self._epsilon = 2**-9
-            self._ps_epsilon = 2**-5
-        elif fppow > 5:
-            self._epsilon = 2**-51
-            self._ps_epsilon = 2**-25
+            self._ps_epsilon = 2**-6
+        elif Qrack.fppow > 5:
+            self._epsilon = 2**-52
+            self._ps_epsilon = 2**-27
         else:
             self._epsilon = 2**-22
             self._ps_epsilon = 2**-12
