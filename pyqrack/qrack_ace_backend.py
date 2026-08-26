@@ -7,8 +7,6 @@
 import math
 import os
 import random
-import sys
-import time
 from collections import deque
 
 from .qrack_system import Qrack
