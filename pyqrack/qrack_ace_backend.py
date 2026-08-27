@@ -1530,12 +1530,13 @@ class QrackAceBackend:
             # invariant.
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p >= (1.0 - self._ps_epsilon):
-                self.force_m(anc1, True)
+            if self._ps_epsilon >= (1.0 - p):
+                b = self.m(anc1)
+            else:
+                b = self.force_m(anc1, False)
+            if b:
                 self.x(anc1)
                 self.x(lq1)
-            else:
-                self.force_m(anc1, False)
             self._in_gadget_capture = False
 
         if anc2 is not None:
@@ -1544,12 +1545,13 @@ class QrackAceBackend:
             self.cx(lq2, anc2)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p >= (1.0 - self._ps_epsilon):
-                self.force_m(anc2, True)
+            if self._ps_epsilon >= (1.0 - p):
+                b = self.m(anc2)
+            else:
+                b = self.force_m(anc2, False)
+            if b:
                 self.x(anc2)
                 self.x(lq2)
-            else:
-                self.force_m(anc2, False)
             self._in_gadget_capture = False
 
         if lq2 is not None and witnessed_targets and self._witness_map is not None:
@@ -1884,20 +1886,22 @@ class QrackAceBackend:
             self.cx(lq2, anc1)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p >= (1.0 - self._ps_epsilon):
-                self.force_m(anc2, True)
+            if self._ps_epsilon >= (1.0 - p):
+                b = self.m(anc2)
+            else:
+                b = self.force_m(anc2, False)
+            if b:
                 self.x(anc2)
                 self.x(lq1)
-            else:
-                self.force_m(anc2, False)
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if p >= (1.0 - self._ps_epsilon):
-                self.force_m(anc1, True)
+            if self._ps_epsilon >= (1.0 - p):
+                b = self.m(anc1)
+            else:
+                b = self.force_m(anc1, False)
+            if b:
                 self.x(anc1)
                 self.x(lq2)
-            else:
-                self.force_m(anc1, False)
             self._in_gadget_capture = False
 
     def iswap(self, lq1, lq2):
