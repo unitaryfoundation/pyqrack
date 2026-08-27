@@ -242,7 +242,7 @@ class QrackAceBackend:
         is_torus=True,
         is_1d_chain=False,
         is_error_detection=True,
-        is_boundary_repetition_code=False,
+        is_boundary_repetition_code=True,
         to_clone=None,
     ):
         if to_clone:
@@ -453,54 +453,41 @@ class QrackAceBackend:
                 lq_idx = len(self._qubits)
                 self._qubits.append([(sim_id, phys_idx)])
                 self._detect_ancilla2_lq.append(lq_idx)
-        # Boundary repetition code: an ADDITIONAL, higher-abstraction
-        # layer above the gadget-correction level, one level below the
-        # user-facing logical index. For each boundary qubit, pair it
-        # with one dedicated, single-replica "ideal" qubit from each
-        # adjacent patch it touches -- 2 partners (a 3-qubit code) for
-        # an ordinary edge boundary qubit, 4 partners (a 5-qubit code)
-        # for a corner qubit, which already touches 4 patches via its
-        # existing 5-replica structure (home, col-neighbor, crossbar,
-        # row-neighbor, diag-neighbor -- see the main allocation loop
-        # above). The crossbar replica is deliberately excluded as a
-        # code leg: it has no adjacent "patch" bulk of its own to pair
-        # with, the same reasoning that excludes it from
-        # is_replica_correction earlier in this project.
-        #
-        # Each partner is a fresh, single-replica (bulk-style) hidden
-        # logical qubit, allocated the same way _detect_ancilla1_lq/
-        # _detect_ancilla2_lq are: appended past the user-facing qubit
-        # range, so num_qubits() and the user's own logical indices are
-        # completely unaffected. Real, per-patch resource cost, though,
-        # worth being explicit about: every protected boundary qubit
-        # adds 2 (or 4, at a corner) qubits to the relevant patches'
-        # own simulators, and patch simulation cost is exponential in
-        # patch qubit count -- this can be a substantial relative
-        # increase for small patches. That's exactly what the
-        # constructor flag is for.
-        self._rep_code_partners = {}
-        self._rep_code_correcting = False
-        self._rep_code_suppress_check = False
+        # Boundary repetition code, on-demand design: only the couplers
+        # are actually noisy here -- single-qubit gates are already
+        # exactly transversal, per-replica, with zero error, so there's
+        # no need to maintain a permanently-synced repetition code across
+        # them at all. Instead: TWO dedicated, reusable scratch ancillae
+        # per patch (separate from _detect_ancilla1/2 above, to avoid any
+        # contention between this mechanism and that one within the same
+        # coupling event), allocated ONCE, and reused across every
+        # boundary qubit that patch ever protects -- not one allocation
+        # per boundary qubit the way the earlier, always-on version did.
+        # See _cpauli for the actual encode/couple/decode/correct cycle
+        # built around these; this block is just the qubit-index
+        # bookkeeping, in the same style as _detect_ancilla1/2 above.
+        self._rep_code_ancilla1 = []
+        self._rep_code_ancilla2 = []
         if self.is_boundary_repetition_code:
-            for lq in range(len(self._qubits)):
-                hq = self._qubits[lq]
-                if len(hq) < 2:
-                    continue
-                partners = []
-                for replica in hq:
-                    if has_boundary and replica[0] == boundary_sim_id:
-                        continue
-                    partners.append(replica[0])
-                # allocate AFTER scanning hq, so appending to
-                # self._qubits mid-scan can't shift replica contents
-                resolved_partners = []
-                for sim_id in partners:
-                    idx = sim_counts[sim_id]
-                    sim_counts[sim_id] += 1
-                    p_lq = len(self._qubits)
-                    self._qubits.append([(sim_id, idx)])
-                    resolved_partners.append(p_lq)
-                self._rep_code_partners[lq] = resolved_partners
+            for i in range(len(sim_counts)):
+                self._rep_code_ancilla1.append(sim_counts[i])
+                sim_counts[i] += 1
+                self._rep_code_ancilla2.append(sim_counts[i])
+                sim_counts[i] += 1
+
+        self._rep_code_ancilla1_lq = []
+        self._rep_code_ancilla2_lq = []
+        if self.is_boundary_repetition_code:
+            for sim_id, phys_idx in enumerate(self._rep_code_ancilla1):
+                lq_idx = len(self._qubits)
+                self._qubits.append([(sim_id, phys_idx)])
+                self._rep_code_ancilla1_lq.append(lq_idx)
+            for sim_id, phys_idx in enumerate(self._rep_code_ancilla2):
+                lq_idx = len(self._qubits)
+                self._qubits.append([(sim_id, phys_idx)])
+                self._rep_code_ancilla2_lq.append(lq_idx)
+
+        self._rep_code_correcting = False
 
         # capture calls (see _apply_coupling): those calls go through
         # the ordinary _cpauli -> _apply_coupling path themselves, which
@@ -1126,8 +1113,6 @@ class QrackAceBackend:
         if lhv is not None:
             lhv.u(th, ph, lm)
 
-        self._rep_code_apply_gate(lq, "u", th, ph, lm)
-
         # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def _revert_shadow_commitment(self, lq1):
@@ -1221,11 +1206,6 @@ class QrackAceBackend:
             elif p == Pauli.PauliZ:
                 lhv.rz(th)
 
-        if self.is_boundary_repetition_code and not self._rep_code_correcting:
-            for p_lq in self._rep_code_partners.get(lq, ()):
-                sim_id, idx = self._qubits[p_lq][0]
-                self.sim[sim_id].r(p, th, idx)  # r()'s idx is LAST, unlike every other gate
-
         # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
     def h(self, lq):
@@ -1247,8 +1227,6 @@ class QrackAceBackend:
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.h()
-
-        self._rep_code_apply_gate(lq, "h")
 
         # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
@@ -1272,8 +1250,6 @@ class QrackAceBackend:
         if lhv is not None:
             lhv.s()
 
-        self._rep_code_apply_gate(lq, "s")
-
     def adjs(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -1293,8 +1269,6 @@ class QrackAceBackend:
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.adjs()
-
-        self._rep_code_apply_gate(lq, "adjs")
 
     def sx(self, lq):
         hq = self._unpack(lq)
@@ -1316,8 +1290,6 @@ class QrackAceBackend:
         if lhv is not None:
             lhv.sx()
 
-        self._rep_code_apply_gate(lq, "sx")
-
     def adjsx(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -1338,176 +1310,138 @@ class QrackAceBackend:
         if lhv is not None:
             lhv.adjsx()
 
-        self._rep_code_apply_gate(lq, "adjsx")
-
-    def _rep_code_apply_gate(self, lq, gate_name, *args):
-        """Apply the same single-qubit gate, with the same arguments, to
-        every boundary-repetition-code partner of lq -- the "encode all
-        logical gates on these as hardware qubits" half of the design.
-        Called from the tail of every transversal single-qubit gate
-        method below. A no-op whenever the feature is off or lq has no
-        partners (bulk qubits, or a boundary qubit when the flag was
-        off at construction), so this is always safe to call
-        unconditionally. Also a no-op while _rep_code_correct is
-        applying its OWN correction to lq via self.x()/self.z() below --
-        otherwise that correction would recursively re-sync the
-        partners, undoing the very thing it just decided about them.
+    def _rep_code_patch_triples(self, lq):
+        """(patch_replica, ancilla1_lq, ancilla2_lq) triples for lq's
+        non-crossbar patches -- one per patch this boundary qubit
+        touches. Recomputed fresh on every call (this is the on-demand
+        design: nothing persists between coupling events), rather than
+        stored once at construction the way the earlier, always-on
+        version did. Empty if lq is bulk (single-replica) or the
+        feature is off -- both cases where there's nothing to protect
+        or nowhere to protect it.
         """
-        if not self.is_boundary_repetition_code or self._rep_code_correcting:
-            return
-        partners = self._rep_code_partners.get(lq)
-        if not partners:
-            return
-        for p_lq in partners:
-            sim_id, idx = self._qubits[p_lq][0]
-            getattr(self.sim[sim_id], gate_name)(idx, *args)
-
-    def _rep_code_replica_partner_pairs(self, lq):
-        """(boundary_patch_replica, partner_lq) pairs for lq's
-        repetition-code partners -- one per non-crossbar patch this
-        boundary qubit touches, in the same order _rep_code_partners
-        was built in at construction (iterating hq in order, skipping
-        the crossbar replica), so pairs[i] always lines up correctly.
-        Empty if lq isn't repetition-code protected.
-        """
-        partners = self._rep_code_partners.get(lq)
-        if not partners:
+        if not self.is_boundary_repetition_code:
             return []
         hq = self._qubits[lq]
-        pairs = []
-        p_i = 0
+        if len(hq) < 2:
+            return []
+        triples = []
         for replica in hq:
             if self._boundary_sim_id is not None and replica[0] == self._boundary_sim_id:
                 continue
-            pairs.append((replica, partners[p_i]))
-            p_i += 1
-        return pairs
+            sim_id = replica[0]
+            triples.append((replica, self._rep_code_ancilla1_lq[sim_id], self._rep_code_ancilla2_lq[sim_id]))
+        return triples
 
-    def _rep_code_correct(self, lq, phase=False):
-        """Extract and correct the boundary-repetition-code syndrome for
-        lq, called after every non-transversal (coupling) touch to lq.
-        phase=False checks/corrects Z-basis (bit-flip) errors directly;
-        phase=True checks/corrects X-basis (phase-flip) errors via an
-        H-sandwich around the same raw, same-simulator captures.
-
-        Each patch gets its own INDEPENDENT syndrome bit: a raw CNOT of
-        the boundary's replica IN THAT PATCH, and of the dedicated
-        partner IN THAT SAME PATCH, into that patch's own detection
-        ancilla (never a nested logical capture -- deliberately: that's
-        what caused the earlier spurious-correction failure elsewhere in
-        this file, and this design avoids it by construction, not by
-        threshold tuning).
-
-        Decoding follows the same "try to force error-free, fall back to
-        an unforced Born-rule read, then it's obvious by elimination"
-        pattern established elsewhere in this file: read prob() first;
-        force_m to whichever branch is already within _ps_epsilon of
-        certain (never forcing the far branch, which is what crashes);
-        only fall through to a genuine, unforced measurement when
-        neither branch is that confident. With N syndrome bits (2 for an
-        edge qubit's 3-qubit code, 4 for a corner's 5-qubit code):
-        zero disagreeing partners means no error; exactly one
-        disagreeing partner unambiguously identifies that partner as the
-        error (every other partner, by construction, still agrees with
-        the boundary); all partners disagreeing unambiguously identifies
-        the boundary itself (every partner agrees with each other, only
-        the boundary is the outlier). A strict MINORITY (more than zero,
-        fewer than half) is not explainable by any single-qubit error at
-        all and is left uncorrected -- guessing would risk introducing a
-        wrong correction where an unrelated, uncorrectable multi-qubit
-        event happened instead. A strict MAJORITY (more than half, but
-        not all) is treated as the boundary being the outlier, the same
-        conclusion as the "all agree against the boundary" case, just
-        without full unanimity among the partners.
+    def _rep_code_encode(self, lq):
+        """Step 1: CNOT lq's replica-in-each-patch onto that patch's
+        dedicated, reusable ancilla1 -- a fresh, TEMPORARY repetition-
+        code copy, good for exactly the duration of one coupling event.
+        Returns the triples for the caller to pass to
+        _rep_code_extend_coupling and _rep_code_decode_and_correct, or
+        an empty list if lq isn't repetition-code eligible right now.
         """
-        if not self.is_boundary_repetition_code:
-            return
-        pairs = self._rep_code_replica_partner_pairs(lq)
-        if not pairs:
+        triples = self._rep_code_patch_triples(lq)
+        for (sim_id, b_idx), anc1_lq, _ in triples:
+            anc1_idx = self._qubits[anc1_lq][0][1]
+            self.sim[sim_id].mcx([b_idx], anc1_idx)
+        return triples
+
+    def _rep_code_extend_coupling(self, pauli, anti, qb1, hq1, lq1_lr, lq1, triples):
+        """Step 2: extend the SAME coupling (same control) to each
+        freshly-encoded ancilla1 -- reuses _apply_coupling directly,
+        the same real/shadow dispatch every other target already gets.
+        Only meaningful for a TARGET's triples: a CONTROL's own value
+        is never touched by gate_fn/shadow_fn in the first place (the
+        established, control-invariance fact this whole file already
+        relies on), so there's nothing for a control's ancilla1 to need
+        extended to -- callers only pass a target's triples here.
+        """
+        for _, anc1_lq, _ in triples:
+            hq_a = self._qubits[anc1_lq]
+            qb_a, _ = QrackAceBackend._get_qb_lhv_indices(hq_a)
+            self._apply_coupling(pauli, anti, qb1, hq1, qb_a, hq_a, lq1_lr, lq1, anc1_lq)
+
+    def _rep_code_decode_and_correct(self, lq, triples, phase=False):
+        """Steps 3-5: bit-flip syndrome-check-and-correct (using
+        ancilla2 per patch), THEN the final decode CNOT (lq's replica
+        -> ancilla1 again), which -- once any disagreement has already
+        been corrected -- returns ancilla1 exactly to |0>, ready for
+        the next boundary qubit's coupling event to reuse. An explicit
+        measure-and-reset backstops the decode CNOT for the rare
+        (corner-only) multi-disagreement case left uncorrected below,
+        so ancilla1 is unconditionally clean afterward either way.
+
+        Same "try to force error-free, fall back to an unforced Born-
+        rule read, then it's obvious by elimination" decoding pattern
+        used elsewhere in this file. With N syndrome bits (2 for an
+        edge qubit's 3-qubit code, 4 for a corner's 5-qubit code): zero
+        disagreeing patches means no error; exactly one unambiguously
+        identifies that patch's ancilla1 as the outlier (every other
+        patch's ancilla1, by construction, still agrees with lq); a
+        strict majority (including unanimity) unambiguously identifies
+        lq itself as the outlier. A strict minority greater than one is
+        not explainable by any single-qubit error and is left
+        uncorrected -- guessing would risk introducing a wrong
+        correction where an unrelated, uncorrectable multi-qubit event
+        happened instead.
+        """
+        if not triples:
             return
 
         syndrome = []
-        for boundary_replica, partner_lq in pairs:
-            sim_id, b_idx = boundary_replica
-            _, p_idx = self._qubits[partner_lq][0]
+        for (sim_id, b_idx), anc1_lq, anc2_lq in triples:
             sim = self.sim[sim_id]
-            anc = self._detect_ancilla1_lq[sim_id]
-            _, anc_idx = self._qubits[anc][0]
+            anc1_idx = self._qubits[anc1_lq][0][1]
+            anc2_idx = self._qubits[anc2_lq][0][1]
 
-            if phase:
-                sim.h(b_idx)
-                sim.h(p_idx)
-            sim.mcx([b_idx], anc_idx)
-            sim.mcx([p_idx], anc_idx)
-            if phase:
-                sim.h(b_idx)
-                sim.h(p_idx)
+            sim.mcx([b_idx], anc2_idx)
+            sim.mcx([anc1_idx], anc2_idx)
 
-            p = sim.prob(anc_idx)
+            p = sim.prob(anc2_idx)
             if p < self._ps_epsilon:
-                sim.force_m(anc_idx, False)
+                sim.force_m(anc2_idx, False)
                 bit = False
             elif p >= (1.0 - self._ps_epsilon):
-                sim.force_m(anc_idx, True)
+                sim.force_m(anc2_idx, True)
                 bit = True
             else:
-                bit = sim.m(anc_idx)
+                bit = sim.m(anc2_idx)
             if bit:
-                sim.x(anc_idx)  # reset ancilla to |0> for reuse
+                sim.x(anc2_idx)  # reset ancilla2 to |0> for reuse
 
-            syndrome.append((bit, sim_id, p_idx))
+            syndrome.append((bit, sim_id, anc1_idx))
 
         n = len(syndrome)
         disagree = sum(1 for bit, _, _ in syndrome if bit)
-        if disagree == 0:
-            return
-
-        if disagree > n - disagree:
-            # strict majority (including unanimity) disagrees with the
-            # boundary -- the boundary itself is the outlier. Correct via
-            # the ordinary logical gate, so it transversally touches
-            # every one of the boundary's OWN existing replicas exactly
-            # the way any other x()/z() call would -- suppressing the
-            # partner re-sync (see _rep_code_apply_gate) since the
-            # partners were just independently verified correct.
-            self._rep_code_correcting = True
-            try:
-                if phase:
-                    self.z(lq)
-                else:
-                    self.x(lq)
-            finally:
-                self._rep_code_correcting = False
-        elif disagree == 1:
-            # exactly one partner disagrees -- unambiguously that partner
-            for bit, sim_id, p_idx in syndrome:
-                if bit:
+        if disagree > 0:
+            if disagree > n - disagree:
+                self._rep_code_correcting = True
+                try:
                     if phase:
-                        self.sim[sim_id].z(p_idx)
+                        self.z(lq)
                     else:
-                        self.sim[sim_id].x(p_idx)
-        # else: strict minority > 1 (only possible with the 5-qubit
-        # corner code) -- not explainable by any single-qubit error,
-        # left uncorrected rather than guessed at.
+                        self.x(lq)
+                finally:
+                    self._rep_code_correcting = False
+            elif disagree == 1:
+                for bit, sim_id, anc1_idx in syndrome:
+                    if bit:
+                        if phase:
+                            self.sim[sim_id].z(anc1_idx)
+                        else:
+                            self.sim[sim_id].x(anc1_idx)
+            # else: strict minority > 1 (only possible with the 5-qubit
+            # corner code) -- not explainable by any single-qubit error,
+            # left uncorrected; the explicit reset below still cleans
+            # up ancilla1 for reuse regardless.
 
-    def _rep_code_correct_pair(self, lq1, lq2):
-        """Called at the tail of every TOP-LEVEL cx/cy/cz/acx/acy/acz
-        (never from inside _cpauli itself, and never for cy()/cz()'s own
-        internal cx() call while mid-H-sandwich -- see
-        _rep_code_suppress_check): runs the bit-flip syndrome check on
-        both lq1 and lq2. Unlike the soft _correct() elsewhere in this
-        file, lq1 (the control) gets checked too here, not just the
-        target -- this mechanism has a genuine, hard invariant to test
-        on the control as well.
-        """
-        if (
-            not self.is_boundary_repetition_code
-            or self._rep_code_correcting
-            or self._rep_code_suppress_check
-        ):
-            return
-        self._rep_code_correct(lq1)
-        self._rep_code_correct(lq2)
+        for (sim_id, b_idx), anc1_lq, _ in triples:
+            anc1_idx = self._qubits[anc1_lq][0][1]
+            sim = self.sim[sim_id]
+            sim.mcx([b_idx], anc1_idx)
+            if sim.m(anc1_idx):
+                sim.x(anc1_idx)
 
     def x(self, lq):
         hq = self._unpack(lq)
@@ -1529,8 +1463,6 @@ class QrackAceBackend:
         if lhv is not None:
             lhv.x()
 
-        self._rep_code_apply_gate(lq, "x")
-
     def y(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -1550,8 +1482,6 @@ class QrackAceBackend:
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.y()
-
-        self._rep_code_apply_gate(lq, "y")
 
     def z(self, lq):
         hq = self._unpack(lq)
@@ -1573,8 +1503,6 @@ class QrackAceBackend:
         if lhv is not None:
             lhv.z()
 
-        self._rep_code_apply_gate(lq, "z")
-
     def t(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -1595,8 +1523,6 @@ class QrackAceBackend:
         if lhv is not None:
             lhv.t()
 
-        self._rep_code_apply_gate(lq, "t")
-
     def adjt(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -1616,8 +1542,6 @@ class QrackAceBackend:
         lhv = self._lhv.get(lq)
         if lhv is not None:
             lhv.adjt()
-
-        self._rep_code_apply_gate(lq, "adjt")
 
     def _get_gate(self, pauli, anti, sim_id):
         gate = None
@@ -1859,32 +1783,49 @@ class QrackAceBackend:
             self._correct(lq1)
             self._correct(lq2)
 
-        qb1, _ = QrackAceBackend._get_qb_lhv_indices(hq1)
-        qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
-        # Apply cross coupling on every qubit, including former-LHV boundary
-        # qubits, which now live as real qubits in the shared boundary sim.
-        self._apply_coupling(pauli, anti, qb1, hq1, qb2, hq2, lq1_lr, lq1, lq2)
-
-        # Boundary repetition code: the coupling's effect on lq2 has to
-        # ALSO land on lq2's dedicated partners, not just lq2's own
-        # existing replicas -- "encode all logical gates on these as
-        # hardware qubits" means the coupling too, not only the
-        # transversal single-qubit gates. Reuses _apply_coupling
-        # directly, once per partner, with the SAME control (qb1/hq1) --
-        # this is exactly the existing real/shadow dispatch every other
-        # target already goes through, no new mechanism.
+        # Boundary repetition code, on-demand: encode/couple/decode/
+        # correct wraps ONLY the actual coupler call immediately below,
+        # tightly -- not the transversal single-qubit gates (already
+        # exact, per-replica, nothing to protect), and not the outer
+        # cy()/cz() wrapper when this _cpauli call is their internal,
+        # H-sandwiched cx() (see below for why that's actually fine now,
+        # unlike the earlier design). Guarded by not
+        # self._in_gadget_capture the same way the _correct() calls
+        # above are: a nested capture's own target is always a hidden,
+        # single-replica ancilla (never boundary-eligible, so this would
+        # no-op anyway), but the CONTROL side could still be a protected
+        # boundary qubit, and re-running its own encode/check/decode
+        # cycle on every nested capture would be wasteful and redundant
+        # with the outer call already doing it once.
         #
-        # Only defined for "patch-local" connectivity, which is the only
-        # officially supported connectivity model here (get_
-        # logical_coupling_map() only ever returns pairs that share a
-        # simulator) -- the pure-shadow case (lq1, lq2 share NO
-        # simulator at all) only exists as a fallback for users who
-        # ignore that map, and this repetition-code layer doesn't try to
-        # support it: raise plainly instead of silently coupling
-        # partners through an undefined/unsupported path.
-        if self.is_boundary_repetition_code:
-            partners = self._rep_code_partners.get(lq2)
-            if partners:
+        # lq1 (control) gets a SIMPLER cycle than lq2 (target): the
+        # coupler never gates the control at all (the same control-
+        # invariance fact this whole file already relies on), so there's
+        # no coupling effect to extend to its ancilla1 -- just verify/
+        # correct lq1's OWN reliability once, right before the coupler
+        # is about to read it, so a stale value doesn't feed a wrong
+        # shadow decision.
+        if self.is_boundary_repetition_code and not self._in_gadget_capture:
+            t1 = self._rep_code_encode(lq1)
+            self._rep_code_decode_and_correct(lq1, t1)
+
+        # lq2 (target) encode happens BEFORE the coupler, so the SAME
+        # coupling can be extended to ancilla1 right after -- capturing
+        # a "before" snapshot the coupler's own effect then lands on
+        # too, the same real/shadow dispatch every other target gets.
+        t2 = []
+        if self.is_boundary_repetition_code and not self._in_gadget_capture:
+            t2 = self._rep_code_encode(lq2)
+            if t2:
+                # Only defined for "patch-local" connectivity, the only
+                # officially supported connectivity model here (get_
+                # logical_coupling_map() only ever returns pairs that
+                # share a simulator). The pure-shadow case (lq1, lq2
+                # share NO simulator at all) only exists as a fallback
+                # for users who ignore that map, and this repetition-
+                # code layer doesn't try to support it: raise plainly
+                # instead of silently coupling ancilla1 through an
+                # undefined/unsupported path.
                 sims1 = {b[0] for b in hq1}
                 sims2 = {b[0] for b in hq2}
                 if not (sims1 & sims2):
@@ -1894,10 +1835,15 @@ class QrackAceBackend:
                         "patch-local connectivity map) -- not supported with "
                         "is_boundary_repetition_code=True."
                     )
-                for p_lq in partners:
-                    hq_p = self._qubits[p_lq]
-                    qb_p, _ = QrackAceBackend._get_qb_lhv_indices(hq_p)
-                    self._apply_coupling(pauli, anti, qb1, hq1, qb_p, hq_p, lq1_lr, lq1, p_lq)
+
+        qb1, _ = QrackAceBackend._get_qb_lhv_indices(hq1)
+        qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
+        # Apply cross coupling on every qubit, including former-LHV boundary
+        # qubits, which now live as real qubits in the shared boundary sim.
+        self._apply_coupling(pauli, anti, qb1, hq1, qb2, hq2, lq1_lr, lq1, lq2)
+
+        if t2:
+            self._rep_code_extend_coupling(pauli, anti, qb1, hq1, lq1_lr, lq1, t2)
 
         if lq2 in self._lhv:
             ctrl_prob = self.sim[hq1[0][0]].prob(hq1[0][1])
@@ -1905,6 +1851,22 @@ class QrackAceBackend:
 
         if self._in_gadget_capture:
             return
+
+        # Repetition-code decode-and-correct for lq2 happens HERE,
+        # immediately after the coupler+extension, in the SAME frame
+        # they just ran in -- deliberately BEFORE _correct()'s own,
+        # separate soft reconciliation below, which can itself rotate
+        # lq2 (the phase=True call) and would otherwise pull it out of
+        # sync with an ancilla1 that never gets that same rotation. This
+        # is also exactly why cy()/cz()'s internal H-sandwich is safe
+        # now, unlike the earlier, always-on design: encode, couple,
+        # and this decode-and-correct are all contained within this one
+        # _cpauli call, whatever frame it happens to be running in --
+        # never spanning an external rotation the way permanently-
+        # synced partners, checked from a separate top-level call, used
+        # to.
+        if self.is_boundary_repetition_code:
+            self._rep_code_decode_and_correct(lq2, t2)
 
         # No post-coupling correction on lq1 (the control): _cz_shadow only
         # ever calls .z() on the target, never gates the control -- only
@@ -1919,82 +1881,43 @@ class QrackAceBackend:
         if pauli != Pauli.PauliX:
             self._correct(lq2, True)
 
-        # Boundary repetition code's syndrome CHECK deliberately does NOT
-        # live here (unlike the partner-coupling step above, which does):
-        # cy()/cz() reformulate themselves as h();cx();h() when
-        # is_error_detection is on, and that inner cx() call reaches
-        # _cpauli too -- a Z-basis syndrome check firing there would be
-        # checking a qubit (and its partners) that are deliberately,
-        # temporarily rotated into the X-basis frame mid-sandwich, which
-        # is checking noise, not signal (verified directly: corrupted
-        # both the boundary value and a partner via exactly this path).
-        # The check belongs once, after the user's FULL requested
-        # operation has completed -- see the top-level cx/cy/cz/etc.
-        # wrappers below, not this shared, nested helper.
-
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
-        self._rep_code_correct_pair(lq1, lq2)
 
     def cy(self, lq1, lq2):
         if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
             self.adjs(lq2)
-            self._rep_code_suppress_check = True
-            try:
-                self.cx(lq1, lq2)
-            finally:
-                self._rep_code_suppress_check = False
+            self.cx(lq1, lq2)
             self.s(lq2)
-            self._rep_code_correct_pair(lq1, lq2)
         else:
             self._cpauli(lq1, lq2, False, Pauli.PauliY)
-            self._rep_code_correct_pair(lq1, lq2)
 
     def cz(self, lq1, lq2):
         if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
             self.h(lq2)
-            self._rep_code_suppress_check = True
-            try:
-                self.cx(lq1, lq2)
-            finally:
-                self._rep_code_suppress_check = False
+            self.cx(lq1, lq2)
             self.h(lq2)
-            self._rep_code_correct_pair(lq1, lq2)
         else:
             self._cpauli(lq1, lq2, False, Pauli.PauliZ)
-            self._rep_code_correct_pair(lq1, lq2)
 
     def acx(self, lq1, lq2):
         self._cpauli(lq1, lq2, True, Pauli.PauliX)
-        self._rep_code_correct_pair(lq1, lq2)
 
     def acy(self, lq1, lq2):
         if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
             self.adjs(lq2)
-            self._rep_code_suppress_check = True
-            try:
-                self.acx(lq1, lq2)
-            finally:
-                self._rep_code_suppress_check = False
+            self.acx(lq1, lq2)
             self.s(lq2)
-            self._rep_code_correct_pair(lq1, lq2)
         else:
             self._cpauli(lq1, lq2, True, Pauli.PauliY)
-            self._rep_code_correct_pair(lq1, lq2)
 
     def acz(self, lq1, lq2):
         if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
             self.h(lq2)
-            self._rep_code_suppress_check = True
-            try:
-                self.acx(lq1, lq2)
-            finally:
-                self._rep_code_suppress_check = False
+            self.acx(lq1, lq2)
             self.h(lq2)
-            self._rep_code_correct_pair(lq1, lq2)
         else:
             self._cpauli(lq1, lq2, True, Pauli.PauliZ)
-            self._rep_code_correct_pair(lq1, lq2)
 
     def mcx(self, lq1, lq2):
         if len(lq1) > 1:
@@ -2091,41 +2014,31 @@ class QrackAceBackend:
             if lhv1 is not None:
                 self._lhv[lq2] = lhv1
 
-            # Boundary repetition code: partners are tied to a PHYSICAL
-            # patch location, allocated once at construction and never
-            # moved -- exactly like self._qubits and self._lhv just
-            # above, which this mirrors. After swapping WHICH logical
-            # index points to which physical replica list, the partner
-            # mapping needs the same treatment, or lq2 (now pointing at
-            # lq1's old physical hardware) would keep lq2's OLD partners,
-            # checked against physically the wrong patches from then on.
-            if self.is_boundary_repetition_code:
-                p1 = self._rep_code_partners.pop(lq1, None)
-                p2 = self._rep_code_partners.pop(lq2, None)
-                if p2 is not None:
-                    self._rep_code_partners[lq1] = p2
-                if p1 is not None:
-                    self._rep_code_partners[lq2] = p1
+            # Boundary repetition code needs no bookkeeping here, unlike
+            # self._qubits/self._lhv just above: it's on-demand now, not
+            # a permanent, per-logical-index dict of pre-allocated
+            # partners -- eligibility is just len(self._qubits[lq]) > 1,
+            # computed fresh on every coupling event, so the reference
+            # swap of self._qubits above already, automatically carries
+            # the right eligibility with it. Nothing else to move.
             return
 
         # Boundary repetition code: redirect entirely to the 3-CNOT
         # decomposition at the bottom of this method whenever EITHER
-        # side is protected, rather than extending each of the
-        # specialized fast/partial-match paths below individually with
-        # new, separately-unverified partner-handling logic. self.cx()
-        # already handles partner-coupling and the bit-flip syndrome
-        # check correctly -- verified directly, including two real bugs
-        # found and fixed there -- so this reuses that rather than
-        # re-deriving equivalent logic three more times under the same
-        # risk of another subtle mismatch. Costs the fast-path
-        # optimizations below for this specific case; given the
-        # fast/exact-match path additionally requires lq1 and lq2 to be
-        # TWO boundary qubits with identically-matching patch structure
-        # -- rare on its own, before "and both are repetition-code
-        # protected" on top -- the case being deferred is narrow.
-        if self.is_boundary_repetition_code and (
-            self._rep_code_partners.get(lq1) or self._rep_code_partners.get(lq2)
-        ):
+        # side is multi-replica (repetition-code eligible), rather than
+        # extending each of the specialized fast/partial-match paths
+        # below individually with new, separately-unverified encode/
+        # decode logic. self.cx() already handles the on-demand encode/
+        # couple/decode/correct cycle correctly -- verified directly,
+        # including real bugs found and fixed there -- so this reuses
+        # that rather than re-deriving equivalent logic three more times
+        # under the same risk of another subtle mismatch. Costs the
+        # fast-path optimizations below for this specific case; given
+        # the fast/exact-match path additionally requires lq1 and lq2 to
+        # be TWO boundary qubits with identically-matching patch
+        # structure -- rare on its own -- the case being deferred is
+        # narrow.
+        if self.is_boundary_repetition_code and (len(hq1) > 1 or len(hq2) > 1):
             self.cx(lq1, lq2)
             self.cx(lq2, lq1)
             self.cx(lq1, lq2)
