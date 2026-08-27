@@ -498,7 +498,6 @@ class QrackAceBackend:
         if "QRACK_QUNIT_SEPARABILITY_THRESHOLD" in os.environ:
             self._sdrp = min(1, float(os.environ["QRACK_QUNIT_SEPARABILITY_THRESHOLD"]))
         else:
-            # "Golden value"
             self._sdrp = 0.0
 
         self.sim = []
@@ -1398,14 +1397,10 @@ class QrackAceBackend:
             sim.mcx([anc1_idx], anc2_idx)
 
             p = sim.prob(anc2_idx)
-            if p < self._ps_epsilon:
-                sim.force_m(anc2_idx, False)
-                bit = False
-            elif p >= (1.0 - self._ps_epsilon):
-                sim.force_m(anc2_idx, True)
-                bit = True
-            else:
+            if self._ps_epsilon >= (1.0 - p):
                 bit = sim.m(anc2_idx)
+            else:
+                bit = sim.force_m(anc2_idx, False)
             if bit:
                 sim.x(anc2_idx)  # reset ancilla2 to |0> for reuse
 
