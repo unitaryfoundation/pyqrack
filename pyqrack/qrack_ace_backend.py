@@ -1426,11 +1426,11 @@ class QrackAceBackend:
             sim.mcx([b_idx], anc1_idx)
             p = sim.prob(anc1_idx)
             if self._ps_epsilon >= (1.0 - p):
-                b = self.m(anc1_idx)
+                b = sim.m(anc1_idx)
             else:
-                b = self.force_m(anc1_idx, False)
+                b = sim.force_m(anc1_idx, False)
             if b:
-                self.x(anc1_idx)
+                sim.x(anc1_idx)
 
     def x(self, lq):
         hq = self._unpack(lq)
