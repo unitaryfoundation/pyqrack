@@ -1406,19 +1406,18 @@ class QrackAceBackend:
         disagree = sum(1 for bit, _, _ in syndrome if bit)
         if disagree > 0:
             if disagree > n - disagree:
-                for bit, sim_id, anc1_idx in syndrome:
-                    if not bit:
-                        if phase:
-                            self.sim[sim_id].z(anc1_idx)
-                        else:
-                            self.sim[sim_id].x(anc1_idx)
-            else:
-                for bit, sim_id, anc1_idx in syndrome:
-                    if bit:
-                        if phase:
-                            self.sim[sim_id].z(anc1_idx)
-                        else:
-                            self.sim[sim_id].x(anc1_idx)
+                # Flip all bits
+                if phase:
+                    self.z(lq)
+                else:
+                    self.x(lq)
+            # Necessary either way, even if all flipped
+            for bit, sim_id, anc1_idx in syndrome:
+                if bit:
+                    if phase:
+                        self.sim[sim_id].z(anc1_idx)
+                    else:
+                        self.sim[sim_id].x(anc1_idx)
 
         for (sim_id, b_idx), anc1_lq, _ in triples:
             anc1_idx = self._qubits[anc1_lq][0][1]
