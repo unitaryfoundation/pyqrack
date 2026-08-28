@@ -1398,10 +1398,10 @@ class QrackAceBackend:
             sim.mcx([anc1_idx], anc2_idx)
 
             p = sim.prob(anc2_idx)
-            if p < self._ps_epsilon:
+            if self._ps_epsilon >= p:
                 sim.force_m(anc2_idx, False)
                 bit = False
-            elif p >= (1.0 - self._ps_epsilon):
+            elif self._ps_epsilon >= (1.0 - p):
                 sim.force_m(anc2_idx, True)
                 bit = True
             else:
@@ -1423,24 +1423,25 @@ class QrackAceBackend:
                         self.x(lq)
                 finally:
                     self._rep_code_correcting = False
-            elif disagree == 1:
+            else:
                 for bit, sim_id, anc1_idx in syndrome:
                     if bit:
                         if phase:
                             self.sim[sim_id].z(anc1_idx)
                         else:
                             self.sim[sim_id].x(anc1_idx)
-            # else: strict minority > 1 (only possible with the 5-qubit
-            # corner code) -- not explainable by any single-qubit error,
-            # left uncorrected; the explicit reset below still cleans
-            # up ancilla1 for reuse regardless.
 
         for (sim_id, b_idx), anc1_lq, _ in triples:
             anc1_idx = self._qubits[anc1_lq][0][1]
             sim = self.sim[sim_id]
             sim.mcx([b_idx], anc1_idx)
-            if sim.m(anc1_idx):
-                sim.x(anc1_idx)
+            p = sim.prob(anc1_idx)
+            if self._ps_epsilon >= (1.0 - p):
+                b = self.m(anc1_idx)
+            else:
+                b = self.force_m(anc1_idx, False)
+            if b:
+                self.x(anc1_idx)
 
     def x(self, lq):
         hq = self._unpack(lq)
