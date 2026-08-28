@@ -487,8 +487,6 @@ class QrackAceBackend:
                 self._qubits.append([(sim_id, phys_idx)])
                 self._rep_code_ancilla2_lq.append(lq_idx)
 
-        self._rep_code_correcting = False
-
         # capture calls (see _apply_coupling): those calls go through
         # the ordinary _cpauli -> _apply_coupling path themselves, which
         # would otherwise try to wrap ITSELF in another capture,
@@ -1409,14 +1407,12 @@ class QrackAceBackend:
         disagree = sum(1 for bit, _, _ in syndrome if bit)
         if disagree > 0:
             if disagree > n - disagree:
-                self._rep_code_correcting = True
-                try:
-                    if phase:
-                        self.z(lq)
-                    else:
-                        self.x(lq)
-                finally:
-                    self._rep_code_correcting = False
+                for bit, sim_id, anc1_idx in syndrome:
+                    if not bit:
+                        if phase:
+                            self.sim[sim_id].z(anc1_idx)
+                        else:
+                            self.sim[sim_id].x(anc1_idx)
             else:
                 for bit, sim_id, anc1_idx in syndrome:
                     if bit:
