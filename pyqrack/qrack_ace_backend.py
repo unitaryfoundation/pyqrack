@@ -1399,14 +1399,7 @@ class QrackAceBackend:
             sim.mcx([anc1_idx], anc2_idx)
 
             p = sim.prob(anc2_idx)
-            if self._ps_epsilon >= p:
-                sim.force_m(anc2_idx, False)
-                bit = False
-            elif self._ps_epsilon >= (1.0 - p):
-                sim.force_m(anc2_idx, True)
-                bit = True
-            else:
-                bit = sim.m(anc2_idx)
+            bit = sim.m(anc2_idx)
             if bit:
                 sim.x(anc2_idx)  # reset ancilla2 to |0> for reuse
 
