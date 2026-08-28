@@ -242,7 +242,7 @@ class QrackAceBackend:
         is_torus=True,
         is_1d_chain=False,
         is_error_detection=True,
-        is_boundary_repetition_code=True,
+        is_boundary_repetition_code=False,
         to_clone=None,
     ):
         if to_clone:
