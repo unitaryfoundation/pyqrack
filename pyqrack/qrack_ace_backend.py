@@ -633,6 +633,7 @@ class QrackAceBackend:
     def _cz_shadow(self, q1, q2):
         p1 = self.sim[q1[0]].prob(q1[1]) if isinstance(q1, tuple) else q1.prob()
         p2 = self.sim[q2[0]].prob(q2[1]) if isinstance(q2, tuple) else q2.prob()
+        target = q2
 
         # 0/1-BALANCE FIX: a near-tie (both readings within epsilon of each
         # other -- the ORDINARY case for a maximally-mixed control paired
@@ -655,7 +656,7 @@ class QrackAceBackend:
         # changed the deterministic outcome). When the readings are
         # NOT tied, the existing decisive-threshold logic is unambiguous
         # and unchanged.
-        if abs(p1 - p2) <= self._epsilon:
+        if (abs(p1 - 0.5) <= self._epsilon) and abs(p2 - 0.5) <= self._epsilon:
             apply = random.random() < 0.5
         else:
             # Symmetric-in-control-vs-target CZ shadow, by design: pick
@@ -670,16 +671,18 @@ class QrackAceBackend:
             # the control's actual value.
             d1 = abs(p1 - 0.5)
             d2 = abs(p2 - 0.5)
-            decisive = p1 if d1 >= d2 else p2
+            if d1 >= d2:
+                decisive = p1
+            else:
+                decisive = p2
+                target = q1
             apply = decisive >= (0.5 - self._epsilon)
 
-        # The Z gate always targets q2 (the actual shadow target) --
-        # never q1 (the control) -- per the earlier phase-kickback fix.
         if apply:
-            if isinstance(q2, tuple):
-                self.sim[q2[0]].z(q2[1])
+            if isinstance(target, tuple):
+                self.sim[target[0]].z(target[1])
             else:
-                q2.z()
+                target.z()
 
     def _qec_x(self, c):
         if isinstance(c, tuple):
@@ -717,17 +720,31 @@ class QrackAceBackend:
         self._anti_shadow_wrap(c, t, self._cz_shadow)
 
     def _cx_shadow(self, c, t):
-        self._qec_h(t)
-        self._cz_shadow(c, t)
-        self._qec_h(t)
+        p = self.sim[c[0]].prob(c[1]) if isinstance(c, tuple) else c.prob()
+        if abs(p - 0.5) <= self._epsilon:
+            apply = random.random() < 0.5
+        else:
+            apply = p > 0.5
+        if apply:
+            if isinstance(t, tuple):
+                self.sim[t[0]].x(t[1])
+            else:
+                t.x()
 
     def _anti_cx_shadow(self, c, t):
         self._anti_shadow_wrap(c, t, self._cx_shadow)
 
     def _cy_shadow(self, c, t):
-        self._qec_adjs(t)
-        self._cx_shadow(c, t)
-        self._qec_s(t)
+        p = self.sim[c[0]].prob(c[1]) if isinstance(c, tuple) else c.prob()
+        if abs(p - 0.5) <= self._epsilon:
+            apply = random.random() < 0.5
+        else:
+            apply = p > 0.5
+        if apply:
+            if isinstance(t, tuple):
+                self.sim[t[0]].y(t[1])
+            else:
+                t.y()
 
     def _anti_cy_shadow(self, c, t):
         self._anti_shadow_wrap(c, t, self._cy_shadow)
