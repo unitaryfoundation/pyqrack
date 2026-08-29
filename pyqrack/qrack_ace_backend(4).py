@@ -633,7 +633,6 @@ class QrackAceBackend:
     def _cz_shadow(self, q1, q2):
         p1 = self.sim[q1[0]].prob(q1[1]) if isinstance(q1, tuple) else q1.prob()
         p2 = self.sim[q2[0]].prob(q2[1]) if isinstance(q2, tuple) else q2.prob()
-        target = q2
 
         # 0/1-BALANCE FIX: a near-tie (both readings within epsilon of each
         # other -- the ORDINARY case for a maximally-mixed control paired
@@ -656,7 +655,7 @@ class QrackAceBackend:
         # changed the deterministic outcome). When the readings are
         # NOT tied, the existing decisive-threshold logic is unambiguous
         # and unchanged.
-        if (abs(p1 - 0.5) <= self._epsilon) and abs(p2 - 0.5) <= self._epsilon:
+        if abs(p1 - p2) <= self._epsilon:
             apply = random.random() < 0.5
         else:
             # Symmetric-in-control-vs-target CZ shadow, by design: pick
@@ -671,42 +670,66 @@ class QrackAceBackend:
             # the control's actual value.
             d1 = abs(p1 - 0.5)
             d2 = abs(p2 - 0.5)
-            if d1 >= d2:
-                decisive = p1
-            else:
-                decisive = p2
-                target = q1
+            decisive = p1 if d1 >= d2 else p2
             apply = decisive >= (0.5 - self._epsilon)
 
+        # The Z gate always targets q2 (the actual shadow target) --
+        # never q1 (the control) -- per the earlier phase-kickback fix.
         if apply:
-            if isinstance(target, tuple):
-                self.sim[target[0]].z(target[1])
+            if isinstance(q2, tuple):
+                self.sim[q2[0]].z(q2[1])
             else:
-                target.z()
+                q2.z()
+
+    def _shadow_control_apply(self, c, t, gate_name):
+        """Non-symmetric, control-only shadow: the decision is based
+        ONLY on the control's own probability, never on whichever of
+        control/target happens to be more polarized, and the payload
+        gate (gate_name -- "x" for CX, "y" for CY) is applied directly
+        to the target with NO conjugation at all.
+
+        This is the hot path for CX and CY -- NOT for a genuinely,
+        directly requested CZ, which keeps using the fully symmetric
+        _cz_shadow above, unchanged, and NOT for CZ's own "hot path"
+        reformulation in cz() either, which keeps its dynamic, CZ-
+        symmetric choice of which side to wrap (see cz()).
+
+        The earlier design conjugated the target with H (for CX) or S
+        (for CY, itself built from an H-conjugated CX) specifically so
+        the SAME symmetric CZ logic could serve every gate type by
+        letting the shadow read either side. Once the decision is
+        control-only (see the CX/CZ-symmetry fix above), that
+        conjugation no longer accomplishes anything: H.Z.H = X and
+        S.X.Sdag = Y exactly (verified directly), and the identity
+        no-fire case collapses to a genuine no-op either way. Applying
+        the payload gate directly, only when warranted, skips two now-
+        pointless gate calls per shadow decision on what is likely the
+        hottest path in the whole architecture -- CX is typically the
+        most common two-qubit gate, and CY/CZ often reduce to it here
+        anyway.
+        """
+        p = self.sim[c[0]].prob(c[1]) if isinstance(c, tuple) else c.prob()
+
+        # Same "genuine uncertainty gets a genuine coin flip" principle
+        # as _cz_shadow above, just against the control's own distance
+        # from 0.5 rather than a control-vs-target comparison, since
+        # there's only one reading in play here.
+        if abs(p - 0.5) <= self._epsilon:
+            apply = random.random() < 0.5
+        else:
+            apply = p >= (0.5 - self._epsilon)
+
+        if apply:
+            if isinstance(t, tuple):
+                getattr(self.sim[t[0]], gate_name)(t[1])
+            else:
+                getattr(t, gate_name)()
 
     def _qec_x(self, c):
         if isinstance(c, tuple):
             self.sim[c[0]].x(c[1])
         else:
             c.x()
-
-    def _qec_h(self, t):
-        if isinstance(t, tuple):
-            self.sim[t[0]].h(t[1])
-        else:
-            t.h()
-
-    def _qec_s(self, t):
-        if isinstance(t, tuple):
-            self.sim[t[0]].s(t[1])
-        else:
-            t.s()
-
-    def _qec_adjs(self, t):
-        if isinstance(t, tuple):
-            self.sim[t[0]].adjs(t[1])
-        else:
-            t.adjs()
 
     def _detect_swap(self, sim_id, idx1, idx2):
         self.sim[sim_id].swap(idx1, idx2)
@@ -720,31 +743,13 @@ class QrackAceBackend:
         self._anti_shadow_wrap(c, t, self._cz_shadow)
 
     def _cx_shadow(self, c, t):
-        p = self.sim[c[0]].prob(c[1]) if isinstance(c, tuple) else c.prob()
-        if abs(p - 0.5) <= self._epsilon:
-            apply = random.random() < 0.5
-        else:
-            apply = p > 0.5
-        if apply:
-            if isinstance(t, tuple):
-                self.sim[t[0]].x(t[1])
-            else:
-                t.x()
+        self._shadow_control_apply(c, t, "x")
 
     def _anti_cx_shadow(self, c, t):
         self._anti_shadow_wrap(c, t, self._cx_shadow)
 
     def _cy_shadow(self, c, t):
-        p = self.sim[c[0]].prob(c[1]) if isinstance(c, tuple) else c.prob()
-        if abs(p - 0.5) <= self._epsilon:
-            apply = random.random() < 0.5
-        else:
-            apply = p > 0.5
-        if apply:
-            if isinstance(t, tuple):
-                self.sim[t[0]].y(t[1])
-            else:
-                t.y()
+        self._shadow_control_apply(c, t, "y")
 
     def _anti_cy_shadow(self, c, t):
         self._anti_shadow_wrap(c, t, self._cy_shadow)
@@ -1900,9 +1905,35 @@ class QrackAceBackend:
 
     def cz(self, lq1, lq2):
         if self.is_error_detection and ((len(self._unpack(lq1)) > 1) or (len(self._unpack(lq2)) > 1)):
-            self.h(lq2)
-            self.cx(lq1, lq2)
-            self.h(lq2)
+            # CZ's own exchange symmetry (CZ(a,b)=CZ(b,a)) means either
+            # H-sandwich direction below gives the IDENTICAL, correct
+            # CZ unitary -- so pick whichever leaves the underlying
+            # cx()'s shadow reading the more decisively polarized
+            # qubit, the same principle _cz_shadow itself already
+            # applies directly for a genuinely, directly requested CZ
+            # (the "else" branch below). This is the "hot path" fix:
+            # without it, this branch (is_error_detection AND either
+            # side boundary -- the common, practical case) always read
+            # lq1 regardless of which side was actually more decisive,
+            # since _cx_shadow's control-only basis (see
+            # _shadow_control_apply) no longer inherits _cz_shadow's own
+            # symmetric picking the way it used to.
+            #
+            # Does NOT extend to acz() below: anti-control isn't
+            # symmetric the same way CZ is -- verified directly,
+            # X-conjugating the control vs the target gives two
+            # different gate matrices, not the same one -- so acz() has
+            # no analogous second choice to pick between; lq1 must stay
+            # the one read, since it's specifically the anti-controlled
+            # qubit by the gate's own definition.
+            if abs(self.prob(lq1) - 0.5) >= abs(self.prob(lq2) - 0.5):
+                self.h(lq2)
+                self.cx(lq1, lq2)
+                self.h(lq2)
+            else:
+                self.h(lq1)
+                self.cx(lq2, lq1)
+                self.h(lq1)
         else:
             self._cpauli(lq1, lq2, False, Pauli.PauliZ)
 
