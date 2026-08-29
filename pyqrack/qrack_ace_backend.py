@@ -656,8 +656,9 @@ class QrackAceBackend:
         # changed the deterministic outcome). When the readings are
         # NOT tied, the existing decisive-threshold logic is unambiguous
         # and unchanged.
-        if (abs(p1 - 0.5) <= self._epsilon) and abs(p2 - 0.5) <= self._epsilon:
+        if (abs(p1 - 0.5) <= self._epsilon) and (abs(p2 - 0.5) <= self._epsilon):
             apply = random.random() < 0.5
+            target = q1 if (random.random() < 0.5) else q2
         else:
             # Symmetric-in-control-vs-target CZ shadow, by design: pick
             # whichever of p1/p2 is more DECISIVE (further from 0.5, i.e.
