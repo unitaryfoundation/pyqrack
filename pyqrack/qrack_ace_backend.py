@@ -227,9 +227,9 @@ class QrackAceBackend:
 
     def __init__(
         self,
-        qubit_count=1,
-        long_range_columns=4,
-        long_range_rows=4,
+        qubit_count=84,
+        long_range_columns=3,
+        long_range_rows=7,
         is_transpose=False,
         is_schmidt_decompose_multi=False,
         is_stabilizer_hybrid=False,
