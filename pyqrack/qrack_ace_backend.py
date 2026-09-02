@@ -1749,7 +1749,7 @@ class QrackAceBackend:
                     self.x(anc1)
                     if p1 >= p2:
                         self.x(lq1)
-                        is_flipped = true
+                        is_flipped = True
                 if b2:
                     self.x(anc1b)
                     if (not is_flipped) and (p2 >= p1):
