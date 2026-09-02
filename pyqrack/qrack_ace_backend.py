@@ -1691,6 +1691,7 @@ class QrackAceBackend:
                     if witness is not None and witness != b2:
                         witnessed_targets.append((b2, witness))
 
+        is_flipped = False
         if anc1 is not None:
             self._in_gadget_capture = True
             self.cx(lq1, anc1)
@@ -1744,6 +1745,7 @@ class QrackAceBackend:
                     self.x(anc1b)
                     if (not is_flipped) and (p2 >= p1):
                         self.x(lq1)
+                        is_flipped = True
             else:
                 anc_sim, anc_idx = self._qubits[anc1][0]
                 p = self.sim[anc_sim].prob(anc_idx)
@@ -1754,6 +1756,7 @@ class QrackAceBackend:
                 if b:
                     self.x(anc1)
                     self.x(lq1)
+                    is_flipped = True
             self._in_gadget_capture = False
 
         if anc2 is not None:
@@ -1762,10 +1765,13 @@ class QrackAceBackend:
             self.cx(lq2, anc2)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if self._ps_epsilon >= (1.0 - p):
+            # Probabilistic error cancellation
+            if not is_flipped:
+                p = 1.0 - p
+            if self._ps_epsilon >= p:
                 b = self.m(anc2)
             else:
-                b = self.force_m(anc2, False)
+                b = self.force_m(anc2, is_flipped)
             if b:
                 self.x(anc2)
                 self.x(lq2)
