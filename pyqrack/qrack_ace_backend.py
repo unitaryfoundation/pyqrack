@@ -1673,10 +1673,6 @@ class QrackAceBackend:
                     self.cx(lq1, anc2)
             self._in_gadget_capture = False
 
-        if not self._in_gadget_capture:
-            self._correct(lq1)
-            self._correct(lq2)
-
         for q1 in qb1:
             b1 = hq1[q1]
             gate_fn, shadow_fn = self._get_gate(pauli, anti, b1[0])
@@ -1694,12 +1690,6 @@ class QrackAceBackend:
                     shadow_targets.append(b2)
                     if witness is not None and witness != b2:
                         witnessed_targets.append((b2, witness))
-
-        if not self._in_gadget_capture:
-            if pauli != Pauli.PauliZ:
-                self._correct(lq2, False, pauli != Pauli.PauliX)
-            if pauli != Pauli.PauliX:
-                self._correct(lq2, True)
 
         if anc1 is not None:
             self._in_gadget_capture = True
@@ -1835,6 +1825,10 @@ class QrackAceBackend:
         lq1_lr = len(hq1) == 1
         lq2_lr = len(hq2) == 1
 
+        if not self._in_gadget_capture:
+            self._correct(lq1)
+            self._correct(lq2)
+
         # Boundary repetition code, on-demand: encode/couple/decode/
         # correct wraps ONLY the actual coupler call immediately below,
         # tightly -- not the transversal single-qubit gates (already
@@ -1919,6 +1913,11 @@ class QrackAceBackend:
         # to.
         if self.is_boundary_repetition_code:
             self._rep_code_decode_and_correct(lq2, t2)
+
+        if pauli != Pauli.PauliZ:
+            self._correct(lq2, False, pauli != Pauli.PauliX)
+        if pauli != Pauli.PauliX:
+            self._correct(lq2, True)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
