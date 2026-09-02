@@ -1672,10 +1672,6 @@ class QrackAceBackend:
                     self.cx(lq1, anc2)
             self._in_gadget_capture = False
 
-        if not self._in_gadget_capture:
-            self._correct(lq1)
-            self._correct(lq2)
-
         for q1 in qb1:
             b1 = hq1[q1]
             gate_fn, shadow_fn = self._get_gate(pauli, anti, b1[0])
@@ -1694,12 +1690,7 @@ class QrackAceBackend:
                     if witness is not None and witness != b2:
                         witnessed_targets.append((b2, witness))
 
-        if not self._in_gadget_capture:
-            if pauli != Pauli.PauliZ:
-                self._correct(lq2, False, pauli != Pauli.PauliX)
-            if pauli != Pauli.PauliX:
-                self._correct(lq2, True)
-
+        is_flipped = False
         if anc1 is not None:
             self._in_gadget_capture = True
             self.cx(lq1, anc1)
@@ -1753,6 +1744,7 @@ class QrackAceBackend:
                     self.x(anc1b)
                     if (not is_flipped) and (p2 >= p1):
                         self.x(lq1)
+                        is_flipped = True
             else:
                 anc_sim, anc_idx = self._qubits[anc1][0]
                 p = self.sim[anc_sim].prob(anc_idx)
@@ -1763,6 +1755,7 @@ class QrackAceBackend:
                 if b:
                     self.x(anc1)
                     self.x(lq1)
+                    is_flipped = True
             self._in_gadget_capture = False
 
         if anc2 is not None:
@@ -1771,12 +1764,16 @@ class QrackAceBackend:
             self.cx(lq2, anc2)
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if self._ps_epsilon >= (1.0 - p):
+            # Probabilistic error cancellation
+            if not is_flipped:
+                p = 1.0 - p
+            if self._ps_epsilon >= p:
                 b = self.m(anc2)
             else:
-                b = self.force_m(anc2, False)
+                b = self.force_m(anc2, is_flipped)
             if b:
                 self.x(anc2)
+            if b != is_flipped:
                 self.x(lq2)
             self._in_gadget_capture = False
 
@@ -1833,6 +1830,10 @@ class QrackAceBackend:
 
         lq1_lr = len(hq1) == 1
         lq2_lr = len(hq2) == 1
+
+        if not self._in_gadget_capture:
+            self._correct(lq1)
+            self._correct(lq2)
 
         # Boundary repetition code, on-demand: encode/couple/decode/
         # correct wraps ONLY the actual coupler call immediately below,
@@ -1918,6 +1919,11 @@ class QrackAceBackend:
         # to.
         if self.is_boundary_repetition_code:
             self._rep_code_decode_and_correct(lq2, t2)
+
+        if pauli != Pauli.PauliZ:
+            self._correct(lq2, False, pauli != Pauli.PauliX)
+        if pauli != Pauli.PauliX:
+            self._correct(lq2, True)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
