@@ -1744,13 +1744,15 @@ class QrackAceBackend:
                 else:
                     b1 = self.force_m(anc1, False)
                     b2 = self.force_m(anc1b, False)
+                is_flipped = False
                 if b1:
                     self.x(anc1)
                     if p1 >= p2:
                         self.x(lq1)
+                        is_flipped = True
                 if b2:
                     self.x(anc1b)
-                    if p2 >= p1:
+                    if (not is_flipped) and (p2 >= p1):
                         self.x(lq1)
             else:
                 anc_sim, anc_idx = self._qubits[anc1][0]
