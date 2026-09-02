@@ -1774,6 +1774,7 @@ class QrackAceBackend:
                 b = self.force_m(anc2, is_flipped)
             if b:
                 self.x(anc2)
+            if b != is_flipped:
                 self.x(lq2)
             self._in_gadget_capture = False
 
