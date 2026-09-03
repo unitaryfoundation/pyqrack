@@ -1660,42 +1660,12 @@ class QrackAceBackend:
             # Control bit-flip
             self.cx(lq1, anc1)
             if len(hq1) > 1:
-                anc2 = self._detect_ancilla2_lq[hq1[0][0]]
-
-                # BUGFIX: anc1b used to be allocated unconditionally as
-                # _detect_ancilla2_lq[hq2[0][0]] -- a second, independent
-                # capture of lq1, anchored in lq2's home patch, meant to
-                # cross-check lq1's value using a DIFFERENT simulator
-                # than anc1/anc2 (both anchored in hq1's home patch).
-                # That's only a distinct physical ancilla when hq2's home
-                # patch actually differs from hq1's. Whenever the coupling
-                # is intra-patch (hq1[0][0] == hq2[0][0] -- the common
-                # case for a bulk/boundary pair sharing one patch), this
-                # collided with anc2 above: _detect_ancilla2_lq[same sim]
-                # is literally the same logical ancilla, so the "capture
-                # lq1 a second time" step and the "capture lq2, then XOR
-                # in lq1" step below stomped on each other's state, and
-                # the ancilla no longer deterministically read 0 when
-                # lq1/lq2 were untouched by real errors. Confirmed
-                # empirically: with the collision, a boundary control's
-                # own Z-basis marginal drifted far from 0.5 after nothing
-                # but H+CX (should be exactly invariant -- the coupler
-                # never gates the control), and Bell-pair correlation
-                # between two boundary qubits in the same patch collapsed
-                # to ~0.46 (no better than uncorrelated coin flips).
-                # Restricting anc1b to the genuinely-cross-patch case
-                # fixes both: same-patch couplings now fall back to the
-                # single-ancilla check below (still exact, since anc1
-                # never shares a slot with anc2), and cross-patch
-                # couplings keep the original two-independent-checks
-                # design, which never collided in the first place (anc1b
-                # lives in hq2's patch, anc1/anc2 live in hq1's patch --
-                # three genuinely distinct physical ancillas).
-                if hq2[0][0] != hq1[0][0]:
-                    anc1b = self._detect_ancilla2_lq[hq2[0][0]]
+                if hq1[0][0] != hq2[0][0]:
+                    anc1b = self._detect_ancilla1_lq[hq2[0][0]]
                     # Control bit-flip
                     self.cx(lq1, anc1b)
 
+                anc2 = self._detect_ancilla2_lq[hq1[0][0]]
                 # XOR on target
                 self.cx(lq2, anc2)
                 if anti:
