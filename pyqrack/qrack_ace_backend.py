@@ -1652,16 +1652,17 @@ class QrackAceBackend:
         # this gate family only -- same reasoning as the earlier
         # single-replica CZ dual-check, just applied at the logical
         # level now.
-        anc1, anc2 = None, None
+        anc1, anc2, anc1b = None, None, None
         if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
             anc1 = self._detect_ancilla1_lq[hq1[0][0]]
             self._in_gadget_capture = True
             # Control bit-flip
             self.cx(lq1, anc1)
             if len(hq1) > 1:
-                anc1b = self._detect_ancilla2_lq[hq2[0][0]]
-                # Control bit-flip
-                self.cx(lq1, anc1b)
+                if hq1[0][0] != hq2[0][0]:
+                    anc1b = self._detect_ancilla1_lq[hq2[0][0]]
+                    # Control bit-flip
+                    self.cx(lq1, anc1b)
 
                 anc2 = self._detect_ancilla2_lq[hq1[0][0]]
                 # XOR on target
@@ -1684,7 +1685,17 @@ class QrackAceBackend:
                 b2 = hq2[q2]
                 if b1[0] == b2[0]:
                     gate_fn([b1[1]], b2[1])
-                elif lq1_lr or (b1[1] == b2[1]) or ((len(qb1) == 2) and (b1[1] == (b2[1] & 1))):
+                # NOTE: this used to also check
+                # `(len(qb1) == 2) and (b1[1] == (b2[1] & 1))` as a
+                # parity-matched fallback. _get_qb_lhv_indices only ever
+                # returns length 1, 3, or 5 (bulk / edge-boundary /
+                # corner-boundary), matching self._qubits' own replica
+                # counts by construction -- len(qb1) == 2 is therefore
+                # unreachable, and that branch was permanently dead code
+                # (harmless, but confusing). Removed rather than kept:
+                # there is no length-2 replica structure anywhere in this
+                # class for it to ever fire on.
+                elif lq1_lr or (b1[1] == b2[1]):
                     shadow_fn(b1, b2)
                     shadow_targets.append(b2)
                     if witness is not None and witness != b2:
@@ -1710,7 +1721,7 @@ class QrackAceBackend:
             # probability), reset the ancilla back to |0>, and apply
             # a corrective X to lq1 to restore the detected
             # invariant.
-            if len(hq1) > 1:
+            if anc1b is not None:
                 self.cx(lq1, anc1b)
                 anc_sim, anc_idx = self._qubits[anc1][0]
                 p1 = self.sim[anc_sim].prob(anc_idx)
