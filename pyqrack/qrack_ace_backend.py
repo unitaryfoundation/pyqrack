@@ -1728,10 +1728,7 @@ class QrackAceBackend:
                 p1 = self.sim[anc_sim].prob(anc_idx)
                 anc_sim, anc_idx = self._qubits[anc1b][0]
                 p2 = self.sim[anc_sim].prob(anc_idx)
-                if (self._ps_epsilon >= (1.0 - p1)) and (self._ps_epsilon >= (1.0 - p2)):
-                    b1 = self.force_m(anc1, True)
-                    b2 = self.force_m(anc1b, True)
-                elif self._ps_epsilon >= (1.0 - p1):
+                if self._ps_epsilon >= (1.0 - p1):
                     b1 = self.force_m(anc1, True)
                     if self._ps_epsilon >= p2:
                         b2 = self.force_m(anc1b, True)
