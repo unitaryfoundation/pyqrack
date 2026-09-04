@@ -282,6 +282,14 @@ class QrackAceBackend:
             self._epsilon = 2**-24
             self._ps_epsilon = 2**-12
 
+        # Boundary, on a single qubit's one_minus_r (see _get_bloch_angles),
+        # between "more separable" (rotation toward consensus is real,
+        # useful reconciliation) and "more entangled" (rotation only
+        # scrambles a real correlation with another logical qubit's
+        # replica -- see _correct). Default is the point where a single
+        # qubit's linear entropy is half its maximum.
+        self._rot_epsilon = (1.0 - 1.0 / math.sqrt(2)) / 2
+
         self._coupling_map = None
 
         # If there's only one or zero "False" columns or rows,
@@ -944,8 +952,40 @@ class QrackAceBackend:
                     # decoherence a physical rotation would cost it.
                     # Indices 1-4 are all crossbar-extension slots with
                     # no comparable real entanglement to lose.
+                    # Only rotate a replica that is itself reasonably
+                    # separable (its own reduced state still has a
+                    # meaningfully-defined Bloch direction). A replica
+                    # that's picked up genuine entanglement with another
+                    # logical qubit's replica (e.g. via a real gate_fn
+                    # coupling in _apply_coupling -- not just slot0; any
+                    # of slots 1-4 can end up real-coupled depending on
+                    # geometry) reads a Bloch vector dominated by
+                    # simulator floating-point noise, not real
+                    # information. Rotating it "toward consensus" in that
+                    # regime doesn't change its own (already ~I/2)
+                    # reduced state, but DOES apply an uncontrolled local
+                    # unitary to one member of a real entangled pair,
+                    # which scrambles the correlation basis the partner
+                    # will later be measured against -- marginals stay
+                    # near 0.5 (so this doesn't show up as a marginal
+                    # bug), but pairwise correlation with the entangled
+                    # partner is destroyed. Empirically confirmed via a
+                    # boundary-to-boundary Bell-pair test: with
+                    # unconditional rotation, Z-correlation between two
+                    # coupled boundary qubits was ~0.51 (no better than
+                    # uncorrelated) despite marginals reading correctly
+                    # at ~0.5; gating this rotation on the replica's own
+                    # separability (one_minus_r <= self._rot_epsilon)
+                    # restores strong correlation. self._rot_epsilon
+                    # defaults to (1 - 1/sqrt(2)) / 2, the point where a
+                    # single qubit's linear entropy is half its maximum
+                    # (Bloch length 1/sqrt(2)) -- past that point a
+                    # replica is "more entangled than separable" and is
+                    # left alone; short of it, the rotation still does
+                    # real, useful reconciliation work.
                     for x in range(1, 5):
-                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                        if [r0, r1, r2, r3, r4][x] <= self._rot_epsilon:
+                            self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
                 # If every replica reads as maximally mixed (w_total ~ 0),
                 # there is no well-defined direction to rotate toward at
                 # all -- skip the rotation rather than rotate toward an
@@ -1085,7 +1125,8 @@ class QrackAceBackend:
                     # comparable real entanglement to lose) are actually
                     # rotated.
                     for x in range(1, 3):
-                        self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+                        if [r0, r1, r2][x] <= self._rot_epsilon:
+                            self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         if phase:
             for q in qb:
@@ -1659,7 +1700,7 @@ class QrackAceBackend:
             # Control bit-flip
             self.cx(lq1, anc1)
             if len(hq1) > 1:
-                if hq1[0][0] != hq2[0][0]:
+                if hq2[0][0] != hq1[0][0]:
                     anc1b = self._detect_ancilla1_lq[hq2[0][0]]
                     # Control bit-flip
                     self.cx(lq1, anc1b)
@@ -1672,6 +1713,32 @@ class QrackAceBackend:
                 else:
                     self.cx(lq1, anc2)
             self._in_gadget_capture = False
+
+        # A target replica (q2) that shares a simulator with ANY control
+        # replica in qb1 is going to receive a REAL, exact gate from that
+        # control at some point in the loop below (the `b1[0] == b2[0]`
+        # branch) -- possibly on a LATER q1 iteration than the current
+        # one. If an EARLIER q1 iteration also shadow-couples to that
+        # same q2 (purely from an incidental b1[1] == b2[1] index match,
+        # unrelated to the real pairing), that shadow write corrupts the
+        # target before the authoritative real gate ever touches it: a
+        # probabilistic X flip from an independent control replica can
+        # invert the correlation sign the real CNOT is about to
+        # establish. Confirmed directly: for a boundary-to-boundary
+        # coupling, measuring the raw physical replica pairs that DO
+        # share a simulator (bypassing all of _correct/m's classical
+        # reconciliation, and with is_error_detection off) showed near-
+        # perfect agreement for the one pair untouched by any earlier
+        # shadow write, but only ~50-60% agreement (chance level) for
+        # the pairs a prior iteration's shadow write had already
+        # perturbed. Precomputing which q2 indices are real-gated by
+        # *something* in qb1, and excluding them from shadow_fn
+        # entirely (regardless of which q1 the shadow attempt comes
+        # from), avoids ever shadow-writing over a target that a real
+        # gate elsewhere in this same call is authoritative for.
+        real_gated_q2 = {
+            q2 for q2 in qb2 if any(hq1[q1][0] == hq2[q2][0] for q1 in qb1)
+        }
 
         for q1 in qb1:
             b1 = hq1[q1]
@@ -1695,7 +1762,7 @@ class QrackAceBackend:
                 # (harmless, but confusing). Removed rather than kept:
                 # there is no length-2 replica structure anywhere in this
                 # class for it to ever fire on.
-                elif lq1_lr or (b1[1] == b2[1]):
+                elif (q2 not in real_gated_q2) and (lq1_lr or (b1[1] == b2[1])):
                     shadow_fn(b1, b2)
                     shadow_targets.append(b2)
                     if witness is not None and witness != b2:
@@ -1727,10 +1794,7 @@ class QrackAceBackend:
                 p1 = self.sim[anc_sim].prob(anc_idx)
                 anc_sim, anc_idx = self._qubits[anc1b][0]
                 p2 = self.sim[anc_sim].prob(anc_idx)
-                if (self._ps_epsilon >= (1.0 - p1)) and (self._ps_epsilon >= (1.0 - p2)):
-                    b1 = self.force_m(anc1, True)
-                    b2 = self.force_m(anc1b, True)
-                elif self._ps_epsilon >= (1.0 - p1):
+                if self._ps_epsilon >= (1.0 - p1):
                     b1 = self.force_m(anc1, True)
                     if self._ps_epsilon >= p2:
                         b2 = self.force_m(anc1b, True)
