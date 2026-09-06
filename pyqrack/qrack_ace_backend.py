@@ -7,7 +7,6 @@
 import math
 import os
 import random
-from collections import deque
 
 from .qrack_system import Qrack
 from .qrack_simulator import QrackSimulator
@@ -238,7 +237,6 @@ class QrackAceBackend:
         is_host_pointer=(True if os.environ.get("PYQRACK_HOST_POINTER_DEFAULT_ON") else False),
         is_near_clifford_tableau_writer=False,
         noise=0,
-        history_window=1,
         is_torus=True,
         is_1d_chain=False,
         is_error_detection=True,
@@ -250,7 +248,6 @@ class QrackAceBackend:
             long_range_columns = to_clone.long_range_columns
             long_range_rows = to_clone.long_range_rows
             is_transpose = to_clone.is_transpose
-            history_window = to_clone.history_window
             is_torus = to_clone.is_torus
             is_1d_chain = to_clone.is_1d_chain
             is_error_detection = to_clone.is_error_detection
@@ -259,15 +256,12 @@ class QrackAceBackend:
             qubit_count = 0
         if long_range_columns < 0:
             long_range_columns = 0
-        if history_window < 0:
-            history_window = 0
 
         self.is_1d_chain = is_1d_chain
         self._factor_width(qubit_count, is_transpose)
         self.long_range_columns = long_range_columns
         self.long_range_rows = long_range_rows
         self.is_transpose = is_transpose
-        self.history_window = history_window
         self.is_torus = is_torus
         self.is_error_detection = is_error_detection
         self.is_boundary_repetition_code = is_boundary_repetition_code
@@ -343,56 +337,6 @@ class QrackAceBackend:
 
         self._qubits = []
         self._lhv = {}
-        if self.history_window > 0:
-            if to_clone and to_clone._coupling_history is not None:
-                self._coupling_history = {
-                    k: deque(v, maxlen=self.history_window)
-                    for k, v in to_clone._coupling_history.items()
-                }
-                self._coupling_history_rev = dict(to_clone._coupling_history_rev)
-                self._pending_skip = {k: set(v) for k, v in to_clone._pending_skip.items()}
-                self._stale_replicas = {k: set(v) for k, v in to_clone._stale_replicas.items()}
-                self._witness_map = {k: dict(v) for k, v in to_clone._witness_map.items()}
-                self._gate_generation = dict(to_clone._gate_generation)
-            else:
-                self._coupling_history = {}
-                self._coupling_history_rev = {}
-                self._pending_skip = {}
-                self._stale_replicas = {}
-                self._witness_map = {}
-                # See _invalidate_for_gate / _apply_coupling's bump of this
-                # counter, and _revert_shadow_commitment's use of it: a
-                # per-logical-qubit "how many times has this qubit been
-                # touched" counter, snapshotted into each _coupling_history
-                # entry at commitment time. Confirmed directly (targeted
-                # test comparing a sampled connected ZZ correlator against
-                # an exact statevector reference): reverting a shadow
-                # commitment via a bare H is only an IMPROVEMENT when the
-                # target replica is still in the exact state it was
-                # committed in. Once the target has undergone its own
-                # gates in the meantime (a handful of single-qubit
-                # rotations, in the test), blindly H-reverting anyway can
-                # be markedly WORSE than not reverting at all (observed
-                # errors ~0.01-0.09 with the revert skipped entirely vs.
-                # ~0.09-0.15 with the current unconditional revert, on the
-                # same circuits) -- the revert's implicit assumption (the
-                # replica is exactly where the shadow_fn call left it) no
-                # longer holds, and undoing a stale snapshot on top of
-                # since-accumulated evolution doesn't reconstruct anything
-                # correct. Comparing the stored vs. current generation at
-                # revert time lets Case A tell "still fresh, revert helps"
-                # apart from "gone stale, revert would hurt" and fall back
-                # to just dropping the entry (leaving _correct()'s own,
-                # more robust reconciliation to handle it) in the latter
-                # case.
-                self._gate_generation = {}
-        else:
-            self._coupling_history = None
-            self._coupling_history_rev = None
-            self._pending_skip = None
-            self._stale_replicas = None
-            self._witness_map = None
-            self._gate_generation = None
         sim_counts = [0] * sim_count
         sim_id = 0
         tot_qubits = 0
@@ -888,40 +832,6 @@ class QrackAceBackend:
         if len(hq) == 1:
             return
 
-        # BUGFIX: resolve any outstanding witnessed-shadow / stale-replica
-        # bookkeeping for lq BEFORE reading or acting on its replicas'
-        # probabilities below. prob() already does this (see its own
-        # _resolve_witnessed_shadow / _resolve_pending_skip calls), but
-        # _correct() -- called far more often, from the top of every
-        # _cpauli, every swap(), etc. -- never did, even though it reads
-        # and acts on exactly the same replica probabilities. Without
-        # this, _correct() can classically pin a replica (via the
-        # syndrome-based force_m/X-correction or the Bloch-rotation step
-        # below) to a definite value for reasons having nothing to do
-        # with that replica's outstanding witness -- and later, when
-        # _resolve_witnessed_shadow finally runs (at actual measurement
-        # time, however long deferred) and tries to force that
-        # already-pinned replica to match a freshly-read witness value,
-        # the two can flatly disagree with zero probability of agreement,
-        # crashing force_m outright. Confirmed directly: with
-        # history_window > 0 and is_error_detection=True together (the
-        # combination needed to activate the witness-map machinery at
-        # all -- it's None whenever history_window == 0), witnessed
-        # shadow targets landed at EXACTLY p=0 or p=1 well before their
-        # witness was ever consulted, in the large majority of runs
-        # sampled, at a modest RCS depth (10 qubits, depth 12); roughly
-        # half of those then crashed once the witness's own later
-        # measurement landed on the opposite value. Resolving here,
-        # before _correct() can pin anything, closes the race: by the
-        # time any classical decision gets made about a replica, it has
-        # already been synced to its witness, so there's no longer a
-        # competing, witness-blind "truth" for that replica to disagree
-        # with when the witness is eventually consulted.
-        if self._witness_map is not None:
-            self._resolve_witnessed_shadow(lq)
-        if self._stale_replicas is not None:
-            self._resolve_pending_skip(lq)
-
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         if phase:
@@ -953,10 +863,8 @@ class QrackAceBackend:
             end_caps = [p0, p1, p3, p4]
             # Classify each end-cap as decisively high / decisively low /
             # undecided (within epsilon of 0.5), rather than a bare >=0.5
-            # check -- a replica reading EXACTLY 0.5 (e.g. one just
-            # H-reverted by _revert_shadow_commitment, genuinely carrying
-            # zero information) was previously always counted as "high"
-            # via this boundary convention alone.
+            # check -- a replica reading EXACTLY 0.5  was previously always
+            # counted as "high" via this boundary convention alone.
             high_count = sum(1 for x in end_caps if x > (0.5 + self._epsilon))
             low_count = sum(1 for x in end_caps if x < (0.5 - self._epsilon))
             undecided_count = len(end_caps) - high_count - low_count
@@ -1220,13 +1128,11 @@ class QrackAceBackend:
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].u(b[1], th, ph, lm)
+            self.sim[b[0]].u(b[1], th, ph, lm)
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1234,120 +1140,18 @@ class QrackAceBackend:
 
         # Correction deferred to next 2-qubit gate (_cpauli calls _correct)
 
-    def _revert_shadow_commitment(self, lq1):
-        """Revert shadow-committed replicas recorded under lq1. H-reverts
-        each committed shadow replica (undoing the stale Z-basis commitment),
-        stores the reverted tuples in _pending_skip[lq2] so the NEXT gate on
-        that boundary qubit skips those replicas entirely (rotating an H-reverted
-        shadow replica from the wrong starting state gives a wrong result; the
-        right behavior is to skip it and let the next coupling gate re-derive
-        from scratch), and returns the reverted set for the immediate caller to
-        skip as well (for case A, where the control's own rotation should also
-        skip its own shadow replicas that were just un-committed).
-
-        BUGFIX: only actually reverts an entry if lq2's own gate-generation
-        counter still matches what it was at the moment of commitment (see
-        _gate_generation's own comment in __init__ for the empirical
-        justification). If lq2 has had ANY of its own gates applied since
-        the commitment -- its own single-qubit gates, or being coupled
-        again elsewhere -- the target replica is no longer in the state
-        the H-revert assumes it's in, and blindly reverting anyway
-        introduced MORE error than it removed in direct testing. In that
-        case, the entry is simply dropped (no H applied, nothing added to
-        pending_skip/stale_replicas for it) -- _correct()'s own,
-        independent reconciliation is left to handle that replica instead,
-        rather than this targeted-but-now-invalid fix doing more harm than
-        the no-op it should have been."""
-        if self._coupling_history is None:
-            return set()
-        hist = self._coupling_history.pop(lq1, None)
-        if hist is None:
-            return set()
-        reverted_all = set()
-        for lq2, targets, gen_at_commit in hist:
-            if self._gate_generation.get(lq2, 0) != gen_at_commit:
-                # Stale: lq2 has moved on since this commitment was made.
-                # Drop it rather than reverting a state that no longer
-                # exists -- see docstring above.
-                self._coupling_history_rev.pop(lq2, None)
-                continue
-            reverted = set()
-            for t_sim, t_idx in targets:
-                self.sim[t_sim].h(t_idx)
-                reverted.add((t_sim, t_idx))
-            # Store as pending skip for the NEXT gate on lq2 (case B):
-            # when the boundary qubit's own gate runs, it should skip
-            # these replicas rather than applying its gate to the freshly-
-            # H-reverted, uncommitted state.
-            if reverted:
-                existing = self._pending_skip.get(lq2, set())
-                self._pending_skip[lq2] = existing | reverted
-                existing_stale = self._stale_replicas.get(lq2, set())
-                self._stale_replicas[lq2] = existing_stale | reverted
-            self._coupling_history_rev.pop(lq2, None)
-            reverted_all |= reverted
-        return reverted_all
-
-    def _invalidate_for_gate(self, lq):
-        """Called by every single-qubit gate dispatcher. Returns the set of
-        (sim_id, idx) shadow replicas that should be SKIPPED in the calling
-        gate's own application loop.
-        - Case A: lq is the coherent-partner (lq1) in a live history entry.
-          A gate on the control side invalidates the shadow commitment: reverts
-          the shadow targets via H (returning them to uncommitted 0.5), stores
-          them in pending_skip[lq2] for the NEXT gate on the boundary qubit,
-          and returns them for the immediate caller to skip as well (since the
-          control's own replica at slot0 may also be in the reverted set).
-        - Case B: lq is the boundary recipient (lq2) of a commitment that a
-          prior case-A revert already H-reverted. Consumes the pending_skip
-          set so the boundary gate doesn't apply itself to the freshly-
-          uncommitted replicas (which would give the wrong result from the
-          wrong starting state). Case B NEVER triggers a fresh revert --
-          only case A does, because only a gate on the control side actually
-          invalidates the commitment; a gate on the boundary side just needs
-          to avoid corrupting the already-reverted starting state."""
-        if self._coupling_history is None:
-            return set()
-
-        # Record that lq is being gated right now -- see _gate_generation's
-        # comment in __init__. Used by _revert_shadow_commitment to tell
-        # whether a target qubit is still in the exact state it was
-        # shadow-committed in (safe to revert) or has moved on since
-        # (reverting would do more harm than good). Bumped for every
-        # single-qubit gate on every qubit while history_window > 0,
-        # regardless of whether this particular qubit has any pending
-        # history -- cheap (one dict increment) and needed so that ANY
-        # qubit can later serve as the lq2 side of some other qubit's
-        # commitment.
-        self._gate_generation[lq] = self._gate_generation.get(lq, 0) + 1
-
-        skip = set()
-        # Case A: lq is the coherent control side -- fire the revert.
-        if lq in self._coupling_history:
-            skip |= self._revert_shadow_commitment(lq)
-        # Case B: lq is the boundary side -- ONLY consume pending_skip,
-        # never trigger a fresh revert (that would incorrectly revert
-        # a still-valid commitment that no control-side gate has touched).
-        pending = self._pending_skip.pop(lq, None)
-        if pending:
-            skip |= pending
-        return skip
-
     def r(self, p, th, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].r(p, th, b[1])
             return
 
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
-        skip = self._invalidate_for_gate(lq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].r(p, th, b[1])
+            self.sim[b[0]].r(p, th, b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1364,17 +1168,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].h(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].h(b[1])
+            self.sim[b[0]].h(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1386,17 +1187,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].s(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].s(b[1])
+            self.sim[b[0]].s(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1406,17 +1204,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].adjs(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].adjs(b[1])
+            self.sim[b[0]].adjs(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1426,17 +1221,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].sx(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].sx(b[1])
+            self.sim[b[0]].sx(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1446,17 +1238,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].adjsx(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].adjsx(b[1])
+            self.sim[b[0]].adjsx(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1590,17 +1379,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].x(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].x(b[1])
+            self.sim[b[0]].x(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1610,17 +1396,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].y(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].y(b[1])
+            self.sim[b[0]].y(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1630,17 +1413,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].z(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].z(b[1])
+            self.sim[b[0]].z(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1650,17 +1430,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].t(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].t(b[1])
+            self.sim[b[0]].t(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1670,17 +1447,14 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].adjt(b[1])
             return
 
-        skip = self._invalidate_for_gate(lq)
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         for q in qb:
             b = hq[q]
-            if (b[0], b[1]) not in skip:
-                self.sim[b[0]].adjt(b[1])
+            self.sim[b[0]].adjt(b[1])
 
         lhv = self._lhv.get(lq)
         if lhv is not None:
@@ -1745,16 +1519,6 @@ class QrackAceBackend:
 
     def _apply_coupling(self, pauli, anti, qb1, hq1, qb2, hq2, lq1_lr, lq1=None, lq2=None):
         shadow_targets = []
-        witnessed_targets = []  # (shadow_target, witness_replica) pairs --
-                                 # "easy case": a replica of the SAME target
-                                 # logical qubit lives in the SAME simulator
-                                 # as the control replica used for this
-                                 # shadow pair, and is therefore always
-                                 # exactly correct regardless of how many
-                                 # later gates happen to the control. No
-                                 # bounded window, no reactive invalidation
-                                 # needed for these -- see
-                                 # _resolve_witnessed_shadow.
 
         # Logical-level error-detection gadget: captures lq1's LOGICAL
         # value (and lq2's too, for CZ specifically -- see below) into a
@@ -1861,8 +1625,6 @@ class QrackAceBackend:
                 elif (q2 not in real_gated_q2) and (lq1_lr or (b1[1] == b2[1])):
                     shadow_fn(b1, b2)
                     shadow_targets.append(b2)
-                    if witness is not None and witness != b2:
-                        witnessed_targets.append((b2, witness))
 
         is_flipped = False
         if anc1 is not None:
@@ -1947,100 +1709,6 @@ class QrackAceBackend:
             if b != is_flipped:
                 self.x(lq2)
             self._in_gadget_capture = False
-
-        if lq2 is not None and witnessed_targets and self._witness_map is not None:
-            wmap = self._witness_map.setdefault(lq2, {})
-            for target_replica, witness_replica in witnessed_targets:
-                wmap[target_replica] = witness_replica
-
-        # Mark lq2 as touched by this coupling call, right now -- see
-        # _gate_generation's comment in __init__. Deliberately broader than
-        # the unwitnessed-history bookkeeping just below: lq2's physical
-        # replicas get modified here whenever this call reaches this point
-        # with a real lq2 at all (via gate_fn's real gates and/or
-        # shadow_fn's approximate ones), not only on the specific calls
-        # that happen to produce a fresh, currently-unwitnessed entry. A
-        # different, EARLIER commitment (from some other lq1) waiting on
-        # lq2 needs to see this touch too, or its later staleness check in
-        # _revert_shadow_commitment would wrongly conclude lq2 is still
-        # exactly where it was left, when this call already moved it on.
-        if (
-            self._gate_generation is not None
-            and lq2 is not None
-            and not self._in_gadget_capture
-        ):
-            self._gate_generation[lq2] = self._gate_generation.get(lq2, 0) + 1
-
-        if (
-            self._coupling_history is not None
-            and lq1 is not None
-            and lq2 is not None
-            and shadow_targets
-            and not self._in_gadget_capture
-        ):
-            # BUGFIX: this block records (lq1 -> lq2, shadow_targets) into
-            # the bounded history_window bookkeeping so a LATER single-
-            # qubit gate on lq1 knows to revert lq2's shadow commitment
-            # (see _invalidate_for_gate / _revert_shadow_commitment). That
-            # bookkeeping is only meaningful for real, user-visible
-            # boundary-qubit coupling -- it assumes lq2 is a normal,
-            # multi-replica logical qubit that persists across many
-            # unrelated future gates the way ordinary circuit qubits do.
-            #
-            # Without the `not self._in_gadget_capture` guard, this ALSO
-            # fired for the error-detection gadget's own internal capture
-            # calls (self.cx(lq1, anc1) and friends, called with
-            # _in_gadget_capture=True from just above in _apply_coupling),
-            # recording entries whose "lq2" is actually a hidden,
-            # single-replica detection ancilla -- one of only two per
-            # simulator, permanently reused across every future coupling
-            # gate that happens to land on that simulator. The very next
-            # unrelated single-qubit gate on lq1 would then trigger
-            # _revert_shadow_commitment and H-revert that ancilla's
-            # physical qubit (setting it back to an uncommitted ~0.5
-            # state) and stash a bogus _pending_skip entry keyed by the
-            # ancilla's own logical index -- corrupting the ancilla's
-            # state and skip-bookkeeping for whatever LATER, entirely
-            # unrelated gadget capture next reuses that same physical
-            # ancilla. That silently breaks the double-capture XOR-
-            # cancellation invariant the gadget's probability math
-            # depends on (see the comment above the force_m calls below),
-            # making the "should usually read exactly 0/1" ancilla
-            # readings noisier than the code's ps_epsilon safety checks
-            # expect -- and, reproducibly with is_error_detection=True and
-            # history_window>0 together, occasionally noisy enough to
-            # land the joint outcome the `else` branch forces (both
-            # ancillas False) on a genuinely zero-probability branch,
-            # which is exactly the "impossible post-selection" force_m
-            # crash this class already documents (see the "Check prob()
-            # before forcing" comment below) as a possibility it guards
-            # against for GENUINE architecture noise -- but that guard
-            # only checks each ancilla's own marginal probability, not a
-            # corruption of the state those marginals are read from.
-            # Skipping this tracking entirely for gadget-internal captures
-            # (they have no business in history_window's bookkeeping in
-            # the first place -- an ancilla isn't a boundary qubit a real
-            # circuit gate will ever revisit the way this mechanism
-            # assumes) removes the corruption at its source, matching the
-            # `not self._in_gadget_capture` guard already used for
-            # _correct() and the repetition-code encode/decode above.
-            # Only the NON-witnessed shadow targets need the bounded,
-            # reactive history/invalidation machinery -- witnessed ones are
-            # always resolvable directly and don't need tracking here at all.
-            witnessed_set = {t for t, _ in witnessed_targets}
-            unwitnessed = tuple(t for t in shadow_targets if t not in witnessed_set)
-            if unwitnessed:
-                # lq2's generation was already bumped just above (the
-                # broader, unconditional touch-marker) -- snapshot that
-                # value now; _revert_shadow_commitment later compares it
-                # against lq2's generation AT REVERT TIME to tell whether
-                # anything has touched lq2 since this exact commitment.
-                entry = (lq2, tuple(unwitnessed), self._gate_generation[lq2])
-                hist = self._coupling_history.setdefault(
-                    lq1, deque(maxlen=self.history_window)
-                )
-                hist.append(entry)
-                self._coupling_history_rev[lq2] = lq1
 
     # A "coupled twirling" scheme was tried here -- after every real
     # inter-logical-qubit coupling gate, SWAP which physical qubit is
@@ -2254,35 +1922,6 @@ class QrackAceBackend:
         sims2 = {r[0] for r in hq2}
 
         if sims1.isdisjoint(sims2):
-            # Zero shared physical substrate: a SWAP is, by definition,
-            # just "exchange which logical index refers to which
-            # subsystem" -- for two qubits with no shared simulator or
-            # replica at all, that IS the swap, exactly, with zero gates
-            # and zero error, regardless of what either is entangled
-            # with elsewhere (SWAP is a relabeling of tensor-factor
-            # indices; nothing about that depends on which name we call
-            # either subsystem). This also sidesteps the separate
-            # _apply_coupling local-index-match limitation entirely for
-            # this case, since no shadow coupling is attempted between
-            # these qubits at all.
-            #
-            # Must fully resolve any pending shadow/consensus state tied
-            # to EACH qubit's CURRENT identity before relabeling --
-            # otherwise a cross-reference recorded under the old identity
-            # (e.g. coupling_history[lq1], witness_map[lq2]) would
-            # silently end up describing the wrong physical qubit
-            # afterward. Reuses the same resolution methods prob() and
-            # every single-qubit gate already depend on for correctness,
-            # rather than hand-rolling new bookkeeping that could miss a
-            # cross-reference.
-            self._invalidate_for_gate(lq1)
-            self._invalidate_for_gate(lq2)
-            if len(hq1) >= 2:
-                self._resolve_witnessed_shadow(lq1)
-                self._resolve_pending_skip(lq1)
-            if len(hq2) >= 2:
-                self._resolve_witnessed_shadow(lq2)
-                self._resolve_pending_skip(lq2)
             self._correct(lq1)
             self._correct(lq2)
 
@@ -2473,89 +2112,11 @@ class QrackAceBackend:
         self.cz(lq1, lq2)
         self.swap(lq1, lq2)
 
-    def _resolve_pending_skip(self, lq):
-        """If lq has replicas recorded as STALE (H-reverted after an
-        invalidating control-side rotation, then skipped by their own
-        later gate because _invalidate_for_gate's Case B already popped
-        _pending_skip to decide what to skip -- consuming that record
-        before it could ever reach measurement time), force those
-        specific replicas to match hq[0] directly.
-
-        NOTE: this deliberately does NOT read _pending_skip, because
-        _invalidate_for_gate's Case B already pops (consumes) it the
-        moment the boundary qubit's own next gate runs -- by the time
-        prob()/m() is called at actual measurement time, _pending_skip is
-        already empty even though the replicas never got their intended
-        rotation. _stale_replicas is a SEPARATE record, populated
-        alongside _pending_skip in _revert_shadow_commitment, that is
-        NOT touched by Case B's pop -- only by this method, at the point
-        where staleness actually needs to be resolved.
-
-        Forcing to match hq[0] requires no randomness (unlike an earlier
-        force-correlate-with-control attempt) because hq[0] -- the
-        replica sharing a real simulator with the control, via the exact
-        gate_fn path in _apply_coupling -- is never itself added to
-        shadow_targets/_pending_skip/_stale_replicas, and is verified
-        exact following the _ct_pair_prob/_cz_shadow phase-kickback fix."""
-        if self._stale_replicas is None:
-            return
-        stale = self._stale_replicas.pop(lq, None)
-        if not stale:
-            return
-        hq = self._unpack(lq)
-        b0 = hq[0]
-        ground_truth = self.sim[b0[0]].m(b0[1])
-        for (t_sim, t_idx) in stale:
-            self.sim[t_sim].force_m(t_idx, ground_truth)
-
-    def _resolve_witnessed_shadow(self, lq):
-        """The 'easy case' generalization of history_window: if lq has any
-        shadow replicas with a recorded witness (a replica of the SAME
-        logical qubit living in the SAME simulator as the control used for
-        that shadow coupling), force each one to match its witness's
-        CURRENT value now, unconditionally.
-
-        This is deliberately unbounded -- no history_window, no deque, no
-        reactive invalidation on the control's later gates at all. It
-        doesn't need any of that, because the witness is a real quantum
-        register: it automatically, continuously reflects the correct
-        joint state through ANY NUMBER of intervening gates on the
-        control (or on itself), for free, simply by being the same real
-        simulator. No matter how long resolution is deferred -- one gate
-        later or a thousand -- matching the witness at the moment it's
-        actually needed is exactly as correct as matching it immediately
-        would have been. This is why the fix for the 'easy case' doesn't
-        need a window at all, bounded or otherwise: unlike the harder,
-        no-witness case (still handled by the existing bounded
-        _coupling_history / _stale_replicas machinery, left for a
-        belief-propagation-style treatment another day), there's no
-        approximation being deferred here, so there's nothing for a
-        window size to trade off against."""
-        if self._witness_map is None:
-            return
-        wmap = self._witness_map.pop(lq, None)
-        if not wmap:
-            return
-        for (t_sim, t_idx), (w_sim, w_idx) in wmap.items():
-            ground_truth = self.sim[w_sim].m(w_idx)
-            self.sim[t_sim].force_m(t_idx, ground_truth)
-
     def prob(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
             return self.sim[b[0]].prob(b[1])
-
-        # NOTE: _correct() below now also resolves these first (see its
-        # own docstring/comment) -- these two calls are harmless, cheap
-        # no-ops on the second pass (pop-from-dict returns nothing once
-        # already consumed), kept here for defensiveness/clarity at this
-        # call site rather than relying solely on _correct() doing it.
-        if self._witness_map is not None:
-            self._resolve_witnessed_shadow(lq)
-
-        if self._stale_replicas is not None:
-            self._resolve_pending_skip(lq)
 
         self._correct(lq)
         if len(hq) == 5:
@@ -3056,53 +2617,6 @@ class QrackAceBackend:
         self._coupling_map = sorted(coupling_map)
 
         return self._coupling_map
-
-    def _pair_has_unwitnessed_shadow(self, lq1, lq2):
-        """Structural check (no simulation, no state touched): does a real
-        cx(lq1, lq2)-style coupling (lq1 as control) produce at least one
-        shadow-coupled replica of lq2 that has NO witness -- i.e. one that
-        only the bounded history_window / _coupling_history /
-        _revert_shadow_commitment machinery can ever correct, as opposed
-        to the unconditional, provably-exact witness mechanism
-        (_resolve_witnessed_shadow) that needs no window at all?
-
-        Mirrors _apply_coupling's real/shadow/witness dispatch exactly,
-        including the aggregation subtlety that a target replica can be
-        shadow-reachable from MORE THAN ONE control replica (different
-        q1's in the qb1 loop): it only counts as genuinely unwitnessed if
-        NONE of the control replicas that shadow-couple to it provide a
-        witness. Depends only on the fixed replica layout established at
-        construction (self._qubits), never on any gate history or
-        quantum state -- safe to call at any time.
-        """
-        hq1 = self._unpack(lq1)
-        hq2 = self._unpack(lq2)
-        lq1_lr = len(hq1) == 1
-        qb1, _ = QrackAceBackend._get_qb_lhv_indices(hq1)
-        qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
-        real_gated_q2 = {
-            q2 for q2 in qb2 if any(hq1[q1][0] == hq2[q2][0] for q1 in qb1)
-        }
-
-        shadow_targets = []
-        witnessed_set = set()
-        for q1 in qb1:
-            b1 = hq1[q1]
-            witness = None
-            for b2c in hq2:
-                if b2c[0] == b1[0]:
-                    witness = b2c
-                    break
-            for q2 in qb2:
-                b2 = hq2[q2]
-                if b1[0] == b2[0]:
-                    continue
-                if (q2 not in real_gated_q2) and (lq1_lr or (b1[1] == b2[1])):
-                    shadow_targets.append(b2)
-                    if witness is not None and witness != b2:
-                        witnessed_set.add(b2)
-
-        return any(t not in witnessed_set for t in shadow_targets)
 
     # Designed by Dan, Elara (ChatGPT), and (Anthropic) Claude:
     def create_noise_model(self, x=0.5, y=0.5):
