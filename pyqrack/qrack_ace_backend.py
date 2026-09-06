@@ -1124,7 +1124,6 @@ class QrackAceBackend:
         hq = self._unpack(lq)
         if len(hq) < 2:
             b = hq[0]
-            self._invalidate_for_gate(lq)
             self.sim[b[0]].u(b[1], th, ph, lm)
             return
 
