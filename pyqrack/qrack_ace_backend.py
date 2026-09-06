@@ -859,6 +859,40 @@ class QrackAceBackend:
         if len(hq) == 1:
             return
 
+        # BUGFIX: resolve any outstanding witnessed-shadow / stale-replica
+        # bookkeeping for lq BEFORE reading or acting on its replicas'
+        # probabilities below. prob() already does this (see its own
+        # _resolve_witnessed_shadow / _resolve_pending_skip calls), but
+        # _correct() -- called far more often, from the top of every
+        # _cpauli, every swap(), etc. -- never did, even though it reads
+        # and acts on exactly the same replica probabilities. Without
+        # this, _correct() can classically pin a replica (via the
+        # syndrome-based force_m/X-correction or the Bloch-rotation step
+        # below) to a definite value for reasons having nothing to do
+        # with that replica's outstanding witness -- and later, when
+        # _resolve_witnessed_shadow finally runs (at actual measurement
+        # time, however long deferred) and tries to force that
+        # already-pinned replica to match a freshly-read witness value,
+        # the two can flatly disagree with zero probability of agreement,
+        # crashing force_m outright. Confirmed directly: with
+        # history_window > 0 and is_error_detection=True together (the
+        # combination needed to activate the witness-map machinery at
+        # all -- it's None whenever history_window == 0), witnessed
+        # shadow targets landed at EXACTLY p=0 or p=1 well before their
+        # witness was ever consulted, in the large majority of runs
+        # sampled, at a modest RCS depth (10 qubits, depth 12); roughly
+        # half of those then crashed once the witness's own later
+        # measurement landed on the opposite value. Resolving here,
+        # before _correct() can pin anything, closes the race: by the
+        # time any classical decision gets made about a replica, it has
+        # already been synced to its witness, so there's no longer a
+        # competing, witness-blind "truth" for that replica to disagree
+        # with when the witness is eventually consulted.
+        if self._witness_map is not None:
+            self._resolve_witnessed_shadow(lq)
+        if self._stale_replicas is not None:
+            self._resolve_pending_skip(lq)
+
         qb, _ = QrackAceBackend._get_qb_lhv_indices(hq)
 
         if phase:
@@ -1862,7 +1896,54 @@ class QrackAceBackend:
             and lq1 is not None
             and lq2 is not None
             and shadow_targets
+            and not self._in_gadget_capture
         ):
+            # BUGFIX: this block records (lq1 -> lq2, shadow_targets) into
+            # the bounded history_window bookkeeping so a LATER single-
+            # qubit gate on lq1 knows to revert lq2's shadow commitment
+            # (see _invalidate_for_gate / _revert_shadow_commitment). That
+            # bookkeeping is only meaningful for real, user-visible
+            # boundary-qubit coupling -- it assumes lq2 is a normal,
+            # multi-replica logical qubit that persists across many
+            # unrelated future gates the way ordinary circuit qubits do.
+            #
+            # Without the `not self._in_gadget_capture` guard, this ALSO
+            # fired for the error-detection gadget's own internal capture
+            # calls (self.cx(lq1, anc1) and friends, called with
+            # _in_gadget_capture=True from just above in _apply_coupling),
+            # recording entries whose "lq2" is actually a hidden,
+            # single-replica detection ancilla -- one of only two per
+            # simulator, permanently reused across every future coupling
+            # gate that happens to land on that simulator. The very next
+            # unrelated single-qubit gate on lq1 would then trigger
+            # _revert_shadow_commitment and H-revert that ancilla's
+            # physical qubit (setting it back to an uncommitted ~0.5
+            # state) and stash a bogus _pending_skip entry keyed by the
+            # ancilla's own logical index -- corrupting the ancilla's
+            # state and skip-bookkeeping for whatever LATER, entirely
+            # unrelated gadget capture next reuses that same physical
+            # ancilla. That silently breaks the double-capture XOR-
+            # cancellation invariant the gadget's probability math
+            # depends on (see the comment above the force_m calls below),
+            # making the "should usually read exactly 0/1" ancilla
+            # readings noisier than the code's ps_epsilon safety checks
+            # expect -- and, reproducibly with is_error_detection=True and
+            # history_window>0 together, occasionally noisy enough to
+            # land the joint outcome the `else` branch forces (both
+            # ancillas False) on a genuinely zero-probability branch,
+            # which is exactly the "impossible post-selection" force_m
+            # crash this class already documents (see the "Check prob()
+            # before forcing" comment below) as a possibility it guards
+            # against for GENUINE architecture noise -- but that guard
+            # only checks each ancilla's own marginal probability, not a
+            # corruption of the state those marginals are read from.
+            # Skipping this tracking entirely for gadget-internal captures
+            # (they have no business in history_window's bookkeeping in
+            # the first place -- an ancilla isn't a boundary qubit a real
+            # circuit gate will ever revisit the way this mechanism
+            # assumes) removes the corruption at its source, matching the
+            # `not self._in_gadget_capture` guard already used for
+            # _correct() and the repetition-code encode/decode above.
             # Only the NON-witnessed shadow targets need the bounded,
             # reactive history/invalidation machinery -- witnessed ones are
             # always resolvable directly and don't need tracking here at all.
@@ -2380,6 +2461,11 @@ class QrackAceBackend:
             b = hq[0]
             return self.sim[b[0]].prob(b[1])
 
+        # NOTE: _correct() below now also resolves these first (see its
+        # own docstring/comment) -- these two calls are harmless, cheap
+        # no-ops on the second pass (pop-from-dict returns nothing once
+        # already consumed), kept here for defensiveness/clarity at this
+        # call site rather than relying solely on _correct() doing it.
         if self._witness_map is not None:
             self._resolve_witnessed_shadow(lq)
 
