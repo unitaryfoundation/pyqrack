@@ -1967,6 +1967,13 @@ class QrackAceBackend:
             self.cx(lq1, lq2)
             return
 
+        # Boundary-to-boundary handling
+        if (len(hq1) > 1) and (len(hq2) > 1):
+            self.cx(lq1, lq2)
+            self.cx(lq2, lq1)
+            self.cx(lq1, lq2)
+            return
+
         # Fast/exact path: every replica of lq1 lines up, position-for-
         # position, with the corresponding replica of lq2 on the SAME
         # underlying simulator. A native swap() there is pure index
