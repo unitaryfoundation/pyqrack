@@ -1552,7 +1552,7 @@ class QrackAceBackend:
         # this gate family only -- same reasoning as the earlier
         # single-replica CZ dual-check, just applied at the logical
         # level now.
-        anc1, anc2, anc1b = None, None, None
+        anc1, anc2, anc1b, anc1c = None, None, None, None
         if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
             anc1 = self._detect_ancilla1_lq[hq1[0][0]]
             self._in_gadget_capture = True
@@ -1563,6 +1563,23 @@ class QrackAceBackend:
                     anc1b = self._detect_ancilla1_lq[hq2[0][0]]
                     # Control bit-flip
                     self.cx(lq1, anc1b)
+
+                # Third participant: hq1 is a boundary qubit here
+                # (len(hq1) > 1), so it always carries a genuine physical
+                # replica in the shared boundary "crossbar" simulator too
+                # -- index 2 of its replica list, by construction (see
+                # __init__'s qubit-building loop: the crossbar replica is
+                # always appended right after the (up to two) patch
+                # replicas, for every boundary qubit, edge or corner
+                # alike). That replica was never checked by this gadget
+                # before now, even though it's a distinct physical copy
+                # of lq1's value -- give it its own dedicated ancilla,
+                # already allocated in the crossbar sim alongside every
+                # other simulator's pair, and capture lq1 through it the
+                # same nested-cx way as anc1/anc1b, so it can vote
+                # alongside them below instead of going unchecked.
+                anc1c = self._detect_ancilla1_lq[hq1[2][0]]
+                self.cx(lq1, anc1c)
 
                 anc2 = self._detect_ancilla2_lq[hq1[0][0]]
                 # XOR on target
@@ -1645,38 +1662,67 @@ class QrackAceBackend:
             # probability), reset the ancilla back to |0>, and apply
             # a corrective X to lq1 to restore the detected
             # invariant.
-            if anc1b is not None:
-                self.cx(lq1, anc1b)
-                anc_sim, anc_idx = self._qubits[anc1][0]
-                p1 = self.sim[anc_sim].prob(anc_idx)
-                anc_sim, anc_idx = self._qubits[anc1b][0]
-                p2 = self.sim[anc_sim].prob(anc_idx)
-                if self._ps_epsilon >= (1.0 - p1):
-                    b1 = self.force_m(anc1, True)
-                    if self._ps_epsilon >= p2:
-                        b2 = self.force_m(anc1b, True)
-                    else:
-                        b2 = self.m(anc1b)
-                elif self._ps_epsilon >= (1.0 - p2):
-                    b2 = self.force_m(anc1b, True)
-                    if self._ps_epsilon >= p1:
-                        b1 = self.force_m(anc1, True)
-                    else:
-                        b1 = self.m(anc1)
+            if (anc1b is not None) or (anc1c is not None):
+                # Generalized N-way version (N = 2 or 3, i.e. patch A and
+                # patch B and/or the crossbar's own replica) of the
+                # single-pair steering above: same per-participant rule,
+                # just no longer hand-written per pair. Read every
+                # participant's prob() BEFORE forcing any of them (a
+                # forced measurement can affect correlated others), find
+                # whichever one -- if any -- shows confident (within
+                # ps_epsilon of certain) evidence of an actual flip, force
+                # THAT one first (the branch its own probability actually
+                # supports, never the near-impossible one), then for each
+                # remaining participant either steer it to agree (force
+                # True) if its own signal is too close to the hard-zero
+                # boundary to trust as an honest independent reading, or
+                # let it measure honestly otherwise -- exactly the same
+                # judgment call the original single anc1b case made, now
+                # just applied per-participant in a loop. If nobody shows
+                # confident evidence of a flip, every participant is
+                # forced to the "no error" branch, as before.
+                ancs = [anc1] + ([anc1b] if anc1b is not None else []) + ([anc1c] if anc1c is not None else [])
+                # Complete each participant's before/after XOR capture
+                # (anc1's own second cx() already happened just above,
+                # unconditionally) before reading any prob() below.
+                if anc1b is not None:
+                    self.cx(lq1, anc1b)
+                if anc1c is not None:
+                    self.cx(lq1, anc1c)
+                probs = []
+                for a in ancs:
+                    anc_sim, anc_idx = self._qubits[a][0]
+                    probs.append(self.sim[anc_sim].prob(anc_idx))
+
+                anchor = None
+                for i in range(len(ancs)):
+                    if self._ps_epsilon >= (1.0 - probs[i]):
+                        anchor = i
+                        break
+
+                bits = [None] * len(ancs)
+                if anchor is not None:
+                    bits[anchor] = self.force_m(ancs[anchor], True)
+                    for i in range(len(ancs)):
+                        if i == anchor:
+                            continue
+                        if self._ps_epsilon >= probs[i]:
+                            bits[i] = self.force_m(ancs[i], True)
+                        else:
+                            bits[i] = self.m(ancs[i])
                 else:
-                    b1 = self.force_m(anc1, False)
-                    b2 = self.force_m(anc1b, False)
+                    bits = [self.force_m(a, False) for a in ancs]
+
                 is_flipped = False
-                if b1:
-                    self.x(anc1)
-                    if p1 >= p2:
-                        self.x(lq1)
-                        is_flipped = True
-                if b2:
-                    self.x(anc1b)
-                    if (not is_flipped) and (p2 >= p1):
-                        self.x(lq1)
-                        is_flipped = True
+                best_p = -1.0
+                for i, a in enumerate(ancs):
+                    if bits[i]:
+                        self.x(a)
+                        if probs[i] > best_p:
+                            best_p = probs[i]
+                if best_p >= 0.0:
+                    self.x(lq1)
+                    is_flipped = True
             else:
                 anc_sim, anc_idx = self._qubits[anc1][0]
                 p = self.sim[anc_sim].prob(anc_idx)
