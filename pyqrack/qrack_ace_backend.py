@@ -1713,16 +1713,69 @@ class QrackAceBackend:
                 else:
                     bits = [self.force_m(a, False) for a in ancs]
 
+                # Map each participant to the SPECIFIC physical replica
+                # of hq1 its own syndrome actually covers -- anc1 is
+                # patch A (hq1[0]), anc1c is always the crossbar
+                # (hq1[2], by construction), and anc1b is whichever of
+                # hq1's replicas lives in hq2's own patch (found by sim
+                # id rather than assumed to be a fixed index, since
+                # corner qubits have patch replicas at indices 1, 3, and
+                # 4). This can legitimately be absent: hq1 and hq2 may
+                # share no common patch at all for an arbitrary (non-
+                # adjacent) logical coupling -- confirmed directly
+                # (hq1=[(2,1),(3,0),(4,2)] coupled to hq2=[(1,1)], no
+                # overlap) -- in which case there is no single physical
+                # replica to target for that participant specifically.
+                replicas = [hq1[0]]
+                if anc1b is not None:
+                    replicas.append(next((r for r in hq1 if r[0] == hq2[0][0]), None))
+                if anc1c is not None:
+                    replicas.append(hq1[2])
+
+                # Majority vote decides whether the LOGICAL value itself
+                # genuinely flipped (updating the LHV shadow, same as the
+                # transversal self.x(lq1) used to do unconditionally);
+                # any minority participant is still individually
+                # corrected below regardless, since ITS replica is wrong
+                # either way -- it just isn't treated as evidence the
+                # logical value moved, the same way a repetition code's
+                # decoded value doesn't change just because one physical
+                # bit needed fixing.
                 is_flipped = False
-                best_p = -1.0
+                n_flipped = sum(1 for b in bits if b)
+                if (n_flipped << 1) > len(ancs):
+                    is_flipped = True
+                    lhv = self._lhv.get(lq1)
+                    if lhv is not None:
+                        lhv.x()
+
                 for i, a in enumerate(ancs):
                     if bits[i]:
                         self.x(a)
-                        if probs[i] > best_p:
-                            best_p = probs[i]
-                if best_p >= 0.0:
-                    self.x(lq1)
-                    is_flipped = True
+                        # Targeted, single-replica correction rather than
+                        # a transversal self.x(lq1): these replicas are a
+                        # pseudo-repetition code for lq1, and a
+                        # participant flipping means THAT PHYSICAL COPY
+                        # is the one in error, not the logical value as a
+                        # whole. Flipping every replica transversally is
+                        # only ever correct by coincidence when all
+                        # participants agree -- on a genuine minority
+                        # disagreement it would "fix" the actual error
+                        # while simultaneously breaking the (correct)
+                        # majority replicas that were never wrong. Fixing
+                        # per-replica is correct in the agreeing case too
+                        # (each flipped participant's own replica still
+                        # gets corrected), so this applies unconditionally,
+                        # not just when a disagreement is detected. Falls
+                        # back to the transversal correction only when no
+                        # single hq1 replica corresponds to this
+                        # participant at all (see the no-overlap case
+                        # above).
+                        b = replicas[i]
+                        if b is not None:
+                            self.sim[b[0]].x(b[1])
+                        else:
+                            self.x(lq1)
             else:
                 anc_sim, anc_idx = self._qubits[anc1][0]
                 p = self.sim[anc_sim].prob(anc_idx)
