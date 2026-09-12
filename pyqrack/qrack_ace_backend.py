@@ -1741,7 +1741,6 @@ class QrackAceBackend:
                 # logical value moved, the same way a repetition code's
                 # decoded value doesn't change just because one physical
                 # bit needed fixing.
-                is_flipped = False
                 n_flipped = sum(1 for b in bits if b)
                 if (n_flipped << 1) > len(ancs):
                     is_flipped = True
@@ -1971,46 +1970,174 @@ class QrackAceBackend:
             self._cpauli(lq1, lq2, True, Pauli.PauliZ)
 
     def mcx(self, lq1, lq2):
-        if len(lq1) > 1:
+        if len(lq1) == 1:
+            self.cx(lq1[0], lq2)
+            return
+
+        hq = self._unpack(lq2)
+        if len(hq) > 1:
             raise RuntimeError(
                 "QrackAceBackend.mcx() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.cx(lq1[0], lq2)
+        s = hq[0][0]
+        t = hq[0][1]
+        c = []
+        for l in lq1:
+            hq = self._unpack(l)
+            if (len(hq) > 1) or (s != hq[0][0]):
+                raise RuntimeError(
+                    "QrackAceBackend.mcx() is provided for syntax convenience and only supports 1 control qubit!"
+                )
+            c.append(hq[0][1])
+
+        # We happen to be able to accommodate this:
+        self.sim[s].mcx(c, t)
 
     def mcy(self, lq1, lq2):
-        if len(lq1) > 1:
+        if len(lq1) == 1:
+            self.cy(lq1[0], lq2)
+            return
+
+        hq = self._unpack(lq2)
+        if len(hq) > 1:
             raise RuntimeError(
                 "QrackAceBackend.mcy() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.cy(lq1[0], lq2)
+        s = hq[0][0]
+        t = hq[0][1]
+        c = []
+        for l in lq1:
+            hq = self._unpack(l)
+            if (len(hq) > 1) or (s != hq[0][0]):
+                raise RuntimeError(
+                    "QrackAceBackend.mcy() is provided for syntax convenience and only supports 1 control qubit!"
+                )
+            c.append(hq[0][1])
+
+        # We happen to be able to accommodate this:
+        self.sim[s].mcy(c, t)
 
     def mcz(self, lq1, lq2):
-        if len(lq1) > 1:
+        if len(lq1) == 1:
+            self.cz(lq1[0], lq2)
+            return
+
+        hq = self._unpack(lq2)
+        if len(hq) > 1:
             raise RuntimeError(
                 "QrackAceBackend.mcz() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.cz(lq1[0], lq2)
+        s = hq[0][0]
+        t = hq[0][1]
+        c = []
+        for l in lq1:
+            hq = self._unpack(l)
+            if (len(hq) > 1) or (s != hq[0][0]):
+                raise RuntimeError(
+                    "QrackAceBackend.mcz() is provided for syntax convenience and only supports 1 control qubit!"
+                )
+            c.append(hq[0][1])
+
+        # We happen to be able to accommodate this:
+        self.sim[s].mcz(c, t)
 
     def macx(self, lq1, lq2):
-        if len(lq1) > 1:
+        if len(lq1) == 1:
+            self.acx(lq1[0], lq2)
+            return
+
+        hq = self._unpack(lq2)
+        if len(hq) > 1:
             raise RuntimeError(
                 "QrackAceBackend.macx() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.acx(lq1[0], lq2)
+        s = hq[0][0]
+        t = hq[0][1]
+        c = []
+        for l in lq1:
+            hq = self._unpack(l)
+            if (len(hq) > 1) or (s != hq[0][0]):
+                raise RuntimeError(
+                    "QrackAceBackend.macx() is provided for syntax convenience and only supports 1 control qubit!"
+                )
+            c.append(hq[0][1])
+
+        # We happen to be able to accommodate this:
+        self.sim[s].macx(c, t)
 
     def macy(self, lq1, lq2):
-        if len(lq1) > 1:
+        if len(lq1) == 1:
+            self.acy(lq1[0], lq2)
+            return
+
+        hq = self._unpack(lq2)
+        if len(hq) > 1:
             raise RuntimeError(
                 "QrackAceBackend.macy() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.acy(lq1[0], lq2)
+        s = hq[0][0]
+        t = hq[0][1]
+        c = []
+        for l in lq1:
+            hq = self._unpack(l)
+            if (len(hq) > 1) or (s != hq[0][0]):
+                raise RuntimeError(
+                    "QrackAceBackend.macy() is provided for syntax convenience and only supports 1 control qubit!"
+                )
+            c.append(hq[0][1])
+
+        # We happen to be able to accommodate this:
+        self.sim[s].macy(c, t)
 
     def macz(self, lq1, lq2):
-        if len(lq1) > 1:
+        if len(lq1) == 1:
+            self.acz(lq1[0], lq2)
+            return
+
+        hq = self._unpack(lq2)
+        if len(hq) > 1:
             raise RuntimeError(
                 "QrackAceBackend.macz() is provided for syntax convenience and only supports 1 control qubit!"
             )
-        self.acz(lq1[0], lq2)
+        s = hq[0][0]
+        t = hq[0][1]
+        c = []
+        for l in lq1:
+            hq = self._unpack(l)
+            if (len(hq) > 1) or (s != hq[0][0]):
+                raise RuntimeError(
+                    "QrackAceBackend.macz() is provided for syntax convenience and only supports 1 control qubit!"
+                )
+            c.append(hq[0][1])
+
+        # We happen to be able to accommodate this:
+        self.sim[s].macz(c, t)
+
+    def cswap(self, lq1, lq2, lq3):
+        hq = self._unpack(lq2)
+        if len(hq) > 1:
+            raise RuntimeError(
+                "QrackAceBackend.cswap() is provided for syntax convenience and only supports intra-patch!"
+            )
+        s = hq[0][0]
+        t1 = hq[0][1]
+        hq = self._unpack(lq3)
+        if (len(hq) > 1) or (s != hq[0][0]):
+            raise RuntimeError(
+                "QrackAceBackend.cswap() is provided for syntax convenience and only supports intra-patch!"
+            )
+        t2 = hq[0][1]
+        c = []
+        for l in lq1:
+            hq = self._unpack(l)
+            if (len(hq) > 1) or (s != hq[0][0]):
+                raise RuntimeError(
+                    "QrackAceBackend.cswap() is provided for syntax convenience and only supports intra-patch!"
+                )
+            c.append(hq[0][1])
+
+        # We happen to be able to accommodate this:
+        self.sim[s].cswap(c, t1, t2)
 
     def swap(self, lq1, lq2):
         hq1 = self._unpack(lq1)
@@ -2436,11 +2563,23 @@ class QrackAceBackend:
             self._sim.cy(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == "cz":
             self._sim.cz(operation.qubits[0]._index, operation.qubits[1]._index)
+        elif name == "ccx":
+            self._sim.mcx([operation.qubits[0]._index, operation.qubits[1]._index], operation.qubits[2]._index)
+        elif name == "ccz":
+            self._sim.mcz([operation.qubits[0]._index, operation.qubits[1]._index], operation.qubits[2]._index)
+        elif name == "mcx":
+            self._sim.mcx([q._index for q in operation.qubits[:-1]], operation.qubits[-1]._index)
+        elif name == "mcy":
+            self._sim.mcy([q._index for q in operation.qubits[:-1]], operation.qubits[-1]._index)
+        elif name == "mcz":
+            self._sim.mcz([q._index for q in operation.qubits[:-1]], operation.qubits[-1]._index)
         elif name == "dcx":
             self._sim.mcx(operation.qubits[0]._index, operation.qubits[1]._index)
             self._sim.mcx(operation.qubits[1]._index, operation.qubits[0]._index)
         elif name == "swap":
             self._sim.swap(operation.qubits[0]._index, operation.qubits[1]._index)
+        elif name == "cswap":
+            self._sim.cswap([q._index for q in operation.qubits[:-2]], operation.qubits[-2]._index, operation.qubits[-1]._index)
         elif name == "iswap":
             self._sim.iswap(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == "iswap_dg":
@@ -2680,7 +2819,13 @@ class QrackAceBackend:
             "cx",
             "cy",
             "cz",
+            "ccx",
+            "ccz",
+            "mcx",
+            "mcy",
+            "mcz",
             "swap",
+            "cswap",
             "iswap",
             "reset",
             "measure",
