@@ -4245,6 +4245,8 @@ class QrackSimulator:
             self._sim.mcz([q._index for q in operation.qubits[0:-1]], operation.qubits[-1]._index)
         elif name == "swap":
             self._sim.swap(operation.qubits[0]._index, operation.qubits[1]._index)
+        elif name == "cswap":
+            self._sim.cswap([q._index for q in operation.qubits[:-2]], operation.qubits[-2]._index, operation.qubits[-1]._index)
         elif name == "iswap":
             self._sim.iswap(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == "iswap_dg":
@@ -4502,7 +4504,11 @@ class QrackSimulator:
             "csx",
             "ccx",
             "ccz",
+            "mcx",
+            "mcy",
+            "mcz",
             "swap",
+            "cswap",
             "iswap",
             "cswap",
             "reset",
