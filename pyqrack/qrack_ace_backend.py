@@ -18,6 +18,17 @@ try:
     from qiskit.circuit.quantumcircuit import QuantumCircuit
     from qiskit.compiler import transpile
     from qiskit.quantum_info.operators.symplectic.clifford import Clifford
+    from qiskit.transpiler import Target, InstructionProperties
+    from qiskit.circuit import Parameter
+    from qiskit.circuit.library import (
+        IGate, UGate, U3Gate, U2Gate, U1Gate,
+        XGate, YGate, ZGate, HGate,
+        RXGate, RYGate, RZGate,
+        SGate, SdgGate, TGate, TdgGate,
+        CXGate, CYGate, CZGate, SwapGate, iSwapGate,
+        CCXGate, CCZGate, CSwapGate,
+        Measure, Reset,
+    )
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
 
@@ -803,7 +814,6 @@ class QrackAceBackend:
 
         sim.mtrx([m00, m01, m10, m11], q)
 
-    @staticmethod
     def _get_lhv_bloch_angles(sim):
         z = sim.bloch[2]
         x = sim.bloch[0]
@@ -812,7 +822,6 @@ class QrackAceBackend:
         azimuth = math.atan2(y, x)
         return azimuth, inclination
 
-    @staticmethod
     def _rotate_lhv_to_bloch(sim, delta_azimuth, delta_inclination):
         cosA = math.cos(delta_azimuth)
         sinA = math.sin(delta_azimuth)
@@ -2867,6 +2876,145 @@ class QrackAceBackend:
         self._coupling_map = sorted(coupling_map)
 
         return self._coupling_map
+
+    # Moved here from AceQasmSimulator (qiskit-qrack-provider), so a
+    # QrackAceBackend can be transpiled against directly with plain Qiskit,
+    # without needing the separate Qiskit BackendV2 wrapper at all. The
+    # Qiskit backend now calls this instead of duplicating the logic.
+    #
+    # One correction made in the move: the original 1-qubit "boundary
+    # penalty hint" set was approximated from get_logical_coupling_map()
+    # (any qubit appearing in ANY coupling pair) -- but that map includes
+    # ordinary bulk-bulk pairs within the same patch too, so it actually
+    # flagged nearly every qubit as "boundary." Here, with direct access to
+    # self._unpack(), the real criterion (len(self._unpack(q)) > 1) is used
+    # instead.
+    def get_target(self, description=None, error_1q=0.0, error_2q=0.0):
+        """Build a qiskit Target describing this backend's gate set and
+        connectivity, so it can be used with qiskit.transpile() directly --
+        with or without the separate Qiskit BackendV2 wrapper.
+
+        IMPORTANT, verified directly rather than assumed: qiskit's
+        transpile() does NOT reliably enforce the qubit-tuple-level
+        InstructionProperties restrictions declared here for 3+-qubit gates
+        (ccx/ccz/cswap), at any optimization_level that doesn't outright
+        crash. Confirmed: the default optimization_level raises
+        TranspilerError("target contains multi-qubit operations") on ANY
+        Target containing 3+-qubit gates, valid placement or not (Qiskit's
+        default SabreLayout routing pass doesn't support them at all).
+        optimization_level=0 or 1 avoid that crash, but ALSO transpiled a
+        deliberately-invalid (boundary-qubit) ccx placement successfully in
+        testing -- i.e., they don't validate 3-qubit placements against the
+        target either, they just don't crash on them.
+        The Target's 3-qubit entries are still meaningful as a description
+        of what's actually valid (useful for introspection, or for a
+        transpiler pass that does check placements properly), but they are
+        NOT currently a transpile-time safety guarantee the way the 2-qubit
+        coupling map is. The actual, reliable enforcement is the runtime
+        RuntimeError in mcx()/mcy()/mcz()/cswap() themselves, which fire
+        correctly regardless of what the transpiler allowed through.
+        """
+        if not _IS_QISKIT_AVAILABLE:
+            raise RuntimeError(
+                "QrackAceBackend.get_target() requires Qiskit to be installed!"
+            )
+
+        n = self.num_qubits()
+        tgt = Target(num_qubits=n, description=description)
+
+        # Parameters for parameterised gates
+        theta = Parameter("theta")
+        phi = Parameter("phi")
+        lam = Parameter("lam")
+
+        # --- single-qubit gates: all qubits ---
+        boundary = {q for q in range(n) if len(self._unpack(q)) > 1}
+
+        def _1q_props(err=error_1q):
+            return {
+                (q,): InstructionProperties(error=0.0)
+                for q in range(n)
+            }
+
+        tgt.add_instruction(IGate(), _1q_props())
+        tgt.add_instruction(UGate(theta, phi, lam), _1q_props())
+        tgt.add_instruction(U3Gate(theta, phi, lam), _1q_props())
+        tgt.add_instruction(U2Gate(phi, lam), _1q_props())
+        tgt.add_instruction(U1Gate(lam), _1q_props())
+        tgt.add_instruction(RXGate(theta), _1q_props())
+        tgt.add_instruction(RYGate(theta), _1q_props())
+        tgt.add_instruction(RZGate(theta), _1q_props())
+        tgt.add_instruction(HGate(), _1q_props())
+        tgt.add_instruction(XGate(), _1q_props())
+        tgt.add_instruction(YGate(), _1q_props())
+        tgt.add_instruction(ZGate(), _1q_props())
+        tgt.add_instruction(SGate(), _1q_props())
+        tgt.add_instruction(SdgGate(), _1q_props())
+        tgt.add_instruction(TGate(), _1q_props())
+        tgt.add_instruction(TdgGate(), _1q_props())
+
+        # --- two-qubit gates: coupled pairs (includes boundary-crossing
+        # pairs -- those are supported, via the noisy-coupler mechanism) ---
+        bulk = [item for sublist in bulk_by_patch.values() for item in sublist]
+        coupling_map = self.get_logical_coupling_map()
+        if coupling_map:
+            pair_props = {
+                (a, b): InstructionProperties(error=0 if (a in bulk) and (b in bulk) else error_2q) for a, b in coupling_map
+            }
+        else:
+            pair_props = {
+                (a, b): InstructionProperties(error=0)
+                for a in range(n)
+                for b in range(n)
+                if a != b
+            }
+
+        tgt.add_instruction(CXGate(), pair_props)
+        tgt.add_instruction(CYGate(), pair_props)
+        tgt.add_instruction(CZGate(), pair_props)
+        tgt.add_instruction(SwapGate(), pair_props)
+        tgt.add_instruction(iSwapGate(), pair_props)
+
+        # --- 3-qubit gates: intra-patch, all-bulk triples only ---
+        # ccx/ccz/cswap (and, by extension, mcx/mcy/mcz beyond a single
+        # control) are only valid when every involved qubit is bulk and
+        # shares the same patch -- see mcx()/cswap() above, which raise
+        # otherwise.
+        #
+        # CCXGate/CCZGate and CSwapGate do NOT share a qubit-ordering
+        # convention (verified directly against their gate definitions):
+        # CCXGate puts its target on qubit index 2, with 0-1 as the two
+        # (interchangeable) controls; CSwapGate puts its control on qubit
+        # index 0, with 1-2 as the (interchangeable) swapped pair. They
+        # need separately-ordered InstructionProperties dicts.
+        # bulk_by_patch = {}
+        # for q in range(n):
+        #     hq = self._unpack(q)
+        #     if len(hq) == 1:
+        #         bulk_by_patch.setdefault(hq[0][0], []).append(q)
+        #
+        # ccx_props = {}
+        # cswap_props = {}
+        # for qubits_here in bulk_by_patch.values():
+        #     for pivot in qubits_here:
+        #         others = [q for q in qubits_here if q != pivot]
+        #         for i in range(len(others)):
+        #             for j in range(len(others)):
+        #                 if i == j:
+        #                     continue
+        #                 ccx_props[(others[i], others[j], pivot)] = InstructionProperties(error=0)
+        #                 cswap_props[(pivot, others[i], others[j])] = InstructionProperties(error=0)
+        # if ccx_props:
+        #     tgt.add_instruction(CCXGate(), ccx_props)
+        #     tgt.add_instruction(CCZGate(), ccx_props)
+        # if cswap_props:
+        #     tgt.add_instruction(CSwapGate(), cswap_props)
+
+        # --- measure / reset: all qubits ---
+        tgt.add_instruction(Measure(), {(q,): InstructionProperties() for q in range(n)})
+        tgt.add_instruction(Reset(), {(q,): InstructionProperties() for q in range(n)})
+
+        return tgt
 
     # Designed by Dan, Elara (ChatGPT), and (Anthropic) Claude:
     def create_noise_model(self, x=0.5, y=0.5):
