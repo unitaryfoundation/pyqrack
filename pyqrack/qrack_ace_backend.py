@@ -2955,7 +2955,11 @@ class QrackAceBackend:
 
         # --- two-qubit gates: coupled pairs (includes boundary-crossing
         # pairs -- those are supported, via the noisy-coupler mechanism) ---
-        bulk = [item for sublist in bulk_by_patch.values() for item in sublist]
+        bulk = []
+        for q in range(n):
+            hq = self._unpack(q)
+            if len(hq) == 1:
+                bulk.append(q)
         coupling_map = self.get_logical_coupling_map()
         if coupling_map:
             pair_props = {
