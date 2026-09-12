@@ -2889,7 +2889,7 @@ class QrackAceBackend:
     # flagged nearly every qubit as "boundary." Here, with direct access to
     # self._unpack(), the real criterion (len(self._unpack(q)) > 1) is used
     # instead.
-    def get_target(self, description=None, error_1q=0.0, error_2q=0.0):
+    def get_target(self, description=None, error_2q=0.5):
         """Build a qiskit Target describing this backend's gate set and
         connectivity, so it can be used with qiskit.transpile() directly --
         with or without the separate Qiskit BackendV2 wrapper.
@@ -2930,9 +2930,9 @@ class QrackAceBackend:
         # --- single-qubit gates: all qubits ---
         boundary = {q for q in range(n) if len(self._unpack(q)) > 1}
 
-        def _1q_props(err=error_1q):
+        def _1q_props():
             return {
-                (q,): InstructionProperties(error=0.0)
+                (q,): InstructionProperties()
                 for q in range(n)
             }
 
@@ -2963,11 +2963,11 @@ class QrackAceBackend:
         coupling_map = self.get_logical_coupling_map()
         if coupling_map:
             pair_props = {
-                (a, b): InstructionProperties(error=0 if (a in bulk) and (b in bulk) else error_2q) for a, b in coupling_map
+                (a, b): InstructionProperties() if (a in bulk) and (b in bulk) else InstructionProperties(error=error_2q) for a, b in coupling_map
             }
         else:
             pair_props = {
-                (a, b): InstructionProperties(error=0)
+                (a, b): InstructionProperties()
                 for a in range(n)
                 for b in range(n)
                 if a != b
@@ -3006,8 +3006,8 @@ class QrackAceBackend:
         #             for j in range(len(others)):
         #                 if i == j:
         #                     continue
-        #                 ccx_props[(others[i], others[j], pivot)] = InstructionProperties(error=0)
-        #                 cswap_props[(pivot, others[i], others[j])] = InstructionProperties(error=0)
+        #                 ccx_props[(others[i], others[j], pivot)] = InstructionProperties()
+        #                 cswap_props[(pivot, others[i], others[j])] = InstructionProperties()
         # if ccx_props:
         #     tgt.add_instruction(CCXGate(), ccx_props)
         #     tgt.add_instruction(CCZGate(), ccx_props)
