@@ -2373,6 +2373,11 @@ class QrackAceBackend:
         hq1 = self._unpack(c1)
         hq2 = self._unpack(c2)
         hqt = self._unpack(t)
+
+        if (len(hqt) == 1) and (len(hq1) == 1) and (len(hq2) == 1) and (hqt[0][0] == hq1[0][0]) and (hqt[0][0] == hq2[0][0]):
+            self.mcx([c1, c2], t)
+            return
+
         anc1, anc2 = None, None
         if self.is_error_detection and not self._in_gadget_capture and (len(hqt) == 1) and ((len(hq1) > 1) or (len(hq2) > 1)):
             anc1 = self._detect_ancilla3_lq[hqt[0][0]]
