@@ -2828,9 +2828,6 @@ class QrackAceBackend:
             "cz",
             "ccx",
             "ccz",
-            "mcx",
-            "mcy",
-            "mcz",
             "swap",
             "cswap",
             "iswap",
@@ -2989,28 +2986,28 @@ class QrackAceBackend:
         # (interchangeable) controls; CSwapGate puts its control on qubit
         # index 0, with 1-2 as the (interchangeable) swapped pair. They
         # need separately-ordered InstructionProperties dicts.
-        # bulk_by_patch = {}
-        # for q in range(n):
-        #     hq = self._unpack(q)
-        #     if len(hq) == 1:
-        #         bulk_by_patch.setdefault(hq[0][0], []).append(q)
-        #
-        # ccx_props = {}
-        # cswap_props = {}
-        # for qubits_here in bulk_by_patch.values():
-        #     for pivot in qubits_here:
-        #         others = [q for q in qubits_here if q != pivot]
-        #         for i in range(len(others)):
-        #             for j in range(len(others)):
-        #                 if i == j:
-        #                     continue
-        #                 ccx_props[(others[i], others[j], pivot)] = InstructionProperties()
-        #                 cswap_props[(pivot, others[i], others[j])] = InstructionProperties()
-        # if ccx_props:
-        #     tgt.add_instruction(CCXGate(), ccx_props)
-        #     tgt.add_instruction(CCZGate(), ccx_props)
-        # if cswap_props:
-        #     tgt.add_instruction(CSwapGate(), cswap_props)
+        bulk_by_patch = {}
+        for q in range(n):
+            hq = self._unpack(q)
+            if len(hq) == 1:
+                bulk_by_patch.setdefault(hq[0][0], []).append(q)
+
+        ccx_props = {}
+        cswap_props = {}
+        for qubits_here in bulk_by_patch.values():
+            for pivot in qubits_here:
+                others = [q for q in qubits_here if q != pivot]
+                for i in range(len(others)):
+                    for j in range(len(others)):
+                        if i == j:
+                            continue
+                        ccx_props[(others[i], others[j], pivot)] = InstructionProperties()
+                        cswap_props[(pivot, others[i], others[j])] = InstructionProperties()
+        if ccx_props:
+            tgt.add_instruction(CCXGate(), ccx_props)
+            tgt.add_instruction(CCZGate(), ccx_props)
+        if cswap_props:
+            tgt.add_instruction(CSwapGate(), cswap_props)
 
         # --- measure / reset: all qubits ---
         tgt.add_instruction(Measure(), {(q,): InstructionProperties() for q in range(n)})
