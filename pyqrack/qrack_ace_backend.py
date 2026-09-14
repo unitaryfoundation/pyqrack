@@ -2369,7 +2369,7 @@ class QrackAceBackend:
         self.cz(lq1, lq2)
         self.swap(lq1, lq2)
 
-    def ccnot(self, c1, c2, t):
+    def ccx(self, c1, c2, t):
         hq1 = self._unpack(c1)
         hq2 = self._unpack(c2)
         hqt = self._unpack(t)
@@ -2434,6 +2434,16 @@ class QrackAceBackend:
             # Correction gate
             if b1 or b2:
                 self.x(t)
+
+    def ccz(self, c1, c2, t):
+        self.h(t)
+        self.ccx(c1, c2, t)
+        self.h(t)
+
+    def ccy(self, c1, c2, t):
+        self.adjs(t)
+        self.ccx(c1, c2, t)
+        self.s(t)
 
     def prob(self, lq):
         hq = self._unpack(lq)
@@ -2655,9 +2665,11 @@ class QrackAceBackend:
         elif name == "cz":
             self._sim.cz(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == "ccx":
-            self._sim.mcx([operation.qubits[0]._index, operation.qubits[1]._index], operation.qubits[2]._index)
+            self._sim.ccx(operation.qubits[0]._index, operation.qubits[1]._index, operation.qubits[2]._index)
+        elif name == "ccy":
+            self._sim.ccy(operation.qubits[0]._index, operation.qubits[1]._index, operation.qubits[2]._index)
         elif name == "ccz":
-            self._sim.mcz([operation.qubits[0]._index, operation.qubits[1]._index], operation.qubits[2]._index)
+            self._sim.ccz(operation.qubits[0]._index, operation.qubits[1]._index, operation.qubits[2]._index)
         elif name == "mcx":
             self._sim.mcx([q._index for q in operation.qubits[:-1]], operation.qubits[-1]._index)
         elif name == "mcy":
