@@ -408,11 +408,17 @@ class QrackAceBackend:
         # per-simulator allocation above.
         self._detect_ancilla1 = []
         self._detect_ancilla2 = []
+        self._detect_ancilla3 = []
+        self._detect_ancilla4 = []
         if self.is_error_detection:
             for i in range(len(sim_counts)):
                 self._detect_ancilla1.append(sim_counts[i])
                 sim_counts[i] += 1
                 self._detect_ancilla2.append(sim_counts[i])
+                sim_counts[i] += 1
+                self._detect_ancilla3.append(sim_counts[i])
+                sim_counts[i] += 1
+                self._detect_ancilla4.append(sim_counts[i])
                 sim_counts[i] += 1
 
         # Logical-qubit wrapper around each patch's detection ancilla,
@@ -435,6 +441,8 @@ class QrackAceBackend:
         # legitimately need to change any single replica's own value.
         self._detect_ancilla1_lq = []
         self._detect_ancilla2_lq = []
+        self._detect_ancilla3_lq = []
+        self._detect_ancilla4_lq = []
         if self.is_error_detection:
             for sim_id, phys_idx in enumerate(self._detect_ancilla1):
                 lq_idx = len(self._qubits)
@@ -444,6 +452,14 @@ class QrackAceBackend:
                 lq_idx = len(self._qubits)
                 self._qubits.append([(sim_id, phys_idx)])
                 self._detect_ancilla2_lq.append(lq_idx)
+            for sim_id, phys_idx in enumerate(self._detect_ancilla3):
+                lq_idx = len(self._qubits)
+                self._qubits.append([(sim_id, phys_idx)])
+                self._detect_ancilla3_lq.append(lq_idx)
+            for sim_id, phys_idx in enumerate(self._detect_ancilla4):
+                lq_idx = len(self._qubits)
+                self._qubits.append([(sim_id, phys_idx)])
+                self._detect_ancilla4_lq.append(lq_idx)
         # Boundary repetition code, on-demand design: only the couplers
         # are actually noisy here -- single-qubit gates are already
         # exactly transversal, per-replica, with zero error, so there's
@@ -2353,6 +2369,87 @@ class QrackAceBackend:
         self.cz(lq1, lq2)
         self.swap(lq1, lq2)
 
+    def ccx(self, c1, c2, t):
+        hq1 = self._unpack(c1)
+        hq2 = self._unpack(c2)
+        hqt = self._unpack(t)
+
+        if (len(hqt) == 1) and (len(hq1) == 1) and (len(hq2) == 1) and (hqt[0][0] == hq1[0][0]) and (hqt[0][0] == hq2[0][0]):
+            self.mcx([c1, c2], t)
+            return
+
+        anc1, anc2 = None, None
+        if self.is_error_detection and not self._in_gadget_capture and (len(hqt) == 1) and ((len(hq1) > 1) or (len(hq2) > 1)):
+            anc1 = self._detect_ancilla3_lq[hqt[0][0]]
+            anc2 = self._detect_ancilla4_lq[hqt[0][0]]
+            self._in_gadget_capture = True
+            self.cx(t, anc1)
+            self.cx(c1, anc1)
+            self.cx(c2, anc1)
+            self.cx(t, anc2)
+            self.cx(c2, anc2)
+            self.cx(c1, anc2)
+            self._in_gadget_capture = False
+
+        # CCNOT decomposition
+        self.h(t)
+        self.cx(c2, t)
+        self.adjt(t)
+        self.cx(c1, t)
+        self.t(t)
+        self.cx(c2, t)
+        self.adjt(t)
+        self.cx(c1, t)
+        self.t(t)
+        self.h(t)
+        self.t(c2)
+        self.cx(c1, c2)
+        self.t(c1)
+        self.adjt(c2)
+        self.cx(c1, c2)
+
+        if anc1 is not None:
+            # Syndrome
+            self.cx(t, anc1)
+            self.cx(c2, anc1)
+            self.cx(t, anc2)
+            self.cx(c1, anc2)
+
+            # Post-selection
+            anc_sim, anc_idx = self._qubits[anc1][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if self._ps_epsilon >= (1.0 - p):
+                b1 = self.m(anc1)
+            else:
+                b1 = self.force_m(anc1, False)
+            if b1:
+                self.x(anc1)
+
+            anc_sim, anc_idx = self._qubits[anc2][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if b1:
+                p = 1.0 - p
+            if self._ps_epsilon >= (1.0 - p):
+                b2 = self.m(anc2)
+            else:
+                b2 = self.force_m(anc2, b1)
+            if b2:
+                self.x(anc2)
+
+            # Correction gate
+            if b1 or b2:
+                self.x(t)
+
+    def ccz(self, c1, c2, t):
+        self.h(t)
+        self.ccx(c1, c2, t)
+        self.h(t)
+
+    def ccy(self, c1, c2, t):
+        self.adjs(t)
+        self.ccx(c1, c2, t)
+        self.s(t)
+
     def prob(self, lq):
         hq = self._unpack(lq)
         if len(hq) < 2:
@@ -2573,9 +2670,11 @@ class QrackAceBackend:
         elif name == "cz":
             self._sim.cz(operation.qubits[0]._index, operation.qubits[1]._index)
         elif name == "ccx":
-            self._sim.mcx([operation.qubits[0]._index, operation.qubits[1]._index], operation.qubits[2]._index)
+            self._sim.ccx(operation.qubits[0]._index, operation.qubits[1]._index, operation.qubits[2]._index)
+        elif name == "ccy":
+            self._sim.ccy(operation.qubits[0]._index, operation.qubits[1]._index, operation.qubits[2]._index)
         elif name == "ccz":
-            self._sim.mcz([operation.qubits[0]._index, operation.qubits[1]._index], operation.qubits[2]._index)
+            self._sim.ccz(operation.qubits[0]._index, operation.qubits[1]._index, operation.qubits[2]._index)
         elif name == "mcx":
             self._sim.mcx([q._index for q in operation.qubits[:-1]], operation.qubits[-1]._index)
         elif name == "mcy":
