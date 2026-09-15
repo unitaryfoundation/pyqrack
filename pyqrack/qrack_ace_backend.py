@@ -2373,7 +2373,11 @@ class QrackAceBackend:
         hq2 = self._unpack(c2)
         hqt = self._unpack(t)
 
-        if (len(hqt) > 1) or self.is_boundary_repetition_code:
+        if (len(hqt) == 1) and (len(hq1) == 1) and (len(hq2) == 1) and (hqt[0][0] == hq1[0][0]) and (hqt[0][0] == hq2[0][0]):
+            self.mcx([c1, c2], t)
+            return
+
+        if self.is_boundary_repetition_code or (len(hqt) > 1):
             self.h(t)
             self.cx(c2, t)
             self.adjt(t)
@@ -2391,9 +2395,6 @@ class QrackAceBackend:
             self.cx(c1, c2)
             return
 
-        if (len(hqt) == 1) and (len(hq1) == 1) and (len(hq2) == 1) and (hqt[0][0] == hq1[0][0]) and (hqt[0][0] == hq2[0][0]):
-            self.mcx([c1, c2], t)
-            return
 
         if not self._in_gadget_capture:
             self._correct(c1)
@@ -2401,27 +2402,25 @@ class QrackAceBackend:
 
         anc1, anc2, anc1b, anc2b = None, None, None, None
         if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
-            anc1 = self._detect_ancilla1_lq[hq1[0][0]]
-            if hq1[0][0] == hq2[0][0]:
-                anc2 = self._detect_ancilla2_lq[hq2[0][0]]
-            else:
-                anc2 = self._detect_ancilla1_lq[hq2[0][0]]
-
             self._in_gadget_capture = True
 
-            # Control bit-flip
-            self.cx(c1, anc1)
-            self.cx(c2, anc2)
+            if len(hq1) > 1:
+                anc1 = self._detect_ancilla1_lq[hq1[0][0]]
+                self.cx(c1, anc1)
+                if hqt[0][0] != hq1[0][0]:
+                    anc1b = self._detect_ancilla1_lq[hqt[0][0]]
+                    self.cx(c1, anc1b)
 
-            if (len(hq1) > 1) and (hqt[0][0] != hq1[0][0]):
-                anc1b = self._detect_ancilla1_lq[hqt[0][0]]
-                # Control bit-flip
-                self.cx(c1, anc1b)
-
-            if (len(hq2) > 1) and (hqt[0][0] != hq2[0][0]):
-                anc2b = self._detect_ancilla2_lq[hqt[0][0]]
-                # Control bit-flip
-                self.cx(c2, anc2b)
+            if len(hq2) > 1:
+                if (len(hq1) > 1) and (hq1[0][0] == hq2[0][0]):
+                    anc2 = self._detect_ancilla2_lq[hq2[0][0]]
+                else:
+                    anc2 = self._detect_ancilla1_lq[hq2[0][0]]
+                self.cx(c2, anc2)
+                if hqt[0][0] != hq2[0][0]:
+                    anc2b = self._detect_ancilla2_lq[hqt[0][0]]
+                    # Control bit-flip
+                    self.cx(c2, anc2b)
 
             self._in_gadget_capture = False
 
@@ -2459,13 +2458,23 @@ class QrackAceBackend:
             # Post-selection
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
+            is_flipped = False
             if self._ps_epsilon >= (1.0 - p):
                 b1 = self.m(anc1)
             else:
                 b1 = self.force_m(anc1, False)
             if b1:
                 self.x(anc1)
-                self.x(c1)
+                q = None
+                for c in hq1:
+                    if c[0] == anc_sim:
+                        q = c[1]
+                        break
+                if q is None:
+                    self.x(c1)
+                    is_flipped = True
+                else:
+                    self.sim[anc_sim].x(q)
 
             if anc1b is not None:
                 anc_sim, anc_idx = self._qubits[anc1b][0]
@@ -2478,6 +2487,17 @@ class QrackAceBackend:
                     b2 = self.force_m(anc1b, b1)
                 if b2:
                     self.x(anc1b)
+                if b2 != is_flipped:
+                    q = None
+                    for c in hq1:
+                        if c[0] == anc_sim:
+                            q = c[1]
+                            break
+                    if q is None:
+                        if not is_flipped:
+                            self.x(c1)
+                    else:
+                        self.sim[anc_sim].x(q)
 
         if anc2 is not None:
             # Syndrome
@@ -2486,13 +2506,23 @@ class QrackAceBackend:
             # Post-selection
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
+            is_flipped = False
             if self._ps_epsilon >= (1.0 - p):
                 b1 = self.m(anc2)
             else:
                 b1 = self.force_m(anc2, False)
             if b1:
                 self.x(anc2)
-                self.x(c2)
+                q = None
+                for c in hq2:
+                    if c[0] == anc_sim:
+                        q = c[1]
+                        break
+                if q is None:
+                    self.x(c2)
+                    is_flipped = True
+                else:
+                    self.sim[anc_sim].x(q)
 
             if anc2b is not None:
                 anc_sim, anc_idx = self._qubits[anc2b][0]
@@ -2505,6 +2535,17 @@ class QrackAceBackend:
                     b2 = self.force_m(anc2b, b1)
                 if b2:
                     self.x(anc2b)
+                if b2 != is_flipped:
+                    q = None
+                    for c in hq2:
+                        if c[0] == anc_sim:
+                            q = c[1]
+                            break
+                    if q is None:
+                        if not is_flipped:
+                            self.x(c2)
+                    else:
+                        self.sim[anc_sim].x(q)
 
         self._in_gadget_capture = False
 
