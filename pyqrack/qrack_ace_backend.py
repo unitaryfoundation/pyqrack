@@ -3081,7 +3081,60 @@ class QrackAceBackend:
                     if a != b:
                         coupling_map.add((a, b))
 
-        self._coupling_map = sorted(coupling_map)
+        # BUGFIX (per Dan): distant boundary-to-boundary couplings -- two
+        # boundary qubits sharing a simulator id even when they're
+        # nowhere near each other. Tried re-deriving adjacency from
+        # sim_id arithmetic several ways; none held up, because sim_id
+        # doesn't decompose cleanly back into a geometric position.
+        # Dropping that entirely: the patch grid is a plain, regular
+        # series of rectangles by construction, and that geometry is
+        # already sitting in self._is_row_long_range /
+        # self._is_col_long_range (True = bulk, False = boundary). Two
+        # boundary qubits are kept coupled only when they lie on the
+        # SAME boundary row or column AND bound (or lie within) one
+        # single contiguous bulk run along it -- i.e. no OTHER boundary
+        # crossing lies strictly between them -- which is exactly "the
+        # same single side of one rectangular patch." A corner
+        # naturally keeps this relationship along both its own row and
+        # its own column (its real spokes to the nearest patch in each
+        # of the four directions), while corner-to-distant-corner (or
+        # any other boundary-to-boundary pair separated by an
+        # intervening boundary, or lying on neither a shared row nor a
+        # shared column at all) correctly drops out. Bulk-involved pairs
+        # are untouched -- a bulk qubit's single simulator membership
+        # was never ambiguous.
+        def is_boundary(lq):
+            return len(self._qubits[lq]) > 1
+
+        def same_single_side(idx_a, idx_b, long_range_arr, length):
+            if idx_a == idx_b:
+                return True
+            lo, hi = min(idx_a, idx_b), max(idx_a, idx_b)
+            if all(long_range_arr[i] for i in range(lo + 1, hi)):
+                return True
+            if self.is_torus:
+                wrapped = list(range(hi + 1, length)) + list(range(0, lo))
+                if all(long_range_arr[i] for i in wrapped):
+                    return True
+            return False
+
+        filtered_map = set()
+        for a, b in coupling_map:
+            if is_boundary(a) and is_boundary(b):
+                a_row, a_col = a // self._row_length, a % self._row_length
+                b_row, b_col = b // self._row_length, b % self._row_length
+                keep = False
+                if (a_row == b_row) and (not self._is_row_long_range[a_row]):
+                    if same_single_side(a_col, b_col, self._is_col_long_range, self._row_length):
+                        keep = True
+                if (a_col == b_col) and (not self._is_col_long_range[a_col]):
+                    if same_single_side(a_row, b_row, self._is_row_long_range, self._col_length):
+                        keep = True
+                if not keep:
+                    continue
+            filtered_map.add((a, b))
+
+        self._coupling_map = sorted(filtered_map)
 
         return self._coupling_map
 
