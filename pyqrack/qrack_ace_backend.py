@@ -2466,7 +2466,7 @@ class QrackAceBackend:
             if b1:
                 self.x(anc1)
                 q = None
-                for c in c1:
+                for c in hq1:
                     if c[0] == anc_sim:
                         q = c[1]
                         break
@@ -2489,7 +2489,7 @@ class QrackAceBackend:
                     self.x(anc1b)
                 if b2 != is_flipped:
                     q = None
-                    for c in c1:
+                    for c in hq1:
                         if c[0] == anc_sim:
                             q = c[1]
                             break
@@ -2514,7 +2514,7 @@ class QrackAceBackend:
             if b1:
                 self.x(anc2)
                 q = None
-                for c in c2:
+                for c in hq2:
                     if c[0] == anc_sim:
                         q = c[1]
                         break
@@ -2537,7 +2537,7 @@ class QrackAceBackend:
                     self.x(anc2b)
                 if b2 != is_flipped:
                     q = None
-                    for c in c2:
+                    for c in hq2:
                         if c[0] == anc_sim:
                             q = c[1]
                             break
