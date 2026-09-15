@@ -408,17 +408,11 @@ class QrackAceBackend:
         # per-simulator allocation above.
         self._detect_ancilla1 = []
         self._detect_ancilla2 = []
-        self._detect_ancilla3 = []
-        self._detect_ancilla4 = []
         if self.is_error_detection:
             for i in range(len(sim_counts)):
                 self._detect_ancilla1.append(sim_counts[i])
                 sim_counts[i] += 1
                 self._detect_ancilla2.append(sim_counts[i])
-                sim_counts[i] += 1
-                self._detect_ancilla3.append(sim_counts[i])
-                sim_counts[i] += 1
-                self._detect_ancilla4.append(sim_counts[i])
                 sim_counts[i] += 1
 
         # Logical-qubit wrapper around each patch's detection ancilla,
@@ -441,8 +435,6 @@ class QrackAceBackend:
         # legitimately need to change any single replica's own value.
         self._detect_ancilla1_lq = []
         self._detect_ancilla2_lq = []
-        self._detect_ancilla3_lq = []
-        self._detect_ancilla4_lq = []
         if self.is_error_detection:
             for sim_id, phys_idx in enumerate(self._detect_ancilla1):
                 lq_idx = len(self._qubits)
@@ -452,14 +444,6 @@ class QrackAceBackend:
                 lq_idx = len(self._qubits)
                 self._qubits.append([(sim_id, phys_idx)])
                 self._detect_ancilla2_lq.append(lq_idx)
-            for sim_id, phys_idx in enumerate(self._detect_ancilla3):
-                lq_idx = len(self._qubits)
-                self._qubits.append([(sim_id, phys_idx)])
-                self._detect_ancilla3_lq.append(lq_idx)
-            for sim_id, phys_idx in enumerate(self._detect_ancilla4):
-                lq_idx = len(self._qubits)
-                self._qubits.append([(sim_id, phys_idx)])
-                self._detect_ancilla4_lq.append(lq_idx)
         # Boundary repetition code, on-demand design: only the couplers
         # are actually noisy here -- single-qubit gates are already
         # exactly transversal, per-replica, with zero error, so there's
@@ -716,9 +700,6 @@ class QrackAceBackend:
         else:
             t.adjs()
 
-    def _detect_swap(self, sim_id, idx1, idx2):
-        self.sim[sim_id].swap(idx1, idx2)
-
     def _anti_shadow_wrap(self, c, t, middle_fn):
         self._qec_x(c)
         middle_fn(c, t)
@@ -756,6 +737,24 @@ class QrackAceBackend:
 
     def _anti_cy_shadow(self, c, t):
         self._anti_shadow_wrap(c, t, self._cy_shadow)
+
+    def _ccx_shadow(self, c1, c2, t, lc1, lc2, lt):
+        # CCNOT decomposition
+        self.h(lt)
+        self._cx_shadow(c2, t)
+        self.adjt(lt)
+        self._cx_shadow(c1, t)
+        self.t(lt)
+        self._cx_shadow(c2, t)
+        self.adjt(lt)
+        self._cx_shadow(c1, t)
+        self.t(lt)
+        self.h(lt)
+        self.t(lc2)
+        self._cx_shadow(c1, c2)
+        self.t(lc1)
+        self.adjt(lc2)
+        self._cx_shadow(c1, c2)
 
     def _unpack(self, lq):
         return self._qubits[lq]
@@ -2258,7 +2257,7 @@ class QrackAceBackend:
             for i in range(len(hq1)):
                 sim_id, idx1 = hq1[i]
                 _, idx2 = hq2[i]
-                self._detect_swap(sim_id, idx1, idx2)
+                self.sim[sim_id].swap(idx1, idx2)
             # No post-swap correction: this branch is a native index
             # relabeling applied identically to every matching replica
             # pair, with zero Schmidt-truncation opportunity -- verified
@@ -2300,7 +2299,7 @@ class QrackAceBackend:
             for _hq2 in non_matching:
                 self._cx_shadow(_hq1, _hq2)
             for _hq2 in matching:
-                self._detect_swap(_hq1[0], _hq1[1], _hq2[1])
+                self.sim[_hq1[0]].swap(_hq1[1], _hq2[1])
             for _hq2 in non_matching:
                 self._cx_shadow(_hq1, _hq2)
             # No correction on lq1 (bulk, single-replica): already a
@@ -2317,7 +2316,7 @@ class QrackAceBackend:
             for _hq1 in non_matching:
                 self._cx_shadow(_hq2, _hq1)
             for _hq1 in matching:
-                self._detect_swap(_hq2[0], _hq2[1], _hq1[1])
+                self.sim[_hq2[0]].swap(_hq2[1], _hq2[1])
             for _hq1 in non_matching:
                 self._cx_shadow(_hq2, _hq1)
             self._correct(lq1)
@@ -2378,67 +2377,180 @@ class QrackAceBackend:
             self.mcx([c1, c2], t)
             return
 
-        anc1, anc2 = None, None
-        if self.is_error_detection and not self._in_gadget_capture and (len(hqt) == 1) and ((len(hq1) > 1) or (len(hq2) > 1)):
-            anc1 = self._detect_ancilla3_lq[hqt[0][0]]
-            anc2 = self._detect_ancilla4_lq[hqt[0][0]]
+        if self.is_boundary_repetition_code or (len(hqt) > 1):
+            self.h(t)
+            self.cx(c2, t)
+            self.adjt(t)
+            self.cx(c1, t)
+            self.t(t)
+            self.cx(c2, t)
+            self.adjt(t)
+            self.cx(c1, t)
+            self.t(t)
+            self.h(t)
+            self.t(c2)
+            self.cx(c1, c2)
+            self.t(c1)
+            self.adjt(c2)
+            self.cx(c1, c2)
+            return
+
+
+        if not self._in_gadget_capture:
+            self._correct(c1)
+            self._correct(c2)
+
+        anc1, anc2, anc1b, anc2b = None, None, None, None
+        if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
             self._in_gadget_capture = True
-            self.cx(t, anc1)
-            self.cx(c1, anc1)
-            self.cx(c2, anc1)
-            self.cx(t, anc2)
-            self.cx(c2, anc2)
-            self.cx(c1, anc2)
+
+            if len(hq1) > 1:
+                anc1 = self._detect_ancilla1_lq[hq1[0][0]]
+                self.cx(c1, anc1)
+                if hqt[0][0] != hq1[0][0]:
+                    anc1b = self._detect_ancilla1_lq[hqt[0][0]]
+                    self.cx(c1, anc1b)
+
+            if len(hq2) > 1:
+                if (len(hq1) > 1) and (hq1[0][0] == hq2[0][0]):
+                    anc2 = self._detect_ancilla2_lq[hq2[0][0]]
+                else:
+                    anc2 = self._detect_ancilla1_lq[hq2[0][0]]
+                self.cx(c2, anc2)
+                if hqt[0][0] != hq2[0][0]:
+                    anc2b = self._detect_ancilla2_lq[hqt[0][0]]
+                    # Control bit-flip
+                    self.cx(c2, anc2b)
+
             self._in_gadget_capture = False
 
-        # CCNOT decomposition
-        self.h(t)
-        self.cx(c2, t)
-        self.adjt(t)
-        self.cx(c1, t)
-        self.t(t)
-        self.cx(c2, t)
-        self.adjt(t)
-        self.cx(c1, t)
-        self.t(t)
-        self.h(t)
-        self.t(c2)
-        self.cx(c1, c2)
-        self.t(c1)
-        self.adjt(c2)
-        self.cx(c1, c2)
+        qb1, _ = QrackAceBackend._get_qb_lhv_indices(hq1)
+        qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
+        qbt, _ = QrackAceBackend._get_qb_lhv_indices(hqt)
+
+        for qt in qbt:
+            witness = None
+            bt = hqt[qt]
+            for q1 in qb1:
+                b1 = hq1[q1]
+                for q2 in qb2:
+                    b2 = hq2[q2]
+                    for q2 in qb2:
+                        b2 = hq2[q2]
+                        if bt[0] == b1[0] and bt[0] == b2[0]:
+                            witness = bt
+                            break
+                    if witness is not None:
+                        break
+                if witness is not None:
+                    break
+            if witness:
+                self.sim[b1[0]].mcx([b1[1], b2[1]], bt[1])
+            else:
+                self._ccx_shadow(b1, b2, bt, c1, c2, t)
+
+        self._in_gadget_capture = True
 
         if anc1 is not None:
             # Syndrome
-            self.cx(t, anc1)
-            self.cx(c2, anc1)
-            self.cx(t, anc2)
-            self.cx(c1, anc2)
+            self.cx(c1, anc1)
 
             # Post-selection
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
+            is_flipped = False
             if self._ps_epsilon >= (1.0 - p):
                 b1 = self.m(anc1)
             else:
                 b1 = self.force_m(anc1, False)
             if b1:
                 self.x(anc1)
+                q = None
+                for c in hq1:
+                    if c[0] == anc_sim:
+                        q = c[1]
+                        break
+                if q is None:
+                    self.x(c1)
+                    is_flipped = True
+                else:
+                    self.sim[anc_sim].x(q)
 
+            if anc1b is not None:
+                anc_sim, anc_idx = self._qubits[anc1b][0]
+                p = self.sim[anc_sim].prob(anc_idx)
+                if b1:
+                    p = 1.0 - p
+                if self._ps_epsilon >= (1.0 - p):
+                    b2 = self.m(anc1b)
+                else:
+                    b2 = self.force_m(anc1b, b1)
+                if b2:
+                    self.x(anc1b)
+                if b2 != is_flipped:
+                    q = None
+                    for c in hq1:
+                        if c[0] == anc_sim:
+                            q = c[1]
+                            break
+                    if q is None:
+                        if not is_flipped:
+                            self.x(c1)
+                    else:
+                        self.sim[anc_sim].x(q)
+
+        if anc2 is not None:
+            # Syndrome
+            self.cx(c2, anc2)
+
+            # Post-selection
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
-            if b1:
-                p = 1.0 - p
+            is_flipped = False
             if self._ps_epsilon >= (1.0 - p):
-                b2 = self.m(anc2)
+                b1 = self.m(anc2)
             else:
-                b2 = self.force_m(anc2, b1)
-            if b2:
+                b1 = self.force_m(anc2, False)
+            if b1:
                 self.x(anc2)
+                q = None
+                for c in hq2:
+                    if c[0] == anc_sim:
+                        q = c[1]
+                        break
+                if q is None:
+                    self.x(c2)
+                    is_flipped = True
+                else:
+                    self.sim[anc_sim].x(q)
 
-            # Correction gate
-            if b1 or b2:
-                self.x(t)
+            if anc2b is not None:
+                anc_sim, anc_idx = self._qubits[anc2b][0]
+                p = self.sim[anc_sim].prob(anc_idx)
+                if b1:
+                    p = 1.0 - p
+                if self._ps_epsilon >= (1.0 - p):
+                    b2 = self.m(anc2b)
+                else:
+                    b2 = self.force_m(anc2b, b1)
+                if b2:
+                    self.x(anc2b)
+                if b2 != is_flipped:
+                    q = None
+                    for c in hq2:
+                        if c[0] == anc_sim:
+                            q = c[1]
+                            break
+                    if q is None:
+                        if not is_flipped:
+                            self.x(c2)
+                    else:
+                        self.sim[anc_sim].x(q)
+
+        self._in_gadget_capture = False
+
+        if not self._in_gadget_capture:
+            self._correct(t)
 
     def ccz(self, c1, c2, t):
         self.h(t)
@@ -3300,23 +3412,6 @@ class QrackAceBackend:
             # same condition to stay consistent with what the gate does.
             if (is_a_simple != is_b_simple) and has_match:
                 p_net_swap = 2 * p * (1 - p)
-                # swap()'s own anc1/anc2 cross-check (verifying lq1's new
-                # value against lq2's old, and vice versa -- see swap())
-                # wraps the ENTIRE call, every branch, not specifically
-                # this matching-replica step -- _detect_swap itself is
-                # just a plain swap(), carrying no gadget of its own
-                # (an earlier per-replica parity gadget living there was
-                # proven a mathematically guaranteed no-op, the same way
-                # the old cx/cy/cz gadget was, and was simplified away).
-                # So this IS damped, unlike the stale "swap/iswap
-                # deliberately not damped" note this replaced -- but
-                # unconditionally so, not gated on any structural
-                # per-qubit condition BEYOND the "at least one side is
-                # boundary" precondition this whole branch already
-                # requires: swap()'s gadget captures both sides whenever
-                # is_error_detection is on and either side qualifies, no
-                # separate len(hq)>1-style gate the way _cpauli's anc2
-                # has on top of that.
                 if self.is_error_detection:
                     p_net_swap *= y
                 if is_a_simple:
