@@ -2372,7 +2372,11 @@ class QrackAceBackend:
         hq2 = self._unpack(c2)
         hqt = self._unpack(t)
 
-        if (len(hqt) > 1) or self.is_boundary_repetition_code:
+        if (len(hqt) == 1) and (len(hq1) == 1) and (len(hq2) == 1) and (hqt[0][0] == hq1[0][0]) and (hqt[0][0] == hq2[0][0]):
+            self.mcx([c1, c2], t)
+            return
+
+        if self.is_boundary_repetition_code or (len(hqt) > 1):
             self.h(t)
             self.cx(c2, t)
             self.adjt(t)
@@ -2390,9 +2394,6 @@ class QrackAceBackend:
             self.cx(c1, c2)
             return
 
-        if (len(hqt) == 1) and (len(hq1) == 1) and (len(hq2) == 1) and (hqt[0][0] == hq1[0][0]) and (hqt[0][0] == hq2[0][0]):
-            self.mcx([c1, c2], t)
-            return
 
         if not self._in_gadget_capture:
             self._correct(c1)
@@ -2400,27 +2401,25 @@ class QrackAceBackend:
 
         anc1, anc2, anc1b, anc2b = None, None, None, None
         if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
-            anc1 = self._detect_ancilla1_lq[hq1[0][0]]
-            if hq1[0][0] == hq2[0][0]:
-                anc2 = self._detect_ancilla2_lq[hq2[0][0]]
-            else:
-                anc2 = self._detect_ancilla1_lq[hq2[0][0]]
-
             self._in_gadget_capture = True
 
-            # Control bit-flip
-            self.cx(c1, anc1)
-            self.cx(c2, anc2)
+            if len(hq1) > 1:
+                anc1 = self._detect_ancilla1_lq[hq1[0][0]]
+                self.cx(c1, anc1)
+                if hqt[0][0] != hq1[0][0]:
+                    anc1b = self._detect_ancilla1_lq[hqt[0][0]]
+                    self.cx(c1, anc1b)
 
-            if (len(hq1) > 1) and (hqt[0][0] != hq1[0][0]):
-                anc1b = self._detect_ancilla1_lq[hqt[0][0]]
-                # Control bit-flip
-                self.cx(c1, anc1b)
-
-            if (len(hq2) > 1) and (hqt[0][0] != hq2[0][0]):
-                anc2b = self._detect_ancilla2_lq[hqt[0][0]]
-                # Control bit-flip
-                self.cx(c2, anc2b)
+            if len(hq2) > 1:
+                if (len(hq1) > 1) and (hq1[0][0] == hq2[0][0]):
+                    anc2 = self._detect_ancilla2_lq[hq2[0][0]]
+                else:
+                    anc2 = self._detect_ancilla1_lq[hq2[0][0]]
+                self.cx(c2, anc2)
+                if hqt[0][0] != hq2[0][0]:
+                    anc2b = self._detect_ancilla2_lq[hqt[0][0]]
+                    # Control bit-flip
+                    self.cx(c2, anc2b)
 
             self._in_gadget_capture = False
 
@@ -2458,13 +2457,23 @@ class QrackAceBackend:
             # Post-selection
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
+            is_flipped = False
             if self._ps_epsilon >= (1.0 - p):
                 b1 = self.m(anc1)
             else:
                 b1 = self.force_m(anc1, False)
             if b1:
                 self.x(anc1)
-                self.x(c1)
+                q = None
+                for c in hq1:
+                    if c[0] == anc_sim:
+                        q = c[1]
+                        break
+                if q is None:
+                    self.x(c1)
+                    is_flipped = True
+                else:
+                    self.sim[anc_sim].x(q)
 
             if anc1b is not None:
                 anc_sim, anc_idx = self._qubits[anc1b][0]
@@ -2477,6 +2486,17 @@ class QrackAceBackend:
                     b2 = self.force_m(anc1b, b1)
                 if b2:
                     self.x(anc1b)
+                if b2 != is_flipped:
+                    q = None
+                    for c in hq1:
+                        if c[0] == anc_sim:
+                            q = c[1]
+                            break
+                    if q is None:
+                        if not is_flipped:
+                            self.x(c1)
+                    else:
+                        self.sim[anc_sim].x(q)
 
         if anc2 is not None:
             # Syndrome
@@ -2485,13 +2505,23 @@ class QrackAceBackend:
             # Post-selection
             anc_sim, anc_idx = self._qubits[anc2][0]
             p = self.sim[anc_sim].prob(anc_idx)
+            is_flipped = False
             if self._ps_epsilon >= (1.0 - p):
                 b1 = self.m(anc2)
             else:
                 b1 = self.force_m(anc2, False)
             if b1:
                 self.x(anc2)
-                self.x(c2)
+                q = None
+                for c in hq2:
+                    if c[0] == anc_sim:
+                        q = c[1]
+                        break
+                if q is None:
+                    self.x(c2)
+                    is_flipped = True
+                else:
+                    self.sim[anc_sim].x(q)
 
             if anc2b is not None:
                 anc_sim, anc_idx = self._qubits[anc2b][0]
@@ -2504,6 +2534,17 @@ class QrackAceBackend:
                     b2 = self.force_m(anc2b, b1)
                 if b2:
                     self.x(anc2b)
+                if b2 != is_flipped:
+                    q = None
+                    for c in hq2:
+                        if c[0] == anc_sim:
+                            q = c[1]
+                            break
+                    if q is None:
+                        if not is_flipped:
+                            self.x(c2)
+                    else:
+                        self.sim[anc_sim].x(q)
 
         self._in_gadget_capture = False
 
@@ -3038,7 +3079,60 @@ class QrackAceBackend:
                     if a != b:
                         coupling_map.add((a, b))
 
-        self._coupling_map = sorted(coupling_map)
+        # BUGFIX (per Dan): distant boundary-to-boundary couplings -- two
+        # boundary qubits sharing a simulator id even when they're
+        # nowhere near each other. Tried re-deriving adjacency from
+        # sim_id arithmetic several ways; none held up, because sim_id
+        # doesn't decompose cleanly back into a geometric position.
+        # Dropping that entirely: the patch grid is a plain, regular
+        # series of rectangles by construction, and that geometry is
+        # already sitting in self._is_row_long_range /
+        # self._is_col_long_range (True = bulk, False = boundary). Two
+        # boundary qubits are kept coupled only when they lie on the
+        # SAME boundary row or column AND bound (or lie within) one
+        # single contiguous bulk run along it -- i.e. no OTHER boundary
+        # crossing lies strictly between them -- which is exactly "the
+        # same single side of one rectangular patch." A corner
+        # naturally keeps this relationship along both its own row and
+        # its own column (its real spokes to the nearest patch in each
+        # of the four directions), while corner-to-distant-corner (or
+        # any other boundary-to-boundary pair separated by an
+        # intervening boundary, or lying on neither a shared row nor a
+        # shared column at all) correctly drops out. Bulk-involved pairs
+        # are untouched -- a bulk qubit's single simulator membership
+        # was never ambiguous.
+        def is_boundary(lq):
+            return len(self._qubits[lq]) > 1
+
+        def same_single_side(idx_a, idx_b, long_range_arr, length):
+            if idx_a == idx_b:
+                return True
+            lo, hi = min(idx_a, idx_b), max(idx_a, idx_b)
+            if all(long_range_arr[i] for i in range(lo + 1, hi)):
+                return True
+            if self.is_torus:
+                wrapped = list(range(hi + 1, length)) + list(range(0, lo))
+                if all(long_range_arr[i] for i in wrapped):
+                    return True
+            return False
+
+        filtered_map = set()
+        for a, b in coupling_map:
+            if is_boundary(a) and is_boundary(b):
+                a_row, a_col = a // self._row_length, a % self._row_length
+                b_row, b_col = b // self._row_length, b % self._row_length
+                keep = False
+                if (a_row == b_row) and (not self._is_row_long_range[a_row]):
+                    if same_single_side(a_col, b_col, self._is_col_long_range, self._row_length):
+                        keep = True
+                if (a_col == b_col) and (not self._is_col_long_range[a_col]):
+                    if same_single_side(a_row, b_row, self._is_row_long_range, self._col_length):
+                        keep = True
+                if not keep:
+                    continue
+            filtered_map.add((a, b))
+
+        self._coupling_map = sorted(filtered_map)
 
         return self._coupling_map
 
