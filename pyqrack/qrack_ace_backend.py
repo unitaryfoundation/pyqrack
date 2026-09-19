@@ -2043,27 +2043,6 @@ class QrackAceBackend:
             # the right eligibility with it. Nothing else to move.
             return
 
-        # Boundary repetition code: redirect entirely to the 3-CNOT
-        # decomposition at the bottom of this method whenever EITHER
-        # side is multi-replica (repetition-code eligible), rather than
-        # extending each of the specialized fast/partial-match paths
-        # below individually with new, separately-unverified encode/
-        # decode logic. self.cx() already handles the on-demand encode/
-        # couple/decode/correct cycle correctly -- verified directly,
-        # including real bugs found and fixed there -- so this reuses
-        # that rather than re-deriving equivalent logic three more times
-        # under the same risk of another subtle mismatch. Costs the
-        # fast-path optimizations below for this specific case; given
-        # the fast/exact-match path additionally requires lq1 and lq2 to
-        # be TWO boundary qubits with identically-matching patch
-        # structure -- rare on its own -- the case being deferred is
-        # narrow.
-        if self.is_boundary_repetition_code and (len(hq1) > 1 or len(hq2) > 1):
-            self.cx(lq1, lq2)
-            self.cx(lq2, lq1)
-            self.cx(lq1, lq2)
-            return
-
         # Boundary-to-boundary handling
         if (len(hq1) > 1) and (len(hq2) > 1):
             self.cx(lq1, lq2)
@@ -2224,7 +2203,7 @@ class QrackAceBackend:
             self.mcx([c1, c2], t)
             return
 
-        if self.is_boundary_repetition_code or (len(hqt) > 1):
+        if len(hqt) > 1:
             self.h(t)
             self.cx(c2, t)
             self.adjt(t)
