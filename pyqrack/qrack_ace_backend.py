@@ -2142,7 +2142,7 @@ class QrackAceBackend:
             for _hq1 in non_matching:
                 self._cx_shadow(_hq2, _hq1)
             for _hq1 in matching:
-                self.sim[_hq2[0]].swap(_hq2[1], _hq2[1])
+                self.sim[_hq2[0]].swap(_hq2[1], _hq1[1])
             for _hq1 in non_matching:
                 self._cx_shadow(_hq2, _hq1)
             self._correct(lq1)
