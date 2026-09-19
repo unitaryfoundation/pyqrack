@@ -1736,6 +1736,7 @@ class QrackAceBackend:
         t2 = [lq2]
         anc1 = None
         if self.is_boundary_repetition_code and (not self._in_gadget_capture) and lq1_lr and (not lq2_lr):
+            # Encode:
             anc1 = self._rep_code_ancilla_lq[hq1[0][0]]
             self._in_gadget_capture = True
             self.cx(lq2, anc1)
@@ -1746,6 +1747,7 @@ class QrackAceBackend:
 
         # Apply cross coupling on every qubit, including former-LHV boundary
         # qubits, which now live as real qubits in the shared boundary sim.
+        # Also apply across target repetition.
         for l2 in t2:
             h2 = self._unpack(l2)
             qb2, _ = QrackAceBackend._get_qb_lhv_indices(h2)
@@ -1756,9 +1758,32 @@ class QrackAceBackend:
             _cpauli_lhv(ctrl_prob, self._lhv[lq2], pauli, anti)
 
         if anc1 is not None:
+            anc2 = self._detect_ancilla1_lq[hq1[0][0]]
+            self._in_gadget_capture = True
+            self.cx(lq2, anc2)
+            self.cx(anc1, anc2)
+            self._in_gadget_capture = False
+
+            # If anc2 shows a mismatch, it's more likely
+            # that the boundary qubit is the one in error.
+
+            anc_sim, anc_idx = self._qubits[anc2][0]
+            p = self.sim[anc_sim].prob(anc_idx)
+            if self._ps_epsilon >= (1.0 - p):
+                b = self.m(anc2)
+            else:
+                b = self.force_m(anc2, False)
+            if b:
+                self.x(anc2)
+                self.x(lq2)
+
+            # Decode:
             self._in_gadget_capture = True
             self.cx(lq2, anc1)
             self._in_gadget_capture = False
+
+            # After we corrected any mismatch above, it's unlikely
+            # that we can't post-select no-error on this ancilla.
 
             anc_sim, anc_idx = self._qubits[anc1][0]
             p = self.sim[anc_sim].prob(anc_idx)
