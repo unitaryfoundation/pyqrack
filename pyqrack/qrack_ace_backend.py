@@ -1729,9 +1729,8 @@ class QrackAceBackend:
         lq1_lr = len(hq1) == 1
         lq2_lr = len(hq2) == 1
 
-        if not self._in_gadget_capture:
-            self._correct(lq1)
-            self._correct(lq2)
+        self._correct(lq1)
+        self._correct(lq2)
 
         t2 = [lq2]
         anc1 = None
@@ -1793,9 +1792,6 @@ class QrackAceBackend:
                 b = self.force_m(anc1, False)
             if b:
                 self.x(anc1)
-
-        if self._in_gadget_capture:
-            return
 
         if pauli != Pauli.PauliZ:
             self._correct(lq2, False, pauli != Pauli.PauliX)
@@ -2222,9 +2218,8 @@ class QrackAceBackend:
             return
 
 
-        if not self._in_gadget_capture:
-            self._correct(c1)
-            self._correct(c2)
+        self._correct(c1)
+        self._correct(c2)
 
         anc1, anc2, anc1b, anc2b = None, None, None, None
         if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
@@ -2375,8 +2370,7 @@ class QrackAceBackend:
 
         self._in_gadget_capture = False
 
-        if not self._in_gadget_capture:
-            self._correct(t)
+        self._correct(t)
 
     def ccz(self, c1, c2, t):
         self.h(t)
