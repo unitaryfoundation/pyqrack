@@ -2020,25 +2020,6 @@ class QrackAceBackend:
             self.mcx([c1, c2], t)
             return
 
-        if len(hqt) > 1:
-            self.h(t)
-            self.cx(c2, t)
-            self.adjt(t)
-            self.cx(c1, t)
-            self.t(t)
-            self.cx(c2, t)
-            self.adjt(t)
-            self.cx(c1, t)
-            self.t(t)
-            self.h(t)
-            self.t(c2)
-            self.cx(c1, c2)
-            self.t(c1)
-            self.adjt(c2)
-            self.cx(c1, c2)
-            return
-
-
         if not self._in_gadget_capture:
             self._correct(c1)
             self._correct(c2)
@@ -2066,9 +2047,23 @@ class QrackAceBackend:
         # bulk on this path (the len(hqt) > 1 case returns earlier,
         # above) and nothing else in this method uses that array anymore.
         anc_and = None
-        if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
+        if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1) or (len(hqt) > 1)):
+            found = False
+            anc_sim = hqt[0][0]
+            for x in hq1:
+                if x[0] < 0:
+                    continue
+                anc_sim = x[0]
+                for y in hqt:
+                    if y[0] < 0:
+                        continue
+                    if anc_sim == y[0]:
+                        found = True
+                        break
+                if found:
+                    break
             self._in_gadget_capture = True
-            anc_and = self._detect_ancilla2_lq[hqt[0][0]]
+            anc_and = self._detect_ancilla2_lq[anc_sim]
             self.cx(t, anc_and)
             # self.mcx() only supports a single control at the logical
             # level (a syntax-convenience wrapper, confirmed directly --
@@ -2084,7 +2079,6 @@ class QrackAceBackend:
             # skips setting up a second anc_and, and just performs the
             # ordinary native-witness-or-shadow Toffoli computation on
             # anc_and instead.
-            anc_sim = hqt[0][0]
             c1_idx = next((r[1] for r in hq1 if r[0] == anc_sim), None)
             c2_idx = next((r[1] for r in hq2 if r[0] == anc_sim), None)
             if (c1_idx is not None) and (c2_idx is not None):
@@ -2098,26 +2092,67 @@ class QrackAceBackend:
         qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
         qbt, _ = QrackAceBackend._get_qb_lhv_indices(hqt)
 
+        witnesses = []
+        needs_shadow = False
         for qt in qbt:
-            witness = None
             bt = hqt[qt]
+            witness = None
             for q1 in qb1:
                 b1 = hq1[q1]
                 for q2 in qb2:
                     b2 = hq2[q2]
-                    for q2 in qb2:
-                        b2 = hq2[q2]
-                        if bt[0] == b1[0] and bt[0] == b2[0]:
-                            witness = bt
-                            break
-                    if witness is not None:
+                    if bt[0] == b1[0] and bt[0] == b2[0]:
+                        witness = (b1, b2, bt)
                         break
                 if witness is not None:
                     break
-            if witness:
+            if witness is None:
+                needs_shadow = True
+                break
+            witnesses.append(witness)
+
+        if needs_shadow:
+            # Confirmed directly: whenever even one replica of t lacks a
+            # native witness shared with c1 and c2, the per-replica
+            # fallback to _ccx_shadow craters fidelity specifically when
+            # either control is in genuine superposition -- 0.64-0.68
+            # vs. 0.999+ for every other input tested, stable from 100 to
+            # 2500 shots, so not shot noise. Diverting the WHOLE
+            # operation (not just the unwitnessed replica) to the general
+            # 6-CX decomposition instead: every step here is a genuine
+            # logical cx()/h()/t()/adjt() call, which updates every
+            # replica of t through the same _apply_coupling boundary-
+            # crossing machinery already validated elsewhere in this
+            # file, rather than the lower-level per-replica _cx_shadow
+            # calls _ccx_shadow uses for just the unwitnessed ones.
+            #
+            # Wrapped in _in_gadget_capture, same as established earlier:
+            # without it, each individual cx() here would independently
+            # trigger its own XOR-invariant gadget setup, which corrupts
+            # the precise T/Tdg phase relationships this decomposition
+            # depends on (confirmed directly, the first time this
+            # decomposition was used unconditionally -- corrupted even
+            # c1/c2, which the per-replica path never touched at all).
+            self._in_gadget_capture = True
+            self.h(t)
+            self.cx(c2, t)
+            self.adjt(t)
+            self.cx(c1, t)
+            self.t(t)
+            self.cx(c2, t)
+            self.adjt(t)
+            self.cx(c1, t)
+            self.t(t)
+            self.h(t)
+            self.t(c2)
+            self.cx(c1, c2)
+            self.t(c1)
+            self.adjt(c2)
+            self.cx(c1, c2)
+            self._in_gadget_capture = False
+        else:
+            for (b1, b2, bt) in witnesses:
                 self.sim[b1[0]].mcx([b1[1], b2[1]], bt[1])
-            else:
-                self._ccx_shadow(b1, b2, bt, c1, c2, t)
 
         self._in_gadget_capture = True
 
