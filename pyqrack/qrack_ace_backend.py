@@ -1916,21 +1916,14 @@ class QrackAceBackend:
 
         anc1, anc2 = None, None
         if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
-            if len(hq2) == 1:
-                anc1 = self._detect_ancilla1_lq[hq1[0][0]]
-                anc2 = self._detect_ancilla2_lq[hq1[0][0]]
-            elif len(hq1) == 1:
-                anc1 = self._detect_ancilla1_lq[hq2[0][0]]
-                anc2 = self._detect_ancilla2_lq[hq2[0][0]]
-            else:
-                t_sims = {y[0] for y in hq2 if y[0] >= 0}
-                anc_sim = hq1[0][0]
-                for x in hq1:
-                    if x[0] in t_sims:
-                        anc_sim = x[0]
-                        break
-                anc1 = self._detect_ancilla1_lq[anc_sim]
-                anc2 = self._detect_ancilla2_lq[anc_sim]
+            t_sims = {y[0] for y in hq2 if y[0] >= 0}
+            anc_sim = hq1[0][0]
+            for x in hq1:
+                if x[0] in t_sims:
+                    anc_sim = x[0]
+                    break
+            anc1 = self._detect_ancilla1_lq[anc_sim]
+            anc2 = self._detect_ancilla2_lq[anc_sim]
             self._in_gadget_capture = True
             self.cx(lq1, anc1)
             self.cx(lq2, anc2)
