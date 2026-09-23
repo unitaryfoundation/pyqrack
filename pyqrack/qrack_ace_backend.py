@@ -1438,7 +1438,13 @@ class QrackAceBackend:
         # the single-replica CZ dual-check elsewhere.
         anc2 = None
         if self.is_error_detection and not self._in_gadget_capture and (len(hq1) > 1):
-            anc2 = self._detect_ancilla2_lq[hq1[0][0]]
+            anc_sim = hq1[0][0]
+            t_sims = {y[0] for y in hq2 if y[0] >= 0}
+            for x in hq1:
+                if x[0] in t_sims:
+                    anc_sim = x[0]
+                    break
+            anc2 = self._detect_ancilla2_lq[anc_sim]
             self._in_gadget_capture = True
             # XOR on target
             self.cx(lq2, anc2)
@@ -1913,9 +1919,18 @@ class QrackAceBackend:
             if len(hq2) == 1:
                 anc1 = self._detect_ancilla1_lq[hq1[0][0]]
                 anc2 = self._detect_ancilla2_lq[hq1[0][0]]
-            else:
+            elif len(hq1) == 1:
                 anc1 = self._detect_ancilla1_lq[hq2[0][0]]
                 anc2 = self._detect_ancilla2_lq[hq2[0][0]]
+            else:
+                t_sims = {y[0] for y in hq2 if y[0] >= 0}
+                anc_sim = hq1[0][0]
+                for x in hq1:
+                    if x[0] in t_sims:
+                        anc_sim = x[0]
+                        break
+                anc1 = self._detect_ancilla1_lq[anc_sim]
+                anc2 = self._detect_ancilla2_lq[anc_sim]
             self._in_gadget_capture = True
             self.cx(lq1, anc1)
             self.cx(lq2, anc2)
@@ -2049,13 +2064,14 @@ class QrackAceBackend:
         anc_and = None
         if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1) or (len(hqt) > 1)):
             found = False
-            anc_sim = hqt[0][0]
+            anc_sim = hq1[0][0]
+            t_sims = {y[0] for y in hqt if y[0] >= 0}
             for x in hq1:
-                if x[0] < 0:
+                if (x[0] < 0) or (x[0] not in t_sims):
                     continue
                 anc_sim = x[0]
-                for y in hqt:
-                    if y[0] < 0:
+                for y in hq2:
+                    if (y[0] < 0) or (y[0] not in t_sims):
                         continue
                     if anc_sim == y[0]:
                         found = True
