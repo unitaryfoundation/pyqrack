@@ -3502,7 +3502,7 @@ class QrackSimulator:
         return out
 
     def lossy_out_to_file(self, f, p=6, b=4):
-       """TurboQuant-based state out-to-file (for all simulator types)
+        """TurboQuant-based state out-to-file (for all simulator types)
 
         Saves the simulator state to file, with TurboQuant-based lossy compression.
 
