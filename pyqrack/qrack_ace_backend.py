@@ -2873,7 +2873,7 @@ class QrackAceBackend:
         return tgt
 
     # Designed by Dan, Elara (ChatGPT), and (Anthropic) Claude:
-    def create_noise_model(self, x=0.5, y=0.5):
+    def create_noise_model(self, x=0.25, y=0.25):
         if not _IS_QISKIT_AER_AVAILABLE:
             raise RuntimeError(
                 "Before trying to run_qiskit_circuit() with QrackAceBackend, you must install Qiskit Aer!"
@@ -2881,17 +2881,10 @@ class QrackAceBackend:
         noise_model = NoiseModel()
 
         def _uncommon_sim_fraction(lq1, lq2):
-            sims1 = [qb[0] for qb in self._qubits[lq1]]
-            sims2 = [qb[0] for qb in self._qubits[lq2]]
-            n = 0
-            for s in sims1:
-                if s not in sims2:
-                    n += 1
-            for s in sims2:
-                if s not in sims1:
-                    n += 1
+            sims1 = {qb[0] for qb in self._qubits[lq1]}
+            sims2 = {qb[0] for qb in self._qubits[lq2]}
 
-            return n / (len(sims1) + len(sims2))
+            return len(sims1 ^ sims2) / len(sims1.union(sims2))
 
         coupling_map = self.get_logical_coupling_map()
 
@@ -2971,7 +2964,7 @@ class QrackAceBackend:
                 # anc2 verifying b) are structurally live exactly when a
                 # itself is boundary -- see the comment above this loop.
                 # Damp accordingly.
-                p_shadow_ccz *= y
+                p_shadow_ccz *= y ** c
             noise_model.add_quantum_error(
                 pauli_error([("ZI", p_shadow_ccz), ("II", 1 - p_shadow_ccz)]), "cz", [a, b]
             )
@@ -3057,7 +3050,7 @@ class QrackAceBackend:
             if (is_a_simple != is_b_simple) and has_match:
                 p_net_swap = 2 * p * (1 - p)
                 if self.is_error_detection:
-                    p_net_swap *= y
+                    p_net_swap *= y ** c
                 if is_a_simple:
                     # a is bulk, b is boundary -> error lands on b
                     noise_model.add_quantum_error(
