@@ -1389,7 +1389,6 @@ class QrackAceBackend:
                 sim_id, idx1 = hq1[i]
                 gate_fn, shadow_fn = self._get_gate(pauli, anti, sim_id)
                 _, idx2 = hq2[i]
-                self.sim[sim_id].swap(idx1, idx2)
                 gate_fn([idx1], idx2)
             return
 
