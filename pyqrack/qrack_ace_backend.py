@@ -1542,7 +1542,13 @@ class QrackAceBackend:
         anc1 = None
         if self.is_boundary_repetition_code and (not self._in_gadget_capture) and lq1_lr and (not lq2_lr):
             # Encode:
-            anc1 = self._rep_code_ancilla_lq[hq1[0][0]]
+            anc_sim = hq1[0][0]
+            t_sims = {y[0] for y in hq2 if y[0] >= 0}
+            for x in hq1:
+                if x[0] in t_sims:
+                    anc_sim = x[0]
+                    break
+            anc1 = self._detect_ancilla2_lq[anc_sim]
             self._in_gadget_capture = True
             self.cx(lq2, anc1)
             self._in_gadget_capture = False
@@ -3101,7 +3107,7 @@ class QrackAceBackend:
                     # from a different gate (the now-protected native
                     # swap, not
                     # this cz component).
-                    p_cz *= y
+                    p_cz *= y ** c
                 p_net_iswap = p_net_swap * (1 - p_cz) + p_cz * (1 - p_net_swap)
                 if is_a_simple:
                     terms = [("II", 1 - p_net_iswap), ("ZI", p_net_iswap)]
