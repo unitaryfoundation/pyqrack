@@ -1813,10 +1813,46 @@ class QrackAceBackend:
         sims1 = {r[0] for r in hq1}
         sims2 = {r[0] for r in hq2}
 
-        if sims1.isdisjoint(sims2):
-            self._correct(lq1)
-            self._correct(lq2)
+        # Fast/exact path: every replica of lq1 lines up, position-for-
+        # position, with the corresponding replica of lq2 on the SAME
+        # underlying simulator. A native swap() there is pure index
+        # relabeling -- no transient entanglement, so no Schmidt
+        # decomposition for SDRP to truncate. This is the case the noise
+        # model's common-fraction term assumes is error-free.
 
+        # _cpauli normally wraps every coupling gate with _correct() before
+        # and after, to reconcile multi-replica consensus. This method
+        # calls the underlying simulators (and _cx_shadow) directly,
+        # bypassing that wrapper entirely -- _correct() is a no-op for
+        # single-replica (bulk) qubits, so this is always safe to call, and
+        # only actually matters (and was being silently skipped) whenever
+        # either side is a multi-replica boundary qubit.
+        #
+        # Deliberately NOT wrapped with the same logical-level gadget
+        # _cpauli uses below this branch: unlike a controlled-Pauli gate,
+        # where the control is structurally invariant, SWAP genuinely,
+        # intentionally exchanges both sides' values -- an independent
+        # "did home1/home2 change" check would incorrectly flag a
+        # legitimate swap as an error and try to veto it. The correct
+        # invariant here is the COMBINED parity (home1 XOR home2), not
+        # independent per-side checks, and getting that right when the
+        # two sides can land on different simulators (the partial-match
+        # branches below) needs separate, careful treatment -- not
+        # reused as-is from _cpauli's helper.
+
+        if len(hq1) == len(hq2) and all(hq1[i][0] == hq2[i][0] for i in range(len(hq1))):
+            for i in range(len(hq1)):
+                sim_id, idx1 = hq1[i]
+                _, idx2 = hq2[i]
+                self.sim[sim_id].swap(idx1, idx2)
+            # No post-swap correction: this branch is a native index
+            # relabeling applied identically to every matching replica
+            # pair, with zero Schmidt-truncation opportunity -- verified
+            # empirically exact either way (~1e-8, floating-point noise,
+            # with or without this call).
+            return
+
+        if sims1.isdisjoint(sims2):
             # Once fully resolved, the swap itself is nothing but a
             # reference exchange: self._qubits[lq] is a reference to the
             # replica-list object, so swapping which index points to
@@ -1846,47 +1882,6 @@ class QrackAceBackend:
             self.cx(lq1, lq2)
             return
 
-        # Fast/exact path: every replica of lq1 lines up, position-for-
-        # position, with the corresponding replica of lq2 on the SAME
-        # underlying simulator. A native swap() there is pure index
-        # relabeling -- no transient entanglement, so no Schmidt
-        # decomposition for SDRP to truncate. This is the case the noise
-        # model's common-fraction term assumes is error-free.
-
-        # _cpauli normally wraps every coupling gate with _correct() before
-        # and after, to reconcile multi-replica consensus. This method
-        # calls the underlying simulators (and _cx_shadow) directly,
-        # bypassing that wrapper entirely -- _correct() is a no-op for
-        # single-replica (bulk) qubits, so this is always safe to call, and
-        # only actually matters (and was being silently skipped) whenever
-        # either side is a multi-replica boundary qubit.
-        #
-        # Deliberately NOT wrapped with the same logical-level gadget
-        # _cpauli uses below this branch: unlike a controlled-Pauli gate,
-        # where the control is structurally invariant, SWAP genuinely,
-        # intentionally exchanges both sides' values -- an independent
-        # "did home1/home2 change" check would incorrectly flag a
-        # legitimate swap as an error and try to veto it. The correct
-        # invariant here is the COMBINED parity (home1 XOR home2), not
-        # independent per-side checks, and getting that right when the
-        # two sides can land on different simulators (the partial-match
-        # branches below) needs separate, careful treatment -- not
-        # reused as-is from _cpauli's helper.
-        self._correct(lq1)
-        self._correct(lq2)
-
-        if len(hq1) == len(hq2) and all(hq1[i][0] == hq2[i][0] for i in range(len(hq1))):
-            for i in range(len(hq1)):
-                sim_id, idx1 = hq1[i]
-                _, idx2 = hq2[i]
-                self.sim[sim_id].swap(idx1, idx2)
-            # No post-swap correction: this branch is a native index
-            # relabeling applied identically to every matching replica
-            # pair, with zero Schmidt-truncation opportunity -- verified
-            # empirically exact either way (~1e-8, floating-point noise,
-            # with or without this call).
-            return
-
         anc1, anc2 = None, None
         if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1)):
             t_sims = {y[0] for y in hq2 if y[0] >= 0}
@@ -1901,6 +1896,9 @@ class QrackAceBackend:
             self.cx(lq1, anc1)
             self.cx(lq2, anc2)
             self._in_gadget_capture = False
+
+        self._correct(lq1)
+        self._correct(lq2)
 
         # Partial-match cases: one side is a simple (single-replica) qubit,
         # the other has multiple replicas. For the multi-replica side's
@@ -2001,10 +1999,6 @@ class QrackAceBackend:
             self.mcx([c1, c2], t)
             return
 
-        if not self._in_gadget_capture:
-            self._correct(c1)
-            self._correct(c2)
-
         # Control-protection ancillas (anc1/anc1b/anc2/anc2b, checking
         # whether c1/c2's own values held still) removed entirely, same
         # basis as _apply_coupling: instrumented and stress-tested
@@ -2069,6 +2063,9 @@ class QrackAceBackend:
             else:
                 self.ccx(c1, c2, anc_and)
             self._in_gadget_capture = False
+
+        self._correct(c1)
+        self._correct(c2)
 
         qb1, _ = QrackAceBackend._get_qb_lhv_indices(hq1)
         qb2, _ = QrackAceBackend._get_qb_lhv_indices(hq2)
@@ -2136,6 +2133,8 @@ class QrackAceBackend:
             for (b1, b2, bt) in witnesses:
                 self.sim[b1[0]].mcx([b1[1], b2[1]], bt[1])
 
+        self._correct(t)
+
         self._in_gadget_capture = True
 
         if anc_and is not None:
@@ -2152,9 +2151,6 @@ class QrackAceBackend:
                 self.x(t)
 
         self._in_gadget_capture = False
-
-        if not self._in_gadget_capture:
-            self._correct(t)
 
     def ccz(self, c1, c2, t):
         self.h(t)
