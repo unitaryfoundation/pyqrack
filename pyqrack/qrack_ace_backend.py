@@ -1388,7 +1388,6 @@ class QrackAceBackend:
                 sim_id, idx1 = hq1[i]
                 gate_fn, shadow_fn = self._get_gate(pauli, anti, sim_id)
                 _, idx2 = hq2[i]
-                self.sim[sim_id].swap(idx1, idx2)
                 gate_fn([idx1], idx2)
             return
 
@@ -1434,6 +1433,10 @@ class QrackAceBackend:
             else:
                 self.cx(lq1, anc2)
             self._in_gadget_capture = False
+
+        if not self._in_gadget_capture:
+            self._correct(lq1)
+            self._correct(lq2)
 
         # A target replica (q2) that shares a simulator with ANY control
         # replica in qb1 is going to receive a REAL, exact gate from that
@@ -1487,6 +1490,12 @@ class QrackAceBackend:
                     shadow_fn(b1, b2)
                     shadow_targets.append(b2)
 
+        if not self._in_gadget_capture:
+            if pauli != Pauli.PauliZ:
+                self._correct(lq2, False, pauli != Pauli.PauliX)
+            if pauli != Pauli.PauliX:
+                self._correct(lq2, True)
+
         if anc2 is not None:
             self._in_gadget_capture = True
             # XOR check
@@ -1532,10 +1541,6 @@ class QrackAceBackend:
 
         lq1_lr = len(hq1) == 1
         lq2_lr = len(hq2) == 1
-
-        if not self._in_gadget_capture:
-            self._correct(lq1)
-            self._correct(lq2)
 
         t2 = [lq2]
         anc1 = None
@@ -1603,14 +1608,6 @@ class QrackAceBackend:
                 b = self.force_m(anc1, False)
             if b:
                 self.x(anc1)
-
-        if self._in_gadget_capture:
-            return
-
-        if pauli != Pauli.PauliZ:
-            self._correct(lq2, False, pauli != Pauli.PauliX)
-        if pauli != Pauli.PauliX:
-            self._correct(lq2, True)
 
     def cx(self, lq1, lq2):
         self._cpauli(lq1, lq2, False, Pauli.PauliX)
