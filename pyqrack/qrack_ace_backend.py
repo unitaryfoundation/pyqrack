@@ -1384,6 +1384,15 @@ class QrackAceBackend:
     def _apply_coupling(self, pauli, anti, qb1, hq1, qb2, hq2, lq1_lr, lq1=None, lq2=None):
         shadow_targets = []
 
+        if len(hq1) == len(hq2) and all(hq1[i][0] == hq2[i][0] for i in range(len(hq1))):
+            for i in range(len(hq1)):
+                sim_id, idx1 = hq1[i]
+                gate_fn, shadow_fn = self._get_gate(pauli, anti, sim_id)
+                _, idx2 = hq2[i]
+                self.sim[sim_id].swap(idx1, idx2)
+                gate_fn([idx1], idx2)
+            return
+
         # Logical-level error-detection gadget: an earlier version of this
         # also captured lq1's own logical value into a dedicated ancilla
         # (via a nested cx()), on the theory that the shadow-coupling
@@ -1410,7 +1419,7 @@ class QrackAceBackend:
         # a lq2-invariant check for that gate family, same reasoning as
         # the single-replica CZ dual-check elsewhere.
         anc2 = None
-        if self.is_error_detection and not self._in_gadget_capture and (len(hq1) > 1):
+        if self.is_error_detection and (not self._in_gadget_capture) and (len(hq2) > 1):
             anc_sim = hq1[0][0]
             t_sims = {y[0] for y in hq2 if y[0] >= 0}
             for x in hq1:
@@ -1810,9 +1819,6 @@ class QrackAceBackend:
         hq1 = self._unpack(lq1)
         hq2 = self._unpack(lq2)
 
-        sims1 = {r[0] for r in hq1}
-        sims2 = {r[0] for r in hq2}
-
         # Fast/exact path: every replica of lq1 lines up, position-for-
         # position, with the corresponding replica of lq2 on the SAME
         # underlying simulator. A native swap() there is pure index
@@ -1851,6 +1857,9 @@ class QrackAceBackend:
             # empirically exact either way (~1e-8, floating-point noise,
             # with or without this call).
             return
+
+        sims1 = {r[0] for r in hq1}
+        sims2 = {r[0] for r in hq2}
 
         if sims1.isdisjoint(sims2):
             # Once fully resolved, the swap itself is nothing but a
@@ -2022,7 +2031,7 @@ class QrackAceBackend:
         # bulk on this path (the len(hqt) > 1 case returns earlier,
         # above) and nothing else in this method uses that array anymore.
         anc_and = None
-        if self.is_error_detection and not self._in_gadget_capture and ((len(hq1) > 1) or (len(hq2) > 1) or (len(hqt) > 1)):
+        if self.is_error_detection and not self._in_gadget_capture and (len(hqt) > 1):
             found = False
             anc_sim = hq1[0][0]
             t_sims = {y[0] for y in hqt if y[0] >= 0}
