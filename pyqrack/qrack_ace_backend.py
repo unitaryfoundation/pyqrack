@@ -2944,6 +2944,7 @@ class QrackAceBackend:
 
             sp = (1 - self._sdrp / 2) ** c
             p = (1 - x) ** u
+            d = 1 - ((1 - y) ** u)
 
             # cx/cy/cz: single-qubit, TARGET-only error, with the gate's
             # own generator as the Pauli type -- derived directly from
@@ -2968,7 +2969,7 @@ class QrackAceBackend:
                 # anc2 verifying b) are structurally live exactly when a
                 # itself is boundary -- see the comment above this loop.
                 # Damp accordingly.
-                p_shadow_ccz *= y ** c
+                p_shadow_ccz *= d
             noise_model.add_quantum_error(
                 pauli_error([("ZI", p_shadow_ccz), ("II", 1 - p_shadow_ccz)]), "cz", [a, b]
             )
@@ -3054,7 +3055,7 @@ class QrackAceBackend:
             if (is_a_simple != is_b_simple) and has_match:
                 p_net_swap = 2 * p * (1 - p)
                 if self.is_error_detection:
-                    p_net_swap *= y ** c
+                    p_net_swap *= d
                 if is_a_simple:
                     # a is bulk, b is boundary -> error lands on b
                     noise_model.add_quantum_error(
@@ -3105,7 +3106,7 @@ class QrackAceBackend:
                     # from a different gate (the now-protected native
                     # swap, not
                     # this cz component).
-                    p_cz *= y ** c
+                    p_cz *= d
                 p_net_iswap = p_net_swap * (1 - p_cz) + p_cz * (1 - p_net_swap)
                 if is_a_simple:
                     terms = [("II", 1 - p_net_iswap), ("ZI", p_net_iswap)]
