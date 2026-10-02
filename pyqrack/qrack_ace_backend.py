@@ -1825,57 +1825,14 @@ class QrackAceBackend:
         anc_sim = other_sims.pop() if other_sims else gate_sim
         anc = self._detect_ancilla2_lq[anc_sim]
 
-        # Capture 1: c1 is gate1's CONTROL. A control's role is to decide
-        # WHETHER gate1 fires, not WHAT it applies -- so this capture is
-        # basis-independent of pauli1, but it DOES need to track anti1:
-        # gate1 fires on c1==1 normally, or c1==0 if anti1, so the thing
-        # that should land in anc is that trigger condition, not always
-        # the raw bit. (_apply_coupling's own single-gate XOR check
-        # already does exactly this -- acx(lq1, anc) if anti else
-        # cx(lq1, anc) -- this gadget just never matched it.)
-        cap1 = self.acx if anti1 else self.cx
-        cap1(c1, anc)
+        self.cx(c1, anc)
         gate1(c1, c2)
 
         self.u(c2, th, ph, lm)
-
-        # Capture 2: c2 plays two roles here simultaneously -- it was
-        # gate1's TARGET, and it is about to be gate2's CONTROL.
-        # Target role: gate1 applies pauli1 to c2, and pauli1 only shows
-        # up as a computational-basis (Z) bit-flip when pauli1 is X --
-        # a controlled-Z doesn't touch c2's Z-value at all, and a
-        # controlled-Y touches it along with a phase. Conjugating c2
-        # into the basis where pauli1 acts as a bit-flip -- H for Z
-        # (self-inverse), adjs/s for Y -- before/after this capture
-        # recovers that signal, the same conjugation cy()/cz() already
-        # apply to their own target when dispatching through cx().
-        # Control role: gate2 fires on c2==1 normally, or c2==0 if
-        # anti2, same reasoning as capture 1.
-        if pauli1 == Pauli.PauliY:
-            self.adjs(c2)
-        elif pauli1 == Pauli.PauliZ:
-            self.h(c2)
-        cap2 = self.acx if anti2 else self.cx
-        cap2(c2, anc)
-        if pauli1 == Pauli.PauliY:
-            self.s(c2)
-        elif pauli1 == Pauli.PauliZ:
-            self.h(c2)
+        self.cx(c2, anc)
 
         gate2(c2, t)
-
-        # Capture 3: t is gate2's TARGET only -- same target-basis
-        # conjugation as capture 2, now keyed to pauli2. No anti
-        # adjustment: a target's role doesn't depend on anti2.
-        if pauli2 == Pauli.PauliY:
-            self.adjs(t)
-        elif pauli2 == Pauli.PauliZ:
-            self.h(t)
         self.cx(t, anc)
-        if pauli2 == Pauli.PauliY:
-            self.s(t)
-        elif pauli2 == Pauli.PauliZ:
-            self.h(t)
 
         try:
             b = self.force_m(anc, False)
