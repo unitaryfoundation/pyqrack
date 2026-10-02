@@ -1778,9 +1778,9 @@ class QrackAceBackend:
         hq2 = self._unpack(c2)
         hqt = self._unpack(t)
 
-        sims1 = {r[0] for r in hq1 if r[0] >= 0}
-        sims2 = {r[0] for r in hq2 if r[0] >= 0}
-        simst = {r[0] for r in hqt if r[0] >= 0}
+        sims1 = {r[0] for r in hq1}
+        sims2 = {r[0] for r in hq2}
+        simst = {r[0] for r in hqt}
 
         gate_sims = sims1 & sims2 & simst
 
