@@ -385,20 +385,17 @@ class QrackAceBackend:
                 tot_qubits += 1
 
         # Error-detection gadget (IBM-style detect-and-post-select, not
-        # correction): two shared ancillae per simulator -- one per patch,
+        # correction): one shared ancilla per simulator -- one per patch,
         # "a single ancilla per patch, overall" -- reused across every real
         # (same-simulator) coupling
         # gate that touches it, never allocated per-gate or per-qubit.
         # See _apply_coupling for the actual gadget; this block only does
         # the qubit-index bookkeeping, in the same style as every other
         # per-simulator allocation above.
-        self._detect_ancilla1 = []
-        self._detect_ancilla2 = []
+        self._detect_ancilla = []
         if self.is_error_detection:
             for i in range(len(sim_counts)):
-                self._detect_ancilla1.append(sim_counts[i])
-                sim_counts[i] += 1
-                self._detect_ancilla2.append(sim_counts[i])
+                self._detect_ancilla.append(sim_counts[i])
                 sim_counts[i] += 1
 
         # Logical-qubit wrapper around each patch's detection ancilla,
@@ -419,17 +416,12 @@ class QrackAceBackend:
         # specific physical replica directly (an earlier version of
         # this) isn't a valid invariant, since _correct() can
         # legitimately need to change any single replica's own value.
-        self._detect_ancilla1_lq = []
-        self._detect_ancilla2_lq = []
+        self._detect_ancilla_lq = []
         if self.is_error_detection:
-            for sim_id, phys_idx in enumerate(self._detect_ancilla1):
+            for sim_id, phys_idx in enumerate(self._detect_ancilla):
                 lq_idx = len(self._qubits)
                 self._qubits.append([(sim_id, phys_idx)])
-                self._detect_ancilla1_lq.append(lq_idx)
-            for sim_id, phys_idx in enumerate(self._detect_ancilla2):
-                lq_idx = len(self._qubits)
-                self._qubits.append([(sim_id, phys_idx)])
-                self._detect_ancilla2_lq.append(lq_idx)
+                self._detect_ancilla_lq.append(lq_idx)
         # Boundary repetition code, on-demand design: only the couplers
         # are actually noisy here -- single-qubit gates are already
         # exactly transversal, per-replica, with zero error, so there's
@@ -1424,7 +1416,7 @@ class QrackAceBackend:
                 if x[0] in t_sims:
                     anc_sim = x[0]
                     break
-            anc = self._detect_ancilla1_lq[anc_sim]
+            anc = self._detect_ancilla_lq[anc_sim]
             self._in_gadget_capture = True
             # XOR on target
             self.cx(lq2, anc)
@@ -1773,73 +1765,6 @@ class QrackAceBackend:
         # We happen to be able to accommodate this:
         self.sim[s].macz(c, t)
 
-    def chained_cpauli(self, c1, c2, t, th, ph, lm, pauli1=Pauli.PauliX, pauli2=Pauli.PauliX, anti1=False, anti2=False):
-        hq1 = self._unpack(c1)
-        hq2 = self._unpack(c2)
-        hqt = self._unpack(t)
-
-        sims1 = {r[0] for r in hq1}
-        sims2 = {r[0] for r in hq2}
-        simst = {r[0] for r in hqt}
-
-        gate_sims = sims1 & sims2 & simst
-
-        if len(gate_sims) == 0:
-            raise RuntimeError(
-                "QrackAceBackend.chained_cpauli() qubit arguments must all share a patch!"
-            )
-        gate_sim = gate_sims.pop()
-
-        gate1 = self.acx if anti1 else self.cx
-        if pauli1 == Pauli.PauliY:
-            gate1 = self.acy if anti1 else self.cy
-        elif pauli1 == Pauli.PauliZ:
-            gate1 = self.acz if anti1 else self.cz
-        gate2 = self.acx if anti2 else self.cx
-        if pauli2 == Pauli.PauliY:
-            gate2 = self.acy if anti2 else self.cy
-        elif pauli2 == Pauli.PauliZ:
-            gate2 = self.acz if anti2 else self.cz
-
-        if not self.is_error_detection or ((len(hqt) == 1) and (len(hq1) == 1) and (len(hq2) == 1)):
-            gate1(c1, c2)
-            self.u(c2, th, ph, lm)
-            gate2(c2, t)
-            return
-
-        # Deliberately pick the ancilla's patch to be an ALTERNATE patch
-        # one of the operands also has a replica in, not the gate_sim all
-        # three already share -- that's what makes this an actual error
-        # detector. An ancilla confined to gate_sim only ever touches
-        # already-mutually-consistent replicas (everything the real
-        # gates use is already exact there), so it can't catch anything.
-        # Checked in priority order c1, c2, t (c1 is the "protected"
-        # input in cnot_u3.py's worked example; if a later operand is
-        # the boundary-spanning one instead, this still finds it).
-        other_sims = sims1 - {gate_sim}
-        if not other_sims:
-            other_sims = sims2 - {gate_sim}
-        if not other_sims:
-            other_sims = simst - {gate_sim}
-        anc_sim = other_sims.pop() if other_sims else gate_sim
-        anc = self._detect_ancilla2_lq[anc_sim]
-
-        self.cx(c1, anc)
-        gate1(c1, c2)
-
-        self.u(c2, th, ph, lm)
-        self.cx(c2, anc)
-
-        gate2(c2, t)
-        self.cx(t, anc)
-
-        try:
-            b = self.force_m(anc, False)
-        except Exception:
-            b = self.m(anc)
-        if b:
-            self.x(anc)
-
     def cswap(self, lq1, lq2, lq3):
         hq = self._unpack(lq2)
         if len(hq) > 1:
@@ -2056,7 +1981,7 @@ class QrackAceBackend:
                 if found:
                     break
             self._in_gadget_capture = True
-            anc_and = self._detect_ancilla1_lq[anc_sim]
+            anc_and = self._detect_ancilla_lq[anc_sim]
             self.cx(t, anc_and)
             # self.mcx() only supports a single control at the logical
             # level (a syntax-convenience wrapper, confirmed directly --
