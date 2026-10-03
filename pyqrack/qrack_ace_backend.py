@@ -252,6 +252,7 @@ class QrackAceBackend:
         is_1d_chain=False,
         is_error_detection=True,
         is_boundary_repetition_code=False,
+        use_crossbars=True,
         to_clone=None,
     ):
         if to_clone:
@@ -263,6 +264,7 @@ class QrackAceBackend:
             is_1d_chain = to_clone.is_1d_chain
             is_error_detection = to_clone.is_error_detection
             is_boundary_repetition_code = to_clone.is_boundary_repetition_code
+            use_crossbars = to_clone.use_crossbars
         if qubit_count < 0:
             qubit_count = 0
         if long_range_columns < 0:
@@ -275,6 +277,19 @@ class QrackAceBackend:
         self.is_transpose = is_transpose
         self.is_torus = is_torus
         self.is_error_detection = is_error_detection
+        # Opt-in revival of the shared boundary "crossbar" QrackSimulator
+        # (see the note just below, at the qubit-allocation loop) that was
+        # previously removed outright for not scaling with patch count.
+        # Off by default -- same topology/behavior as before this option
+        # existed. On, it gives every boundary qubit one extra REAL replica
+        # in a single simulator shared by every boundary site in the whole
+        # grid, which is itself an un-scalable idea (that one simulator's
+        # qubit count grows with total boundary-qubit count, not with
+        # patch count) -- but for a small number of patches (e.g. 3-4,
+        # fitting on one GPU) it was measured to add real, genuine
+        # connectivity value on top of the classical LHV proxy, so it's
+        # kept available for exactly that regime rather than discarded.
+        self.use_crossbars = use_crossbars
         self.is_boundary_repetition_code = is_boundary_repetition_code
 
         if Qrack.fppow < 5:
@@ -334,19 +349,26 @@ class QrackAceBackend:
                 self._is_row_long_range[-1] = False
         sim_count = col_patch_count * row_patch_count
 
-        # The shared boundary "crossbar" QrackSimulator has been removed.
-        # It used to give every boundary site (row- and/or column-boundary
-        # alike) one extra real replica in a single simulator shared by ALL
-        # boundary qubits, trusting that simulator's own greedy elision
-        # (set_sdrp) to automatically factor apart whatever boundary sites
-        # turned out to be separable, rather than hand-coding "crossbar
-        # intersection" logic. Measurement showed it adds real, and
-        # growing-with-patch-count, connectivity value -- but per explicit
-        # instruction, it is being ripped out cleanly regardless, to get an
-        # empirical read on XEB without it. Every boundary qubit already
-        # carries a classical LHVQubit proxy (self._lhv, below) in
-        # parallel; _correct() now falls back to that proxy for tie-
-        # breaking wherever the crossbar replica used to be consulted.
+        # The shared boundary "crossbar" QrackSimulator, self.use_crossbars
+        # (see the constructor): every boundary site (row- and/or column-
+        # boundary alike) gets one extra real replica in a single
+        # simulator shared by ALL boundary qubits, trusting that
+        # simulator's own greedy elision (set_sdrp) to automatically
+        # factor apart whatever boundary sites turn out to be separable,
+        # rather than hand-coding "crossbar intersection" logic. Measured
+        # to add real connectivity value, but the single shared simulator
+        # grows with total boundary-qubit count rather than patch count,
+        # so it doesn't scale -- off by default, and worth turning on only
+        # for a handful of patches. Every boundary qubit ALSO still gets
+        # its classical LHVQubit proxy (self._lhv, below) regardless, same
+        # as when this option is off: with the crossbar on, the proxy
+        # drops to being only the last-resort tie-breaker _correct() falls
+        # back to when even the crossbar replica is itself ambiguous; with
+        # it off, the proxy is promoted to cover the crossbar's old
+        # tie-breaking role directly.
+        boundary_sim_id = sim_count
+        boundary_count = 0
+
         self._qubits = []
         self._lhv = {}
         sim_counts = [0] * sim_count
@@ -361,6 +383,10 @@ class QrackAceBackend:
                     t_sim_id = (sim_id + 1) % sim_count
                     qubit.append((t_sim_id, sim_counts[t_sim_id]))
                     sim_counts[t_sim_id] += 1
+
+                    if self.use_crossbars:
+                        qubit.append((boundary_sim_id, boundary_count))
+                        boundary_count += 1
 
                     if (not to_clone) or (tot_qubits in to_clone._lhv):
                         self._lhv[tot_qubits] = LHVQubit(
@@ -383,6 +409,18 @@ class QrackAceBackend:
                     list(to_clone._qubits[tot_qubits]) if to_clone else qubit
                 )
                 tot_qubits += 1
+
+        # The crossbar's size is fixed by how many boundary sites exist.
+        # When there are none at all (e.g. a grid small enough, relative
+        # to long_range_rows/columns, to be fully connected with no QEC
+        # boundary), we must NOT allocate a 0-qubit QrackSimulator for it
+        # -- sim_count/sim_counts simply stay exactly as they were,
+        # exactly mirroring how every other per-simulator allocation below
+        # already guards for "nothing to allocate."
+        has_boundary = self.use_crossbars and (boundary_count > 0)
+        if has_boundary:
+            sim_counts.append(boundary_count)
+            sim_count += 1
 
         # Error-detection gadget (IBM-style detect-and-post-select, not
         # correction): one shared ancilla per simulator -- one per patch,
@@ -729,16 +767,19 @@ class QrackAceBackend:
 
     @staticmethod
     def _get_qb_lhv_indices(hq):
-        # With the shared boundary "crossbar" QrackSimulator removed,
-        # every entry of hq is again an ordinary (sim_id, idx) tuple into a
-        # real physical replica: 1 for a bulk qubit, 2 for an edge-boundary
-        # qubit (home + adjacent-patch), or 4 for a corner-boundary qubit
-        # (home + adjacent-patch + 2 diagonal-patch). None of them are
-        # virtual/LHV-backed slots any more -- the classical LHVQubit
-        # proxy (self._lhv) is tracked entirely separately from hq, not as
-        # one of its indices -- so qb is simply every index, in order. We
-        # keep this helper's name and signature for minimal call-site
-        # churn; "lhv" is always -1 (no index needs special-casing).
+        # Every entry of hq is an ordinary (sim_id, idx) tuple into a real
+        # physical replica: 1 for a bulk qubit; with use_crossbars=False
+        # (default), 2 for an edge-boundary qubit (home + adjacent-patch)
+        # or 4 for a corner-boundary qubit (home + adjacent-patch + 2
+        # diagonal-patch); with use_crossbars=True, 3 (home + adjacent-
+        # patch + shared crossbar) or 5 (home + adjacent-patch + shared
+        # crossbar + 2 diagonal-patch). None of them are virtual/LHV-
+        # backed slots -- the classical LHVQubit proxy (self._lhv) is
+        # tracked entirely separately from hq, not as one of its indices
+        # -- so qb is simply every index, in order, regardless of which
+        # of those counts applies. We keep this helper's name and
+        # signature for minimal call-site churn; "lhv" is always -1 (no
+        # index needs special-casing).
         qb = list(range(len(hq)))
         lhv = -1
 
@@ -944,6 +985,164 @@ class QrackAceBackend:
                 # there is no well-defined direction to rotate toward at
                 # all -- skip the rotation rather than rotate toward an
                 # arbitrary/undefined target derived from noise.
+
+        elif len(hq) == 5:
+            # Corner-boundary qubit, self.use_crossbars=True: 5 real
+            # replicas (home, adjacent-patch, the shared crossbar at
+            # slot 2, and the 2 diagonal-patch shadows). Structurally
+            # identical to the no-crossbar 4-replica case above -- the 4
+            # "end-cap" replicas [p0, p1, p3, p4] vote via their own RMS
+            # pool first; a genuine 2-2 split among them defers to the
+            # crossbar replica (hq[2], a REAL qubit, not a classical
+            # proxy); the classical LHV proxy is consulted only if the
+            # crossbar itself also turns out ambiguous.
+            p0 = self.sim[hq[0][0]].prob(hq[0][1])
+            p1 = self.sim[hq[1][0]].prob(hq[1][1])
+            p2 = self.sim[hq[2][0]].prob(hq[2][1])
+            p3 = self.sim[hq[3][0]].prob(hq[3][1])
+            p4 = self.sim[hq[4][0]].prob(hq[4][1])
+            lhv = self._lhv.get(lq)
+
+            end_caps = [p0, p1, p3, p4]
+            high_count = sum(1 for x in end_caps if x > (0.5 + self._epsilon))
+            low_count = sum(1 for x in end_caps if x < (0.5 - self._epsilon))
+            undecided_count = len(end_caps) - high_count - low_count
+            end_caps_tied = (high_count == 2 and low_count == 2) or (undecided_count > 0)
+
+            if not end_caps_tied:
+                prms = math.sqrt(sum(x**2 for x in end_caps) / 4)
+                qrms = math.sqrt(sum((1 - x) ** 2 for x in end_caps) / 4)
+                eff_prob = (prms + (1 - qrms)) / 2
+                result = (
+                    (random.random() < 0.5)
+                    if abs(eff_prob - 0.5) <= self._epsilon
+                    else (eff_prob >= 0.5)
+                )
+            elif abs(p2 - 0.5) > self._epsilon:
+                result = p2 >= 0.5
+            elif lhv is not None:
+                p_lhv = lhv.prob()
+                result = (
+                    (random.random() < 0.5)
+                    if abs(p_lhv - 0.5) <= self._epsilon
+                    else (p_lhv >= 0.5)
+                )
+            else:
+                result = random.random() < 0.5
+
+            p = [p0, p1, p2, p3, p4]
+            syndrome = [1 - x for x in p] if result else list(p)
+            for q in range(5):
+                if syndrome[q] > (0.5 + self._epsilon):
+                    self.sim[hq[q][0]].x(hq[q][1])
+
+            if not skip_rotation:
+                a, i, rs = [0] * 5, [0] * 5, [0] * 5
+                for idx in range(5):
+                    a[idx], i[idx], rs[idx] = self._get_bloch_angles(hq[idx])
+                w = [1 - r for r in rs]
+
+                w_total = sum(w)
+                if w_total > self._epsilon:
+                    a_target = sum(wx * ax for wx, ax in zip(w, a)) / w_total
+                    i_target = sum(wx * ix for wx, ix in zip(w, i)) / w_total
+                    # Same separability gating as the 4-replica case
+                    # above (hq[0] excluded outright, hq[1:] only
+                    # rotated while still reasonably separable).
+                    for x in range(1, 5):
+                        if rs[x] <= self._rot_epsilon:
+                            self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
+
+        elif len(hq) == 3:
+            # Edge-boundary qubit, self.use_crossbars=True: 3 real
+            # replicas (home, adjacent-patch, and the shared crossbar at
+            # slot 2). Same conditional tie-breaking cascade as the
+            # no-crossbar 2-replica case below, but with the crossbar
+            # (hq[2], a REAL qubit) taking over the role the classical
+            # LHV proxy plays there: trust slot1 (adjacent-patch) and
+            # slot2 (crossbar) together whenever they agree; fall back
+            # to slot0 (home) when they disagree and it has a decisive
+            # opinion; consult the classical LHV proxy only as an
+            # absolute last resort, if even slot0 is ambiguous.
+            p0 = self.sim[hq[0][0]].prob(hq[0][1])
+            p1 = self.sim[hq[1][0]].prob(hq[1][1])
+            p2 = self.sim[hq[2][0]].prob(hq[2][1])
+            lhv = self._lhv.get(lq)
+
+            p1_high = p1 > (0.5 + self._epsilon)
+            p1_low = p1 < (0.5 - self._epsilon)
+            p2_high = p2 > (0.5 + self._epsilon)
+            p2_low = p2 < (0.5 - self._epsilon)
+            end_caps_agree = (p1_high and p2_high) or (p1_low and p2_low)
+            slot0_disagrees_with_end_caps = (
+                end_caps_agree
+                and (abs(p0 - 0.5) > self._epsilon)
+                and ((p0 >= 0.5) != p1_high)
+            )
+            if slot0_disagrees_with_end_caps:
+                # Same reasoning as the no-crossbar 2-replica case below:
+                # the pair agreeing is not, by itself, reliable
+                # corroboration if slot0 has a real, decisive, opposing
+                # opinion -- that contradiction is the signal the pair is
+                # stale, not corroborating.
+                result = p0 >= 0.5
+            elif end_caps_agree:
+                prms = math.sqrt((p1**2 + p2**2) / 2)
+                qrms = math.sqrt(((1 - p1) ** 2 + (1 - p2) ** 2) / 2)
+                eff_prob = (prms + (1 - qrms)) / 2
+                result = (
+                    (random.random() < 0.5)
+                    if abs(eff_prob - 0.5) <= self._epsilon
+                    else (eff_prob >= 0.5)
+                )
+            elif abs(p0 - 0.5) > self._epsilon:
+                # Genuine deadlock between slot1/slot2; slot0 (a real,
+                # exactly-entangled qubit in this common topology) has a
+                # real opinion, so it breaks the tie.
+                result = p0 >= 0.5
+            elif lhv is not None:
+                # slot0 is itself ambiguous, and so is the crossbar pair
+                # above it; only now does the classical LHV's continuous,
+                # non-collapsing proxy actually decide, as the last
+                # resort.
+                p_lhv = lhv.prob()
+                result = (
+                    (random.random() < 0.5)
+                    if abs(p_lhv - 0.5) <= self._epsilon
+                    else (p_lhv >= 0.5)
+                )
+            else:
+                result = random.random() < 0.5
+
+            p = [p0, p1, p2]
+            syndrome = [1 - x for x in p] if result else list(p)
+            for q in range(3):
+                if syndrome[q] > (0.5 + self._epsilon):
+                    self.sim[hq[q][0]].x(hq[q][1])
+            # The LHV proxy is never hard-collapsed via x(); it is only
+            # ever updated by its own transversal gate evolution and
+            # _cpauli_lhv, same as every other branch here.
+
+            if (not skip_rotation) and (not end_caps_agree):
+                a, i, rs = [0, 0, 0], [0, 0, 0], [0, 0, 0]
+                a[0], i[0], rs[0] = self._get_bloch_angles(hq[0])
+                a[1], i[1], rs[1] = self._get_bloch_angles(hq[1])
+                a[2], i[2], rs[2] = self._get_bloch_angles(hq[2])
+                w = [1 - r for r in rs]
+
+                w_total = sum(w)
+                if w_total > self._epsilon:
+                    a_target = sum(wx * ax for wx, ax in zip(w, a)) / w_total
+                    i_target = sum(wx * ix for wx, ix in zip(w, i)) / w_total
+                    # slot0 (hq[0]) is excluded from the rotation itself,
+                    # same reasoning as every other branch here; slot1
+                    # and slot2 (the crossbar) are both real, lossy
+                    # shadow-style replicas with no comparable
+                    # entanglement to protect, so both are eligible,
+                    # each gated on its own separability.
+                    for x in (1, 2):
+                        if rs[x] <= self._rot_epsilon:
+                            self._rotate_to_bloch(hq[x], a_target - a[x], i_target - i[x])
 
         else:
             # Edge-boundary qubit: only 2 real replicas remain (home +
@@ -2112,36 +2311,21 @@ class QrackAceBackend:
             return self.sim[b[0]].prob(b[1])
 
         self._correct(lq)
-        if len(hq) == 4:
-            # The 4 real replicas are already mutually consistent here
-            # (the _correct() call above already ran the tie-breaking
-            # cascade, using the LHV proxy as needed, and forced
-            # agreement via x()). A plain, unweighted RMS over the
-            # now-settled replicas is the correct, already-decided
-            # answer -- there is no crossbar replica left to weight
-            # specially any more.
-            p = [
-                self.sim[hq[0][0]].prob(hq[0][1]),
-                self.sim[hq[1][0]].prob(hq[1][1]),
-                self.sim[hq[2][0]].prob(hq[2][1]),
-                self.sim[hq[3][0]].prob(hq[3][1]),
-            ]
-            prms = math.sqrt(sum(x**2 for x in p) / 4)
-            qrms = math.sqrt(sum((1 - x) ** 2 for x in p) / 4)
-        else:
-            # The 2 real replicas are already mutually consistent here
-            # (the _correct() call above already ran the conditional
-            # tie-breaking cascade, using the LHV proxy as needed, and
-            # forced agreement via x()). Re-weighting in the LHV here
-            # would reintroduce the same center-dragging distortion the
-            # cascade was built to avoid -- a plain RMS over the
-            # now-settled pair is the correct, already-decided answer.
-            p = [
-                self.sim[hq[0][0]].prob(hq[0][1]),
-                self.sim[hq[1][0]].prob(hq[1][1]),
-            ]
-            prms = math.sqrt((p[0] ** 2 + p[1] ** 2) / 2)
-            qrms = math.sqrt(((1 - p[0]) ** 2 + (1 - p[1]) ** 2) / 2)
+        # The real replicas are already mutually consistent here (the
+        # _correct() call above already ran the appropriate tie-breaking
+        # cascade for however many replicas hq has -- 2, 3, 4, or 5,
+        # depending on self.use_crossbars and whether this is an edge or
+        # corner boundary qubit -- using the LHV proxy and/or the
+        # crossbar replica as needed, and forced agreement via x()). A
+        # plain, unweighted RMS over the now-settled replicas is the
+        # correct, already-decided answer, regardless of replica count:
+        # re-weighting any particular replica specially here would
+        # reintroduce the same center-dragging distortion the cascade in
+        # _correct() was built to avoid.
+        p = [self.sim[b[0]].prob(b[1]) for b in hq]
+        n = len(p)
+        prms = math.sqrt(sum(x**2 for x in p) / n)
+        qrms = math.sqrt(sum((1 - x) ** 2 for x in p) / n)
 
         return (prms + (1 - qrms)) / 2
 
