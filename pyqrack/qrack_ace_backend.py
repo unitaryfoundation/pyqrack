@@ -498,25 +498,34 @@ class QrackAceBackend:
             # "Golden value"
             self._sdrp = 0.0
 
+        sim_kwargs = dict(
+            is_schmidt_decompose_multi=is_schmidt_decompose_multi,
+            is_stabilizer_hybrid=is_stabilizer_hybrid,
+            is_binary_decision_tree=is_binary_decision_tree,
+            is_gpu=is_gpu,
+            is_host_pointer=is_host_pointer,
+            is_near_clifford_tableau_writer=is_near_clifford_tableau_writer,
+            noise=noise,
+        )
         self.sim = []
         for i in range(sim_count):
             self.sim.append(
                 to_clone.sim[i].clone()
                 if to_clone
-                else QrackSimulator(
-                    sim_counts[i],
-                    is_schmidt_decompose_multi=is_schmidt_decompose_multi,
-                    is_stabilizer_hybrid=is_stabilizer_hybrid,
-                    is_binary_decision_tree=is_binary_decision_tree,
-                    is_gpu=is_gpu,
-                    is_host_pointer=is_host_pointer,
-                    is_near_clifford_tableau_writer=is_near_clifford_tableau_writer,
-                    noise=noise,
-                )
+                else self._new_patch_sim(sim_counts[i], sim_kwargs)
             )
 
+    def _new_patch_sim(self, qubit_count, sim_kwargs):
+        # Factory for one patch's "just-in-time state machine." Nothing
+        # else in this class depends on the patch being a QrackSimulator:
+        # any object exposing the same gate/prob/m/force_m/clone interface
+        # can be substituted by overriding this (see QrackAceMPSBackend).
+        return QrackSimulator(qubit_count, **sim_kwargs)
+
     def clone(self):
-        return QrackAceBackend(to_clone=self)
+        # type(self), not QrackAceBackend, so subclasses survive cloning
+        # (measure_shots() and run_qiskit_circuit() clone constantly).
+        return type(self)(to_clone=self)
 
     def set_sdrp(self, sdrp):
         sdrp = min(1, sdrp)
@@ -2706,7 +2715,7 @@ class QrackAceBackend:
                 self._classical_memory = 0
                 self._classical_register = 0
             else:
-                self._sim = QrackAceBackend(to_clone=preamble_sim)
+                self._sim = type(preamble_sim)(to_clone=preamble_sim)
                 self._classical_memory = preamble_memory
                 self._classical_register = preamble_register
 
