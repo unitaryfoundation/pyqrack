@@ -1617,7 +1617,7 @@ class QrackAceBackend:
         # a lq2-invariant check for that gate family, same reasoning as
         # the single-replica CZ dual-check elsewhere.
         anc = None
-        if self.is_error_detection and (not self._in_gadget_capture) and (len(hq2) > 1):
+        if self.is_error_detection and (not self._in_gadget_capture) and ((len(hq1) > 1) or (len(hq2) > 1)):
             anc_sim = hq1[0][0]
             t_sims = {y[0] for y in hq2 if y[0] >= 0}
             for x in hq1:
@@ -2172,7 +2172,7 @@ class QrackAceBackend:
         # bulk on this path (the len(hqt) > 1 case returns earlier,
         # above) and nothing else in this method uses that array anymore.
         anc_and = None
-        if self.is_error_detection and not self._in_gadget_capture and (len(hqt) > 1):
+        if self.is_error_detection and not self._in_gadget_capture and ((len(hqt) > 1) or (len(hq1) > 1) or (len(hq2) > 1)):
             found = False
             anc_sim = hq1[0][0]
             t_sims = {y[0] for y in hqt if y[0] >= 0}
