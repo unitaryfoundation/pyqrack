@@ -3228,5 +3228,3 @@ class QrackAceBackend:
                 )
 
         return noise_model
-
-        return noise_model
