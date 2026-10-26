@@ -3117,7 +3117,7 @@ class QrackSimulator:
         if len(b) != len(q):
             raise RuntimeError("Lengths of list parameters are mismatched.")
         result = Qrack.qrack_lib.JointEnsembleProbability(
-            self.sid, len(b), QrackSimulator._ulonglong_byref(b), q
+            self.sid, len(b), QrackSimulator._int_byref(b), q
         )
         self._throw_if_error()
         return result
