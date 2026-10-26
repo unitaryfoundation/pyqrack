@@ -165,7 +165,7 @@ class QrackBridge:
 
     def _new_bond(self, here, there):
         """Fresh bond pair on the cut between adjacent patches here and there; returns (id here, id there)."""
-        rightward = there == (here + 1) % self.P
+        rightward = there == ((here + 1) % self.P if self.ring else here + 1)
         c = here if rightward else there
         j = self.bond[c]
         self.bond[c] += 1
