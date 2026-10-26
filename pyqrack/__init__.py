@@ -9,6 +9,7 @@ from .quimb_circuit_type import QuimbCircuitType
 from .qrack_ace_backend import QrackAceBackend
 from .qrack_ace_mps_backend import QrackAceMPSBackend, QrackMPSPatch
 from .qrack_near_clifford_qec_backend import QrackNearCliffordQecBackend
+from .qrack_bridge import QrackBridge
 from .qrack_circuit import QrackCircuit
 from .qrack_neuron import QrackNeuron
 from .qrack_neuron_torch_layer import (
