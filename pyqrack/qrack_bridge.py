@@ -24,7 +24,10 @@
 # Contracting on each bond pair enforces equality, so every relay bond carries a copy of c and the
 # result is exactly controlled-U(c -> t). A gate between patches k apart costs one bond on each of
 # the k cuts in between; nothing ever couples non-adjacent patches directly.
-# SWAP is 3 CNOTs; iSWAP is (S x S), CZ, SWAP; iSWAP^dagger is SWAP, CZ, (S^dag x S^dag).
+# SWAP, iSWAP and iSWAP^dagger (any two-qubit gate) cross by "ship and return": a's state is
+# teleported along the chain onto a scratch qubit in b's patch (a SWAPped onto the outgoing bond,
+# identity-wire relays, Bell pairing at the destination), the gate is applied there natively, and the
+# scratch qubit is teleported back onto a. Exactly 2 bonds per cut crossed, one recompression per gate.
 #
 # Recompression after each bridged two-qubit gate (one MPS-style sweep over the touched segment):
 #   - Gates on data qubits are unitary on each patch's (left, data) and (data, right) row spaces, so
@@ -40,6 +43,21 @@
 #     bonds are live, is locally optimal but not globally optimal (a periodic MPS has no canonical
 #     form), so fidelity_estimate is an estimate there and not the kept Schmidt weight.
 # Nothing larger than the patch kets and per-cut cores is ever formed: no density matrix.
+#
+# Lazy bond buffering (lazy_bonds > 0). Each ket round-trip costs O(patch ket), so instead of
+# recompressing after every bridged gate, bridged gates pile up as raw bond qubits until some cut
+# exceeds max_bonds + lazy_bonds (or some patch exceeds max_patch_qubits, if set); then ONE sweep
+# truncates the whole batch back to max_bonds. Truncating the accumulated state once is the optimal
+# truncation of that state, rather than a sequence of per-gate truncations. Heap cost: each buffered
+# bond qubit doubles the patches on that cut, so a patch can reach
+# n_patch + 2 * (max_bonds + lazy_bonds) + 3 qubits (one gate's 2 bonds and 1 scratch qubit in
+# flight). lazy_bonds=0 is the eager behaviour. Readout (measure_shots, out_ket) flushes first;
+# flush() does it on demand. On random circuits, lazy buffering mostly pays when consecutive gates
+# cross the same cut on the same pair (e.g. CZ then SWAP); otherwise a larger max_bonds at the same
+# heap is the better use of memory.
+#
+# Linear algebra: the sweeps use Gram matrices (one BLAS product and a small Hermitian eigensolve per
+# cut) instead of LAPACK QR/SVD on the whole patch tensor, and plain matmuls instead of einsum.
 #
 # Readout. Exact for the stored state: sequential conditional sampling, patch by patch, from the
 # exported kets, with shots grouped by prefix. On an open chain the canonical form (centre at patch 0)
@@ -79,6 +97,26 @@ def _bits(dim):
     return (max(int(dim), 1) - 1).bit_length()
 
 
+def _gram_svd(m):
+    """Left singular vectors and values of a short-wide m (rows <= 2^bonds) via its rows x rows Gram
+    matrix: one BLAS product plus a tiny Hermitian eigensolve, instead of a LAPACK SVD of the whole
+    patch. Double precision Gram keeps singular values to ~1e-8 relative, well under _TOL."""
+    lam, u = np.linalg.eigh(m @ m.conj().T)
+    order = np.argsort(lam)[::-1]
+    return u[:, order], np.sqrt(np.clip(lam[order], 0, None))
+
+
+def _left_factor(a):
+    """a = q @ r with q's columns orthonormal, through a's columns x columns Gram matrix; modes with
+    zero weight are dropped (exactly), so the bond only ever shrinks here."""
+    lam, v = np.linalg.eigh(a.conj().T @ a)
+    keep = lam > (_TOL * _TOL) * lam[-1]
+    keep[-1] = True                                   # never an empty bond (lam[-1] > 0 for a live state)
+    s = np.sqrt(lam[keep])
+    v = v[:, keep]
+    return (a @ v) / s[None, :], s[:, None] * v.conj().T
+
+
 _X = [0, 1, 1, 0]
 _Y = [0, -1j, 1j, 0]
 _Z = [1, 0, 0, -1]
@@ -87,10 +125,11 @@ _TOL = 1e-6          # relative singular-value floor treated as exactly zero (Qr
 
 class QrackBridge:
     def __init__(self, qubit_count, max_bonds=6, seed=None, truncation="greedy", patches=2, wrap=False,
-                 _clone=None):
+                 lazy_bonds=0, max_patch_qubits=None, _clone=None):
         if _clone is not None:
             src = _clone
-            for k in ("n", "P", "ring", "max_bonds", "truncation", "fidelity_estimate", "truncations",
+            for k in ("n", "P", "ring", "max_bonds", "lazy_bonds", "max_patch_qubits", "truncation",
+                      "fidelity_estimate", "truncations", "flushes",
                       "peak_bonds", "center", "_wrap_touched"):
                 setattr(self, k, getattr(src, k))
             self.part = [list(x) for x in src.part]
@@ -100,7 +139,6 @@ class QrackBridge:
             self.bond = list(src.bond)
             self.sim = [s.clone() for s in src.sim]
             self._touched = set(src._touched)
-            self._defer = False
             self.rng = np.random.default_rng(int(src.rng.integers(1 << 62)))
             return
         if truncation not in ("greedy", "born"):
@@ -120,6 +158,11 @@ class QrackBridge:
         self.sim = [QrackSimulator(len(qs)) for qs in self.part]
         self.bond = [0] * (patches if self.ring else patches - 1)   # cut c joins patch c (R) to c+1 (L)
         self.max_bonds = max_bonds
+        if lazy_bonds < 0:
+            raise ValueError("lazy_bonds must be >= 0")
+        self.lazy_bonds = lazy_bonds
+        self.max_patch_qubits = max_patch_qubits
+        self.flushes = 0
         self.truncation = truncation
         self.fidelity_estimate = 1.0
         self.truncations = 0
@@ -127,7 +170,6 @@ class QrackBridge:
         self.center = 0
         self._touched = set()
         self._wrap_touched = False
-        self._defer = False
         self.rng = np.random.default_rng(seed)
 
     def clone(self):
@@ -180,6 +222,46 @@ class QrackBridge:
             ids[p] = qid
         return ids[here], ids[there]
 
+    def _new_scratch(self, p):
+        """Fresh |0> working qubit in patch p; it is returned to |0> before any recompression."""
+        qid = len(self.layout[p])
+        self.sim[p].allocate_qubit(qid)
+        self.layout[p].append(("0", qid))
+        return qid
+
+    def _ship(self, path, src):
+        """Teleport the state of qubit src (in patch path[0]) onto a fresh scratch qubit in patch
+        path[-1], through one new bond per cut: src is SWAPped onto the outgoing bond (src left |0>),
+        relays are identity wires (H in; CNOT in -> out), and the destination Bell-pairs its incoming
+        bond with the scratch qubit (H in; CNOT in -> scratch). Returns the scratch qubit's id."""
+        out, inc = self._new_bond(path[0], path[1])
+        self.sim[path[0]].swap(src, out)
+        for k in range(1, len(path) - 1):
+            s = self.sim[path[k]]
+            s.h(inc)
+            out, nxt = self._new_bond(path[k], path[k + 1])
+            s.mcx([inc], out)
+            inc = nxt
+        s = self.sim[path[-1]]
+        z = self._new_scratch(path[-1])
+        s.h(inc)
+        s.mcx([inc], z)
+        return z
+
+    def _unship(self, path, z, dst):
+        """Teleport scratch qubit z (in patch path[0]) back onto qubit dst (|0>, in patch path[-1])."""
+        out, inc = self._new_bond(path[0], path[1])
+        self.sim[path[0]].swap(z, out)                 # z back to |0>
+        for k in range(1, len(path) - 1):
+            s = self.sim[path[k]]
+            s.h(inc)
+            out, nxt = self._new_bond(path[k], path[k + 1])
+            s.mcx([inc], out)
+            inc = nxt
+        s = self.sim[path[-1]]
+        s.h(inc)
+        s.mcx([inc], dst)
+
     def _loc(self, q):
         p, i = self.side[q]
         return self.sim[p], p, i
@@ -226,8 +308,7 @@ class QrackBridge:
         st.h(inc)
         st.mcmtrx([inc], mtrx, it)
         self._touched.update(path)
-        # Inside a SWAP-type gate, recompress exactly between its CNOTs; truncate once at its end.
-        self._compress(exact_only=self._defer)
+        self._maybe_compress()
 
     def mcx(self, c, t): self._controlled(c[0], t, _X, False)
     def mcy(self, c, t): self._controlled(c[0], t, _Y, False)
@@ -240,35 +321,25 @@ class QrackBridge:
     def cy(self, a, b): self.mcy([a], b)
     def cz(self, a, b): self.mcz([a], b)
 
-    def _composite(self, steps):
-        outer = self._defer
-        self._defer = True
-        for f in steps:
-            f()
-        self._defer = outer
-        if not outer:
-            self._compress()
-
-    def swap(self, a, b):
-        if self.side[a][0] == self.side[b][0]:
-            s, _, i = self._loc(a)
-            s.swap(i, self.side[b][1])
+    def _pair_gate(self, a, b, op):
+        """Any two-qubit gate across patches: ship a's state into b's patch, apply the gate natively
+        there, ship it back. Exactly two bonds per cut crossed (operator-Schmidt rank <= 4), and one
+        recompression for the whole gate."""
+        sa, pa, ia = self._loc(a)
+        sb, pb, ib = self._loc(b)
+        if pa == pb:
+            getattr(sa, op)(ia, ib)
             return
-        self._composite([lambda: self.mcx([a], b), lambda: self.mcx([b], a), lambda: self.mcx([a], b)])
+        path = self._path(pa, pb)
+        z = self._ship(path, ia)
+        getattr(sb, op)(z, ib)
+        self._unship(path[::-1], z, ia)
+        self._touched.update(path)
+        self._maybe_compress()
 
-    def iswap(self, a, b):
-        if self.side[a][0] == self.side[b][0]:
-            s, _, i = self._loc(a)
-            s.iswap(i, self.side[b][1])
-            return
-        self._composite([lambda: self.s(a), lambda: self.s(b), lambda: self.mcz([a], b), lambda: self.swap(a, b)])
-
-    def adjiswap(self, a, b):
-        if self.side[a][0] == self.side[b][0]:
-            s, _, i = self._loc(a)
-            s.adjiswap(i, self.side[b][1])
-            return
-        self._composite([lambda: self.swap(a, b), lambda: self.mcz([a], b), lambda: self.adjs(a), lambda: self.adjs(b)])
+    def swap(self, a, b): self._pair_gate(a, b, "swap")
+    def iswap(self, a, b): self._pair_gate(a, b, "iswap")
+    def adjiswap(self, a, b): self._pair_gate(a, b, "adjiswap")
 
     # --- patch tensors through the kets --------------------------------------
 
@@ -281,8 +352,13 @@ class QrackBridge:
         v = _out_ket(self.sim[p])
         order = ([("L", j) for j in reversed(range(bl))] + [("d", i) for i in reversed(range(nd))]
                  + [("R", j) for j in reversed(range(br))])
+        t = v.reshape([2] * k)
+        if any(tag[0] == "0" for tag in lay):         # scratch qubits are back in |0>: project them out
+            t = t[tuple(0 if lay[k - 1 - x][0] == "0" else slice(None) for x in range(k))]
+            lay = [tag for tag in lay if tag[0] != "0"]
+            k = len(lay)
         pos = {tag: x for x, tag in enumerate(lay)}
-        t = v.reshape([2] * k).transpose([k - 1 - pos[tag] for tag in order])
+        t = t.transpose([k - 1 - pos[tag] for tag in order])
         return t.reshape(1 << bl, 1 << nd, 1 << br)
 
     def _store(self, p, a):
@@ -327,16 +403,20 @@ class QrackBridge:
         T = {k: self._tensor(k) for k in range(start, end + 1)}
         for k in range(start, end):                       # left-isometric up to the centre at `end`
             l, d, r = T[k].shape
-            q, rr = np.linalg.qr(T[k].reshape(l * d, r))
+            q, rr = _left_factor(T[k].reshape(l * d, r))  # exact; also drops zero modes
             T[k] = q.reshape(l, d, -1)
-            T[k + 1] = np.einsum("ab,bdr->adr", rr, T[k + 1])
+            nl, nd_, nr = T[k + 1].shape
+            T[k + 1] = (rr @ T[k + 1].reshape(nl, nd_ * nr)).reshape(-1, nd_, nr)
             self.bond[k] = _bits(q.shape[1])
         for k in range(end, lo, -1):                      # right-isometric back down to `lo`
             l, d, r = T[k].shape
-            u, sv, vh = np.linalg.svd(T[k].reshape(l, d * r), full_matrices=False)
+            m = T[k].reshape(l, d * r)
+            u, sv = _gram_svd(m)
             idx = self._select(sv, exact_only)
-            T[k] = vh[idx].reshape(len(idx), d, r)
-            T[k - 1] = np.einsum("ldr,rs->lds", T[k - 1], u[:, idx] * sv[idx][None, :])
+            us = u[:, idx]
+            T[k] = ((us.conj().T @ m) / sv[idx][:, None]).reshape(len(idx), d, r)
+            pl, pd, pr = T[k - 1].shape
+            T[k - 1] = (T[k - 1].reshape(pl * pd, pr) @ (us * sv[idx][None, :])).reshape(pl, pd, -1)
             self.bond[k - 1] = _bits(len(idx))
         for k, a in T.items():
             self._store(k, a)
@@ -356,6 +436,27 @@ class QrackBridge:
         self._store(P - 1, ((qa @ u[:, idx]) * sv[idx][None, :]).reshape(l, d, -1))
         self._store(0, (qb @ vh[idx, :].T).T.reshape(-1, d0, r0))
 
+    def _over_budget(self):
+        """Lazy mode: has any cut, or any patch's total width, outgrown its buffer?"""
+        if any(b > self.max_bonds + self.lazy_bonds for b in self.bond):
+            return True
+        if self.max_patch_qubits is not None:
+            return any(len(lay) > self.max_patch_qubits for lay in self.layout)
+        return False
+
+    def _maybe_compress(self):
+        if not self.lazy_bonds:
+            self._compress()                           # eager: one sweep per bridged gate
+            return
+        # Lazy: let bridged gates pile up as raw bond qubits and truncate the whole batch in one sweep,
+        # only when a cut exceeds max_bonds + lazy_bonds (or a patch exceeds max_patch_qubits).
+        if self._over_budget():
+            self._compress()
+
+    def flush(self):
+        """Truncate any buffered bonds back to max_bonds now (readout does this automatically)."""
+        self._compress()
+
     def _compress(self, exact_only=False):
         if not self._touched:
             return
@@ -364,6 +465,7 @@ class QrackBridge:
             self._touched.update((0, self.P - 1))
         self._sweep(min(self._touched), max(self._touched), exact_only)
         if not exact_only:
+            self.flushes += 1
             self._touched.clear()
             self._wrap_touched = False
 
@@ -407,6 +509,7 @@ class QrackBridge:
 
     def out_ket(self):
         """Dense contracted state (2^n), little-endian over logical qubits; for testing."""
+        self._compress()                                   # same (flushed) state that measure_shots samples
         C = None
         for p in range(self.P):
             A = self._tensor(p)
