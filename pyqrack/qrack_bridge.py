@@ -66,6 +66,7 @@
 #
 # fidelity_estimate multiplies the kept Schmidt weight (greedy) or sum_g p_g^2 (born) per truncation.
 
+import contextlib
 import ctypes
 import math
 
@@ -139,6 +140,7 @@ class QrackBridge:
             self.bond = list(src.bond)
             self.sim = [s.clone() for s in src.sim]
             self._touched = set(src._touched)
+            self._deferring = 0
             self.rng = np.random.default_rng(int(src.rng.integers(1 << 62)))
             return
         if truncation not in ("greedy", "born"):
@@ -163,6 +165,7 @@ class QrackBridge:
         self.lazy_bonds = lazy_bonds
         self.max_patch_qubits = max_patch_qubits
         self.flushes = 0
+        self._deferring = 0
         self.truncation = truncation
         self.fidelity_estimate = 1.0
         self.truncations = 0
@@ -445,6 +448,11 @@ class QrackBridge:
         return False
 
     def _maybe_compress(self):
+        if self._deferring:
+            # Inside deferred(): keep only the exact rank (drop zero singular values); never truncate.
+            if not self.lazy_bonds or self._over_budget():
+                self._compress(exact_only=True)
+            return
         if not self.lazy_bonds:
             self._compress()                           # eager: one sweep per bridged gate
             return
@@ -452,6 +460,27 @@ class QrackBridge:
         # only when a cut exceeds max_bonds + lazy_bonds (or a patch exceeds max_patch_qubits).
         if self._over_budget():
             self._compress()
+
+    @contextlib.contextmanager
+    def deferred(self):
+        """Truncate once, after the whole block, never inside it:
+
+            with sim.deferred():
+                for i in range(9):
+                    sim.mcx([b[i]], a[i])      # e.g. a transversal logical CNOT
+
+        Inside, bridged gates are recompressed only exactly, so bonds carry the full transient
+        entanglement of the block; on exit one sweep truncates to max_bonds. Use it around any
+        multi-gate operation whose intermediate states are more entangled than its result
+        (transversal logical gates, decode/encode, gate decompositions). Heap grows with the
+        transient rank inside the block. Nests; only the outermost exit truncates."""
+        self._deferring += 1
+        try:
+            yield self
+        finally:
+            self._deferring -= 1
+            if not self._deferring:
+                self._maybe_compress()
 
     def flush(self):
         """Truncate any buffered bonds back to max_bonds now (readout does this automatically)."""
