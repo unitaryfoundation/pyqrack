@@ -1478,9 +1478,11 @@ class QrackSystem:
                 "qbridge_get_truncations",
                 "qbridge_get_flushes",
                 "qbridge_get_peak_bonds",
+                "qbridge_get_peak_patch_qubits",
                 "qbridge_get_cut_count",
             ):
-                getattr(self.qrack_lib, fn).restype = c_ulonglong
-                getattr(self.qrack_lib, fn).argtypes = [c_ulonglong]
+                if hasattr(self.qrack_lib, fn):
+                    getattr(self.qrack_lib, fn).restype = c_ulonglong
+                    getattr(self.qrack_lib, fn).argtypes = [c_ulonglong]
             self.qrack_lib.qbridge_get_bonds.restype = None
             self.qrack_lib.qbridge_get_bonds.argtypes = [c_ulonglong, POINTER(c_ulonglong)]

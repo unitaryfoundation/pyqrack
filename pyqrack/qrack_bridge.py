@@ -8,8 +8,10 @@
 # qubit_count % patches blocks get one more), each simulated exactly by its own Qrack engine. Patches
 # sit on a 1D chain (a ring with wrap=True and 3+ patches) and share "bond" qubits only with their
 # nearest neighbours: the state is a matrix-product state whose sites are whole state-vector simulators.
-# Gates within a patch run natively; gates between patches are teleported through fresh bond pairs and
-# each cut is recompressed to at most 2^max_bonds Schmidt components (greedy, or Born-rule groups).
+# Gates within a patch run natively. A gate between patches is split exactly into at most 4 products of
+# one-qubit operators and applied to the patch tensors on the host, growing the bonds there; each cut is
+# then recompressed to at most 2^max_bonds Schmidt components (greedy, or Born-rule groups) before being
+# written back, so patch engines never need ancilla qubits beyond their bonds.
 #
 # Same API as the pure-Python reference implementation (pyqrack.QrackPyBridge), plus pauli_expectation().
 # If the loaded Qrack library predates QBridge, pyqrack.QrackBridge is QrackPyBridge instead.
@@ -167,6 +169,13 @@ class QrackBridge:
     @property
     def peak_bonds(self):
         return Qrack.qrack_lib.qbridge_get_peak_bonds(self.bid)
+
+    @property
+    def peak_patch_qubits(self):
+        """Widest patch engine allocated so far (data + bond qubits). Bridged gates grow bonds on the
+        host, so this stays at most data qubits + max_bonds per cut, except when an in-patch gate
+        lands inside an open deferred() block or lazy buffer."""
+        return Qrack.qrack_lib.qbridge_get_peak_patch_qubits(self.bid)
 
     @property
     def bond(self):
