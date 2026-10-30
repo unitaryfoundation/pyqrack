@@ -1400,3 +1400,87 @@ class QrackSystem:
 
         self.qrack_lib.qcircuit_out_to_string.restype = None
         self.qrack_lib.qcircuit_out_to_string.argtypes = [c_ulonglong, c_char_p]
+
+        # QBridge (bridged patching); absent from Qrack libraries that predate it.
+        self.has_qbridge = hasattr(self.qrack_lib, "init_qbridge")
+        if self.has_qbridge:
+            self.qrack_lib.init_qbridge.restype = c_ulonglong
+            self.qrack_lib.init_qbridge.argtypes = [
+                c_ulonglong,  # qubits
+                c_ulonglong,  # max bonds
+                c_ulonglong,  # patches
+                c_bool,  # wrap
+                c_bool,  # Born-rule truncation
+                c_ulonglong,  # lazy bonds
+                c_ulonglong,  # max patch qubits (0 = none)
+                c_ulonglong,  # sampler seed
+                c_bool,  # tn
+                c_bool,  # md
+                c_bool,  # sd
+                c_bool,  # sh
+                c_bool,  # bdt
+                c_bool,  # pg
+                c_bool,  # hy
+                c_bool,  # oc
+            ]
+            self.qrack_lib.init_qbridge_clone.restype = c_ulonglong
+            self.qrack_lib.init_qbridge_clone.argtypes = [c_ulonglong]
+            self.qrack_lib.destroy_qbridge.restype = None
+            self.qrack_lib.destroy_qbridge.argtypes = [c_ulonglong]
+            self.qrack_lib.get_qbridge_error.restype = c_int
+            self.qrack_lib.get_qbridge_error.argtypes = [c_ulonglong]
+            self.qrack_lib.get_qbridge_qubit_count.restype = c_ulonglong
+            self.qrack_lib.get_qbridge_qubit_count.argtypes = [c_ulonglong]
+            self.qrack_lib.qbridge_mtrx.restype = None
+            self.qrack_lib.qbridge_mtrx.argtypes = [c_ulonglong, POINTER(c_double), c_ulonglong]
+            self.qrack_lib.qbridge_u.restype = None
+            self.qrack_lib.qbridge_u.argtypes = [c_ulonglong, c_ulonglong, c_double, c_double, c_double]
+            for fn in ("qbridge_mcmtrx", "qbridge_macmtrx"):
+                getattr(self.qrack_lib, fn).restype = None
+                getattr(self.qrack_lib, fn).argtypes = [
+                    c_ulonglong,
+                    c_ulonglong,
+                    POINTER(c_ulonglong),
+                    POINTER(c_double),
+                    c_ulonglong,
+                ]
+            for fn in ("qbridge_swap", "qbridge_iswap", "qbridge_adjiswap"):
+                getattr(self.qrack_lib, fn).restype = None
+                getattr(self.qrack_lib, fn).argtypes = [c_ulonglong, c_ulonglong, c_ulonglong]
+            self.qrack_lib.qbridge_fsim.restype = None
+            self.qrack_lib.qbridge_fsim.argtypes = [c_ulonglong, c_double, c_double, c_ulonglong, c_ulonglong]
+            for fn in ("qbridge_begin_deferred", "qbridge_end_deferred", "qbridge_flush"):
+                getattr(self.qrack_lib, fn).restype = None
+                getattr(self.qrack_lib, fn).argtypes = [c_ulonglong]
+            self.qrack_lib.qbridge_measure_shots.restype = None
+            self.qrack_lib.qbridge_measure_shots.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                c_ulonglong,
+                POINTER(c_ulonglong),
+            ]
+            self.qrack_lib.qbridge_pauli_expectation.restype = c_double
+            self.qrack_lib.qbridge_pauli_expectation.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                POINTER(c_ulonglong),
+            ]
+            self.qrack_lib.qbridge_out_ket.restype = None
+            self.qrack_lib.qbridge_out_ket.argtypes = [
+                c_ulonglong,
+                POINTER(c_float) if self.fppow < 6 else POINTER(c_double),
+            ]
+            self.qrack_lib.qbridge_get_fidelity_estimate.restype = c_double
+            self.qrack_lib.qbridge_get_fidelity_estimate.argtypes = [c_ulonglong]
+            for fn in (
+                "qbridge_get_truncations",
+                "qbridge_get_flushes",
+                "qbridge_get_peak_bonds",
+                "qbridge_get_cut_count",
+            ):
+                getattr(self.qrack_lib, fn).restype = c_ulonglong
+                getattr(self.qrack_lib, fn).argtypes = [c_ulonglong]
+            self.qrack_lib.qbridge_get_bonds.restype = None
+            self.qrack_lib.qbridge_get_bonds.argtypes = [c_ulonglong, POINTER(c_ulonglong)]
