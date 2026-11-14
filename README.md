@@ -7,7 +7,7 @@ Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator 
 
 **For PyQrack-HIP-AMD, the package is distributed as source-only on PyPi, so that the Qrack build step can do its best to try to automatically detect your available GPU architectures.**
 
-**If you're looking for Mac ARM support, use the package `pyqrack`, not `pyqrack-cpu`.** Mac officially "deprecated" OpenCL years ago. Hence, accelerator support is not included in ARM-based Mac wheels, and OpenCL installation is **not** required on these systems, but, if you have a CUDA or AMD accelerator on ARM-based Mac, you could try the packages `pyqrack-cuda` or `pyqrack-hip-amd` instead.
+**If you're looking for Mac ARM support, use the package `pyqrack`, not `pyqrack-cpu`.** Mac officially "deprecated" OpenCL years ago. Hence, accelerator support is not included in ARM-based Mac wheels, and OpenCL installation is **not** required on these systems, but, if you have a CUDA or AMD accelerator on ARM-based Mac, you could try the package `pyqrack-cuda` or `pyqrack-hip-amd` instead.
 
 **Performance can benefit greatly from following the [Qrack repository "Quick Start" and "Power user considerations."](https://github.com/unitaryfund/qrack/blob/main/README.md#quick-start)**
 
