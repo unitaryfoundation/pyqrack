@@ -13,7 +13,8 @@
 # then recompressed to at most 2^max_bonds Schmidt components (greedy, or Born-rule groups) before being
 # written back, so patch engines never need ancilla qubits beyond their bonds.
 #
-# Same API as the pure-Python reference implementation (pyqrack.QrackPyBridge), plus pauli_expectation().
+# Same API as the pure-Python reference implementation (pyqrack.QrackPyBridge), plus pauli_expectation()
+# and run_qiskit_circuit() (needs the optional Qiskit dependency).
 # If the loaded Qrack library predates QBridge, pyqrack.QrackBridge is QrackPyBridge instead.
 #
 # Use of this source code is governed by an MIT-style license that can be
@@ -27,6 +28,13 @@ import os
 import numpy as np
 
 from .qrack_system import Qrack
+
+_IS_QISKIT_AVAILABLE = True
+try:
+    from qiskit.circuit import ControlledGate, QuantumCircuit
+    from qiskit.quantum_info import Operator
+except ImportError:
+    _IS_QISKIT_AVAILABLE = False
 
 _SQ = 1 / math.sqrt(2)
 _X = [0, 1, 1, 0]
@@ -53,6 +61,9 @@ def _ulonglong_byref(a):
 
 class QrackBridge:
     """Bridged patching on native Qrack patches (see module docstring).
+
+    For expected XEB across different 2D nearest-neighbor experiments, see the data set, regression model,
+    and calculator at https://tinyurl.com/qrackacexeb.
 
     Args:
         qubit_count: number of logical qubits
@@ -304,3 +315,206 @@ class QrackBridge:
         self._throw_if_error()
         a = np.frombuffer(buf, dtype=np.float32 if Qrack.fppow < 6 else np.float64)
         return a[0::2].astype(float) + 1j * a[1::2].astype(float)
+
+    # --- Qiskit (optional dependency) ------------------------------------------------
+    # Duck-typed like QrackSimulator.run_qiskit_circuit(). The bridge has no single-shot collapse, so
+    # measurement must be terminal per qubit: after a qubit is measured, no later gate may touch it.
+    # Gates on other qubits may still follow, and resets on untouched qubits are no-ops.
+
+    _QISKIT_SKIP = frozenset(("id", "barrier", "delay", "global_phase"))
+    _QISKIT_CONTROL_FLOW = frozenset(("if_else", "while_loop", "for_loop", "switch_case", "box", "break_loop", "continue_loop"))
+
+    def patch_of(self, q):
+        """Index of the patch holding logical qubit q."""
+        return self.side[q][0]
+
+    @staticmethod
+    def _qiskit_check_bound(op):
+        if getattr(op, "is_parameterized", lambda: False)():
+            raise RuntimeError(
+                'QrackBridge cannot run "%s" with unbound parameters; call assign_parameters() first.' % op.name
+            )
+
+    @staticmethod
+    def _qiskit_float_params(op):
+        QrackBridge._qiskit_check_bound(op)
+        return [float(p) for p in op.params]
+
+    @staticmethod
+    def _qiskit_1q_matrix(op):
+        try:
+            m = op.to_matrix()
+        except Exception:
+            m = Operator(op).data
+        return [complex(x) for x in np.asarray(m).flatten()]
+
+    def _qiskit_controlled(self, op, qubits):
+        """Apply a controlled single-qubit gate natively, if the bridge supports its qubits; else False."""
+        if not isinstance(op, ControlledGate) or op.base_gate.num_qubits != 1:
+            return False
+        controls, target = qubits[:-1], qubits[-1]
+        if len(controls) != op.num_ctrl_qubits:
+            return False
+        if len(controls) > 1 and len({self.patch_of(q) for q in qubits}) > 1:
+            # QBridge accepts several controls only when every qubit shares one patch.
+            return False
+        QrackBridge._qiskit_check_bound(op)
+        m = self._qiskit_1q_matrix(op.base_gate)
+        if op.name == "cu":
+            # CUGate.base_gate drops gamma, the phase on the controlled subspace.
+            g = complex(math.cos(float(op.params[3])), math.sin(float(op.params[3])))
+            m = [g * x for x in m]
+        full = (1 << len(controls)) - 1
+        state = op.ctrl_state
+        if state == full:
+            self.mcmtrx(controls, m, target)
+        elif state == 0:
+            self.macmtrx(controls, m, target)
+        else:
+            # Mixed control state: flip the open controls locally around a closed-control gate.
+            opens = [q for i, q in enumerate(controls) if not ((state >> i) & 1)]
+            for q in opens:
+                self.x(q)
+            self.mcmtrx(controls, m, target)
+            for q in opens:
+                self.x(q)
+        return True
+
+    def _apply_qiskit_op(self, op, qubits):
+        name = op.name
+        if name in QrackBridge._QISKIT_SKIP:
+            return
+        if name in QrackBridge._QISKIT_CONTROL_FLOW:
+            raise RuntimeError(
+                'QrackBridge cannot run control flow ("%s"): it has no mid-circuit measurement.' % name
+            )
+        if len(qubits) == 1:
+            q = qubits[0]
+            if name == "x":
+                self.x(q)
+            elif name == "y":
+                self.y(q)
+            elif name == "z":
+                self.z(q)
+            elif name == "h":
+                self.h(q)
+            elif name == "s":
+                self.s(q)
+            elif name == "sdg":
+                self.adjs(q)
+            elif name == "t":
+                self.t(q)
+            elif name == "tdg":
+                self.adjt(q)
+            elif name in ("u", "u3"):
+                self.u(q, *QrackBridge._qiskit_float_params(op))
+            elif name == "u2":
+                ph, lm = QrackBridge._qiskit_float_params(op)
+                self.u(q, math.pi / 2, ph, lm)
+            elif name in ("u1", "p"):
+                self.u(q, 0.0, 0.0, QrackBridge._qiskit_float_params(op)[0])
+            elif name == "reset":
+                raise RuntimeError("QrackBridge cannot reset a qubit that gates have already touched.")
+            else:
+                QrackBridge._qiskit_check_bound(op)
+                self.mtrx(QrackBridge._qiskit_1q_matrix(op), q)
+            return
+        if name == "swap":
+            self.swap(*qubits)
+        elif name == "iswap":
+            self.iswap(*qubits)
+        elif name in ("iswap_dg", "adjiswap"):
+            self.adjiswap(*qubits)
+        elif name == "fsim":
+            th, ph = QrackBridge._qiskit_float_params(op)
+            self.fsim(th, ph, *qubits)
+        elif self._qiskit_controlled(op, qubits):
+            pass
+        elif op.definition is not None:
+            self._run_qiskit_definition(op, qubits)
+        else:
+            raise RuntimeError('QrackBridge encountered unrecognized operation "%s"' % name)
+
+    def _run_qiskit_definition(self, op, qubits):
+        QrackBridge._qiskit_check_bound(op)
+        d = op.definition
+        for inst in d.data:
+            if inst.operation.name == "measure" or inst.clbits:
+                raise RuntimeError('QrackBridge cannot expand "%s": its definition measures.' % op.name)
+            self._apply_qiskit_op(inst.operation, [qubits[d.find_bit(b).index] for b in inst.qubits])
+
+    def run_qiskit_circuit(self, experiment, shots=1):
+        """Apply a Qiskit QuantumCircuit to this bridge and sample its terminal measurements.
+
+        Gates run natively where QrackBridge has a coupler: any single-qubit gate; any controlled
+        single-qubit gate (one control across patches, several within one patch; open controls use
+        macmtrx); swap, iswap, iswap_dg and fsim between any qubits. Anything else, including
+        multi-control gates that span patches, is expanded through its Qiskit definition. The circuit
+        qubit i is logical qubit i. Use qiskit.providers.qrack.QrackBridgeSimulator for transpilation.
+
+        Args:
+            experiment: QuantumCircuit (parameters bound); at most num_qubits() qubits
+            shots: number of samples of the measured clbits
+
+        Returns:
+            list of bit strings (one per shot, clbit 0 rightmost, width = experiment.num_clbits);
+            empty if the circuit measures nothing. The bridge keeps the pre-measurement state.
+        """
+        if not _IS_QISKIT_AVAILABLE:
+            raise RuntimeError(
+                "Before trying to run_qiskit_circuit() with QrackBridge, you must install Qiskit!"
+            )
+        if not isinstance(experiment, QuantumCircuit):
+            raise RuntimeError('Unrecognized "experiment" argument specified for run_qiskit_circuit().')
+        if experiment.num_qubits > self.n:
+            raise RuntimeError(
+                "Circuit has %d qubits, but this QrackBridge has %d." % (experiment.num_qubits, self.n)
+            )
+
+        touched = set()
+        measured = {}  # clbit -> qubit; the last measurement into a clbit wins
+        measured_qubits = set()
+        for inst in experiment.data:
+            op = inst.operation
+            qubits = [experiment.find_bit(q).index for q in inst.qubits]
+            if op.name == "measure":
+                for q, c in zip(qubits, inst.clbits):
+                    measured[experiment.find_bit(c).index] = q
+                    measured_qubits.add(q)
+                continue
+            if op.name in QrackBridge._QISKIT_SKIP:
+                continue
+            if op.name == "reset" and not (set(qubits) & touched):
+                continue
+            if set(qubits) & measured_qubits:
+                raise RuntimeError(
+                    'QrackBridge cannot apply "%s" after measuring one of its qubits (no mid-circuit measurement).'
+                    % op.name
+                )
+            touched.update(qubits)
+            self._apply_qiskit_op(op, qubits)
+
+        if not measured or shots < 1:
+            return []
+        sample_qubits = sorted(set(measured.values()))
+        if len(sample_qubits) > 64:
+            raise RuntimeError("QrackBridge.measure_shots() samples at most 64 qubits per call.")
+        bit_of = {q: j for j, q in enumerate(sample_qubits)}
+        width = experiment.num_clbits
+        out = []
+        for sample in self.measure_shots(sample_qubits, shots):
+            word = 0
+            for c, q in measured.items():
+                word |= ((sample >> bit_of[q]) & 1) << c
+            out.append(bin(word)[2:].zfill(width))
+        return out
+
+    @staticmethod
+    def get_qiskit_basis_gates():
+        """Gate names QrackBridge.run_qiskit_circuit() runs without expanding definitions."""
+        return [
+            "id", "u", "u1", "u2", "u3", "p", "rx", "ry", "rz", "r", "h", "x", "y", "z",
+            "s", "sdg", "sx", "sxdg", "t", "tdg",
+            "cx", "cy", "cz", "ch", "cp", "crx", "cry", "crz", "cu", "cu1", "cu3", "csx",
+            "ccx", "ccz", "mcx", "mcp", "swap", "iswap", "iswap_dg", "fsim", "measure", "reset",
+        ]
