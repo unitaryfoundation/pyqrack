@@ -1,5 +1,5 @@
 # pyqrack
-[![Downloads](https://pepy.tech/badge/pyqrack-cuda-complex128)](https://pepy.tech/project/pyqrack-cuda-complex128) [![Downloads](https://pepy.tech/badge/pyqrack-cuda-complex128/month)](https://pepy.tech/project/pyqrack-cuda-complex128) [![Downloads](https://static.pepy.tech/badge/pyqrack-cuda-complex128/week)](https://pepy.tech/project/pyqrack-cuda-complex128)
+[![Downloads](https://pepy.tech/badge/pyqrack-hip-amd-complex128)](https://pepy.tech/project/pyqrack-hip-amd-complex128) [![Downloads](https://pepy.tech/badge/pyqrack-cuda-complex128/month)](https://pepy.tech/project/pyqrack-hip-amd-complex128) [![Downloads](https://static.pepy.tech/badge/pyqrack-hip-amd-complex128/week)](https://pepy.tech/project/pyqrack-hip-amd-complex128)
 
 Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator library
 
