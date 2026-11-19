@@ -1,5 +1,5 @@
 # pyqrack
-[![Downloads](https://pepy.tech/badge/pyqrack)](https://pepy.tech/project/pyqrack) [![Downloads](https://pepy.tech/badge/pyqrack/month)](https://pepy.tech/project/pyqrack) [![Downloads](https://static.pepy.tech/badge/pyqrack/week)](https://pepy.tech/project/pyqrack)
+[![Downloads](https://pepy.tech/badge/pyqrack-hip-amd)](https://pepy.tech/project/pyqrack-hip-amd) [![Downloads](https://pepy.tech/badge/pyqrack-hip-amd/month)](https://pepy.tech/project/pyqrack-hip-amd) [![Downloads](https://static.pepy.tech/badge/pyqrack-hip-amd/week)](https://pepy.tech/project/pyqrack-hip-amd)
 
 Pure Python bindings for the pure C++11/OpenCL Qrack quantum computer simulator library
 
