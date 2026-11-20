@@ -31,7 +31,7 @@ from .qrack_system import Qrack
 
 _IS_QISKIT_AVAILABLE = True
 try:
-    from qiskit.circuit import ControlledGate, QuantumCircuit
+    from qiskit.circuit import ClassicalRegister, ControlledGate, QuantumCircuit
     from qiskit.quantum_info import Operator
 except ImportError:
     _IS_QISKIT_AVAILABLE = False
@@ -291,11 +291,59 @@ class QrackBridge:
     # --- readout -----------------------------------------------------------------
 
     def measure_shots(self, qubits, shots):
-        """Exact samples of the stored state; bit j of each result is qubits[j]."""
+        """Exact samples of the stored state (not collapsed); bit j of each result is qubits[j].
+
+        Any number of qubits: past 64, results are Python ints assembled from 64-bit words (needs a Qrack
+        library with qbridge_measure_shots_words).
+        """
+        qubits = list(qubits)
+        if len(qubits) > 64:
+            if not Qrack.has_qbridge_wide_shots:
+                raise RuntimeError(
+                    "This Qrack library samples at most 64 qubits per QrackBridge.measure_shots() call; update Qrack."
+                )
+            words = (len(qubits) + 63) >> 6
+            out = (ctypes.c_ulonglong * (shots * words))()
+            Qrack.qrack_lib.qbridge_measure_shots_words(self.bid, len(qubits), _ulonglong_byref(qubits), shots, out)
+            self._throw_if_error()
+            results = []
+            for s in range(shots):
+                v = 0
+                for k in range(words):
+                    v |= int(out[s * words + k]) << (64 * k)
+                results.append(v)
+            return results
         out = (ctypes.c_ulonglong * shots)()
         Qrack.qrack_lib.qbridge_measure_shots(self.bid, len(qubits), _ulonglong_byref(qubits), shots, out)
         self._throw_if_error()
         return list(out)
+
+    # --- mid-circuit measurement ---------------------------------------------------
+
+    def _require_measure(self):
+        if not Qrack.has_qbridge_measure:
+            raise RuntimeError("This Qrack library has no QBridge mid-circuit measurement; update Qrack.")
+
+    def prob(self, q):
+        """Exact probability that qubit q measures |1> (flushes buffered bonds)."""
+        self._require_measure()
+        result = Qrack.qrack_lib.qbridge_prob(self.bid, q)
+        self._throw_if_error()
+        return result
+
+    def m(self, q):
+        """Measure qubit q in the Z basis and collapse the stored state; returns the result (0 or 1)."""
+        self._require_measure()
+        result = Qrack.qrack_lib.qbridge_m(self.bid, q)
+        self._throw_if_error()
+        return int(result)
+
+    def force_m(self, q, r):
+        """Post-select result r on qubit q, collapsing the stored state (error if r has zero probability)."""
+        self._require_measure()
+        result = Qrack.qrack_lib.qbridge_force_m(self.bid, q, bool(r))
+        self._throw_if_error()
+        return int(result)
 
     def pauli_expectation(self, q, b):
         """Exact <P> for the Pauli product with basis b[i] (pyqrack.Pauli) on qubit q[i]."""
@@ -317,9 +365,10 @@ class QrackBridge:
         return a[0::2].astype(float) + 1j * a[1::2].astype(float)
 
     # --- Qiskit (optional dependency) ------------------------------------------------
-    # Duck-typed like QrackSimulator.run_qiskit_circuit(). The bridge has no single-shot collapse, so
-    # measurement must be terminal per qubit: after a qubit is measured, no later gate may touch it.
-    # Gates on other qubits may still follow, and resets on untouched qubits are no-ops.
+    # Duck-typed like QrackSimulator.run_qiskit_circuit(). Circuits whose measurements are all terminal are run
+    # once and sampled. Anything else (a gate or reset after a measurement, a reset of a touched qubit, if_else, or a
+    # legacy c_if condition) runs the gates before the first such operation once, then one collapsing trajectory per
+    # shot on a clone. Resets on untouched qubits are no-ops.
 
     _QISKIT_SKIP = frozenset(("id", "barrier", "delay", "global_phase"))
     _QISKIT_CONTROL_FLOW = frozenset(("if_else", "while_loop", "for_loop", "switch_case", "box", "break_loop", "continue_loop"))
@@ -386,7 +435,7 @@ class QrackBridge:
             return
         if name in QrackBridge._QISKIT_CONTROL_FLOW:
             raise RuntimeError(
-                'QrackBridge cannot run control flow ("%s"): it has no mid-circuit measurement.' % name
+                'QrackBridge supports if_else control flow only, not "%s".' % name
             )
         if len(qubits) == 1:
             q = qubits[0]
@@ -414,7 +463,8 @@ class QrackBridge:
             elif name in ("u1", "p"):
                 self.u(q, 0.0, 0.0, QrackBridge._qiskit_float_params(op)[0])
             elif name == "reset":
-                raise RuntimeError("QrackBridge cannot reset a qubit that gates have already touched.")
+                if self.m(q):
+                    self.x(q)
             else:
                 QrackBridge._qiskit_check_bound(op)
                 self.mtrx(QrackBridge._qiskit_1q_matrix(op), q)
@@ -443,8 +493,94 @@ class QrackBridge:
                 raise RuntimeError('QrackBridge cannot expand "%s": its definition measures.' % op.name)
             self._apply_qiskit_op(inst.operation, [qubits[d.find_bit(b).index] for b in inst.qubits])
 
+    @staticmethod
+    def _qiskit_condition(op):
+        """Legacy c_if condition of a non-control-flow op (Qiskit < 2), or None."""
+        try:
+            return getattr(op, "condition", None) if op.name != "if_else" else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _qiskit_is_dynamic(experiment):
+        """True if any measurement is not terminal, a touched qubit is reset, or classical control appears."""
+        touched = set()
+        measured = set()
+        for inst in experiment.data:
+            op = inst.operation
+            if op.name in QrackBridge._QISKIT_SKIP:
+                continue
+            qubits = [experiment.find_bit(q).index for q in inst.qubits]
+            if op.name in QrackBridge._QISKIT_CONTROL_FLOW or QrackBridge._qiskit_condition(op) is not None:
+                return True
+            if op.name == "measure":
+                measured.update(qubits)
+                continue
+            if set(qubits) & measured:
+                return True
+            if op.name == "reset":
+                if set(qubits) & touched:
+                    return True
+                continue
+            touched.update(qubits)
+        return False
+
+    @staticmethod
+    def _qiskit_eval_condition(circuit, condition, clbits, cmap):
+        target, value = condition
+        if isinstance(target, ClassicalRegister):
+            # Register: little-endian over its bits
+            v = 0
+            for i, bit in enumerate(target):
+                v |= clbits[cmap[circuit.find_bit(bit).index]] << i
+            return v == int(value)
+        return clbits[cmap[circuit.find_bit(target).index]] == int(bool(value))
+
+    def _run_qiskit_dynamic(self, circuit, data, qmap, cmap, clbits, touched):
+        """One trajectory over instructions `data` of `circuit`, collapsing on measurement.
+
+        qmap/cmap map the circuit's own qubit/clbit indices to the bridge's qubits and the outer clbits.
+        """
+        for inst in data:
+            op = inst.operation
+            name = op.name
+            if name in QrackBridge._QISKIT_SKIP:
+                continue
+            qubits = [qmap[circuit.find_bit(q).index] for q in inst.qubits]
+            cond = QrackBridge._qiskit_condition(op)
+            if cond is not None:
+                if not hasattr(cond, "__len__") or len(cond) != 2:
+                    raise RuntimeError('QrackBridge supports only (bit or register, value) conditions on "%s".' % name)
+                if not QrackBridge._qiskit_eval_condition(circuit, cond, clbits, cmap):
+                    continue
+            if name == "measure":
+                for q, c in zip(qubits, inst.clbits):
+                    clbits[cmap[circuit.find_bit(c).index]] = self.m(q)
+                continue
+            if name == "reset":
+                for q in qubits:
+                    if q in touched and self.m(q):
+                        self.x(q)
+                continue
+            if name == "if_else":
+                cond = op.condition
+                if not isinstance(cond, tuple):
+                    raise RuntimeError("QrackBridge supports if_else on (bit or register, value) conditions only.")
+                inner_cmap = [cmap[circuit.find_bit(c).index] for c in inst.clbits]
+                body = op.blocks[0] if QrackBridge._qiskit_eval_condition(circuit, cond, clbits, cmap) else (
+                    op.blocks[1] if len(op.blocks) > 1 else None
+                )
+                if body is not None:
+                    # The condition's bits are among inst.clbits; the body's bits are positional over them.
+                    self._run_qiskit_dynamic(body, body.data, qubits, inner_cmap, clbits, touched)
+                continue
+            if name in QrackBridge._QISKIT_CONTROL_FLOW:
+                raise RuntimeError('QrackBridge supports if_else control flow only, not "%s".' % name)
+            touched.update(qubits)
+            self._apply_qiskit_op(op, qubits)
+
     def run_qiskit_circuit(self, experiment, shots=1):
-        """Apply a Qiskit QuantumCircuit to this bridge and sample its terminal measurements.
+        """Apply a Qiskit QuantumCircuit to this bridge and sample its measurements.
 
         Gates run natively where QrackBridge has a coupler: any single-qubit gate; any controlled
         single-qubit gate (one control across patches, several within one patch; open controls use
@@ -452,13 +588,20 @@ class QrackBridge:
         multi-control gates that span patches, is expanded through its Qiskit definition. The circuit
         qubit i is logical qubit i. Use qiskit.providers.qrack.QrackBridgeSimulator for transpilation.
 
+        Terminal measurements only: the circuit is applied to this bridge once and its measured qubits
+        are sampled exactly (any number of them); the bridge keeps the pre-measurement state.
+
+        Mid-circuit measurement, reset of touched qubits, if_else and c_if: the operations before the first
+        of these are applied to this bridge once; then each shot runs the rest on a clone, collapsing at
+        every measurement. The bridge keeps the state from before that point.
+
         Args:
             experiment: QuantumCircuit (parameters bound); at most num_qubits() qubits
             shots: number of samples of the measured clbits
 
         Returns:
             list of bit strings (one per shot, clbit 0 rightmost, width = experiment.num_clbits);
-            empty if the circuit measures nothing. The bridge keeps the pre-measurement state.
+            empty if the circuit measures nothing.
         """
         if not _IS_QISKIT_AVAILABLE:
             raise RuntimeError(
@@ -470,37 +613,65 @@ class QrackBridge:
             raise RuntimeError(
                 "Circuit has %d qubits, but this QrackBridge has %d." % (experiment.num_qubits, self.n)
             )
+        width = experiment.num_clbits
+
+        if QrackBridge._qiskit_is_dynamic(experiment):
+            data = list(experiment.data)
+            # Preamble: everything before the first measurement, touched reset, or classically controlled op.
+            touched = set()
+            split = len(data)
+            for k, inst in enumerate(data):
+                op = inst.operation
+                if op.name in QrackBridge._QISKIT_SKIP:
+                    continue
+                qubits = [experiment.find_bit(q).index for q in inst.qubits]
+                if (
+                    op.name == "measure"
+                    or op.name in QrackBridge._QISKIT_CONTROL_FLOW
+                    or QrackBridge._qiskit_condition(op) is not None
+                    or (op.name == "reset" and (set(qubits) & touched))
+                ):
+                    split = k
+                    break
+                if op.name == "reset":
+                    continue
+                touched.update(qubits)
+                self._apply_qiskit_op(op, qubits)
+            if width == 0 or shots < 1:
+                return []
+            qmap = list(range(experiment.num_qubits))
+            cmap = list(range(width))
+            out = []
+            for _ in range(shots):
+                traj = self.clone()
+                clbits = [0] * width
+                traj._run_qiskit_dynamic(experiment, data[split:], qmap, cmap, clbits, set(touched))
+                word = 0
+                for c, v in enumerate(clbits):
+                    word |= v << c
+                out.append(bin(word)[2:].zfill(width))
+            return out
 
         touched = set()
         measured = {}  # clbit -> qubit; the last measurement into a clbit wins
-        measured_qubits = set()
         for inst in experiment.data:
             op = inst.operation
             qubits = [experiment.find_bit(q).index for q in inst.qubits]
             if op.name == "measure":
                 for q, c in zip(qubits, inst.clbits):
                     measured[experiment.find_bit(c).index] = q
-                    measured_qubits.add(q)
                 continue
             if op.name in QrackBridge._QISKIT_SKIP:
                 continue
             if op.name == "reset" and not (set(qubits) & touched):
                 continue
-            if set(qubits) & measured_qubits:
-                raise RuntimeError(
-                    'QrackBridge cannot apply "%s" after measuring one of its qubits (no mid-circuit measurement).'
-                    % op.name
-                )
             touched.update(qubits)
             self._apply_qiskit_op(op, qubits)
 
         if not measured or shots < 1:
             return []
         sample_qubits = sorted(set(measured.values()))
-        if len(sample_qubits) > 64:
-            raise RuntimeError("QrackBridge.measure_shots() samples at most 64 qubits per call.")
         bit_of = {q: j for j, q in enumerate(sample_qubits)}
-        width = experiment.num_clbits
         out = []
         for sample in self.measure_shots(sample_qubits, shots):
             word = 0
