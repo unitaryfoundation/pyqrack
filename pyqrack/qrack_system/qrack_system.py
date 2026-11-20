@@ -1475,3 +1475,24 @@ class QrackSystem:
                     getattr(self.qrack_lib, fn).argtypes = [c_ulonglong]
             self.qrack_lib.qbridge_get_bonds.restype = None
             self.qrack_lib.qbridge_get_bonds.argtypes = [c_ulonglong, POINTER(c_ulonglong)]
+        # Newer QBridge entry points (each guarded, so an older library still loads):
+        self.has_qbridge_wide_shots = self.has_qbridge and hasattr(self.qrack_lib, "qbridge_measure_shots_words")
+        if self.has_qbridge_wide_shots:
+            self.qrack_lib.qbridge_measure_shots_words.restype = None
+            self.qrack_lib.qbridge_measure_shots_words.argtypes = [
+                c_ulonglong,
+                c_ulonglong,
+                POINTER(c_ulonglong),
+                c_ulonglong,
+                POINTER(c_ulonglong),
+            ]
+        self.has_qbridge_measure = self.has_qbridge and all(
+            hasattr(self.qrack_lib, fn) for fn in ("qbridge_prob", "qbridge_m", "qbridge_force_m")
+        )
+        if self.has_qbridge_measure:
+            self.qrack_lib.qbridge_prob.restype = c_double
+            self.qrack_lib.qbridge_prob.argtypes = [c_ulonglong, c_ulonglong]
+            self.qrack_lib.qbridge_m.restype = c_ulonglong
+            self.qrack_lib.qbridge_m.argtypes = [c_ulonglong, c_ulonglong]
+            self.qrack_lib.qbridge_force_m.restype = c_ulonglong
+            self.qrack_lib.qbridge_force_m.argtypes = [c_ulonglong, c_ulonglong, c_bool]
