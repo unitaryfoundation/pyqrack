@@ -22,7 +22,11 @@ jobs:
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
+<<<<<<< HEAD
           sudo apt-get install -y build-essential cmake python3-venv libboost-dev libopenblas-dev libclblast-dev libclblast1
+=======
+          sudo apt-get install -y build-essential cmake python3-venv libboost-dev libopenblas-dev
+>>>>>>> main
 
       - name: Install Python Dependencies
         run: |
@@ -66,7 +70,11 @@ jobs:
       - name: Prepare Build Environment (Linux)
         run: |
           sudo apt-get update
+<<<<<<< HEAD
           sudo apt-get install -y build-essential cmake python3-venv libboost-dev libopenblas-dev libclblast-dev libclblast1
+=======
+          sudo apt-get install -y build-essential cmake python3-venv libboost-dev libopenblas-dev
+>>>>>>> main
 
       - name: Install Python Dependencies
         run: |
